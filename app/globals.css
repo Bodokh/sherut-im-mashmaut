@@ -1,26 +1,259 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* =========================================================================
+   שירות עם משמעות — design tokens
+   Strategy: Committed. Techelet (sky→flag blue) carries the surface; living
+   green is the accent of hope & the "give" action; neutrals are tinted toward
+   the brand hue (never warm cream). OKLCH throughout.
+   ========================================================================= */
+@theme {
+  /* ---- Brand: techelet sky deepening into the flag blue ---- */
+  --color-brand-50:  oklch(0.972 0.013 235);
+  --color-brand-100: oklch(0.940 0.030 236);
+  --color-brand-200: oklch(0.892 0.058 238);
+  --color-brand-300: oklch(0.822 0.094 240);
+  --color-brand-400: oklch(0.722 0.134 244);
+  --color-brand-500: oklch(0.622 0.160 248); /* techelet core */
+  --color-brand-600: oklch(0.536 0.172 252);
+  --color-brand-700: oklch(0.472 0.166 255); /* primary action */
+  --color-brand-800: oklch(0.388 0.140 258);
+  --color-brand-900: oklch(0.298 0.100 260); /* deep navy section */
+  --color-brand-950: oklch(0.224 0.072 262);
+
+  /* ---- Green: life, growth, the "give" action ---- */
+  --color-green-50:  oklch(0.975 0.021 152);
+  --color-green-100: oklch(0.945 0.046 152);
+  --color-green-200: oklch(0.892 0.083 151);
+  --color-green-300: oklch(0.822 0.112 150);
+  --color-green-400: oklch(0.748 0.138 150);
+  --color-green-500: oklch(0.668 0.146 150);
+  --color-green-600: oklch(0.582 0.140 150);
+  --color-green-700: oklch(0.498 0.120 150); /* accessible fill w/ white text */
+  --color-green-800: oklch(0.424 0.100 150);
+  --color-green-900: oklch(0.352 0.080 150);
+
+  /* ---- Ink: blue-tinted neutrals ---- */
+  --color-ink-50:  oklch(0.975 0.004 244);
+  --color-ink-100: oklch(0.940 0.006 245);
+  --color-ink-200: oklch(0.882 0.008 248);
+  --color-ink-300: oklch(0.760 0.010 250);
+  --color-ink-400: oklch(0.650 0.012 254);
+  --color-ink-500: oklch(0.550 0.013 255);
+  --color-ink-600: oklch(0.470 0.014 256); /* muted, still AA on paper */
+  --color-ink-700: oklch(0.400 0.015 256); /* secondary body */
+  --color-ink-800: oklch(0.320 0.016 258);
+  --color-ink-900: oklch(0.250 0.018 258); /* primary body */
+  --color-ink-950: oklch(0.200 0.018 260);
+
+  /* ---- Surfaces ---- */
+  --color-paper:     oklch(0.992 0.004 245);
+  --color-surface:   oklch(0.980 0.006 244);
+  --color-surface-2: oklch(0.962 0.009 243);
+  --color-line:      oklch(0.910 0.010 244);
+
+  /* ---- Semantic ---- */
+  --color-success: oklch(0.582 0.140 150);
+  --color-danger:  oklch(0.560 0.196 25);
+  --color-warning: oklch(0.760 0.150 75);
+
+  /* ---- Type families (next/font sets the underlying vars on <html>) ---- */
+  --font-sans: var(--font-assistant), "Assistant", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: var(--font-display-family), "Rubik", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* ---- Easing (exponential ease-out family) ---- */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out-expo:  cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ---- Soft, techelet-tinted shadows ---- */
+  --shadow-soft: 0 1px 2px oklch(0.30 0.10 260 / 0.05), 0 8px 24px oklch(0.30 0.10 260 / 0.07);
+  --shadow-lift: 0 2px 6px oklch(0.30 0.10 260 / 0.07), 0 22px 48px oklch(0.30 0.10 260 / 0.12);
+  --shadow-glow: 0 0 0 1px oklch(0.62 0.16 248 / 0.10), 0 18px 56px oklch(0.50 0.17 252 / 0.28);
+
+  /* ---- Semantic z-index scale ---- */
+  --z-base: 0;
+  --z-raised: 10;
+  --z-sticky: 100;
+  --z-header: 200;
+  --z-backdrop: 300;
+  --z-modal: 400;
+  --z-toast: 500;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+/* =========================================================================
+   Base
+   ========================================================================= */
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --header-h: 4.5rem;
+    --gutter: clamp(1.25rem, 5vw, 4rem);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    scroll-padding-top: calc(var(--header-h) + 1rem);
+  }
+
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink-900);
+    font-family: var(--font-sans);
+    font-weight: 400;
+    line-height: 1.62;
+    font-synthesis-weight: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    line-height: 1.06;
+    letter-spacing: -0.022em;
+    text-wrap: balance;
+    color: var(--color-ink-950);
+  }
+
+  p { text-wrap: pretty; }
+
+  /* Hebrew sits better without the tighter Latin tracking on display type */
+  :lang(he) h1, :lang(he) h2, :lang(he) h3, :lang(he) h4 { letter-spacing: 0; }
+
+  a { color: inherit; text-decoration: none; }
+
+  ::selection {
+    background-color: var(--color-brand-600);
+    color: white;
+  }
+
+  :focus-visible {
+    outline: 2.5px solid var(--color-brand-600);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  /* Dark sections re-tone the focus ring for contrast */
+  [data-theme="dark"] :focus-visible {
+    outline-color: var(--color-brand-300);
+  }
+
+  img, video { max-width: 100%; height: auto; display: block; }
+}
+
+/* =========================================================================
+   Reusable atmosphere
+   ========================================================================= */
+@layer components {
+  /* Page gutter container */
+  .shell {
+    width: 100%;
+    max-width: 78rem;
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+  .shell-wide { max-width: 88rem; }
+  .shell-narrow { max-width: 52rem; }
+
+  /* Techelet light — a soft dawn glow used behind hero / drenched folds */
+  .aurora-techelet {
+    background:
+      radial-gradient(60% 80% at 78% 12%, oklch(0.72 0.135 244 / 0.55), transparent 60%),
+      radial-gradient(50% 60% at 12% 8%, oklch(0.82 0.10 220 / 0.35), transparent 62%),
+      radial-gradient(80% 90% at 50% 120%, oklch(0.50 0.17 252 / 0.30), transparent 60%);
+  }
+
+  /* Fine grid weave — barely-there texture for blue folds */
+  .weave {
+    background-image:
+      linear-gradient(oklch(1 0 0 / 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, oklch(1 0 0 / 0.045) 1px, transparent 1px);
+    background-size: 56px 56px;
+    -webkit-mask-image: radial-gradient(120% 90% at 50% 0%, black, transparent 78%);
+            mask-image: radial-gradient(120% 90% at 50% 0%, black, transparent 78%);
+  }
+
+  /* Hairline divider that follows the brand hue */
+  .hr-brand {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--color-line), transparent);
+  }
+
+  /* Deliberate emphasis underline (a single brand move, not a side stripe) */
+  .ink-underline {
+    background-image: linear-gradient(transparent 62%, oklch(0.748 0.138 150 / 0.45) 0);
+    background-repeat: no-repeat;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* =========================================================================
+   Scroll reveals — only elements that the controller explicitly *arms*
+   (.reveal-armed, added by JS for below-fold elements) are ever hidden.
+   Without JS, in-view elements, or reduced motion, content is fully visible;
+   a scroll fallback guarantees nothing is ever stuck hidden.
+   ========================================================================= */
+@media (prefers-reduced-motion: no-preference) {
+  [data-reveal].reveal-armed {
+    opacity: 0;
+    transform: translateY(24px);
+    transition:
+      opacity 0.75s var(--ease-out-expo),
+      transform 0.75s var(--ease-out-expo);
+    transition-delay: var(--reveal-delay, 0ms);
+    will-change: opacity, transform;
+  }
+  [data-reveal="fade"].reveal-armed  { transform: none; }
+  [data-reveal="scale"].reveal-armed { transform: scale(0.965); }
+  [data-reveal="right"].reveal-armed { transform: translateX(2.5rem); }
+  [data-reveal="left"].reveal-armed  { transform: translateX(-2.5rem); }
+
+  [data-reveal].reveal-armed.is-in {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* =========================================================================
+   Hero entrance — pure CSS, runs on load, degrades to visible
+   ========================================================================= */
+@media (prefers-reduced-motion: no-preference) {
+  .hero-rise {
+    animation: heroRise 0.9s var(--ease-out-expo) both;
+    animation-delay: var(--rise-delay, 0ms);
+  }
+}
+@keyframes heroRise {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* =========================================================================
+   Values marquee + ambient float
+   ========================================================================= */
+.marquee { overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, black 12%, black 88%, transparent); mask-image: linear-gradient(90deg, transparent, black 12%, black 88%, transparent); }
+.marquee-track { display: flex; width: max-content; animation: marquee 42s linear infinite; }
+[dir="rtl"] .marquee-track { animation-direction: reverse; }
+.marquee:hover .marquee-track { animation-play-state: paused; }
+@keyframes marquee { to { transform: translateX(-50%); } }
+
+@media (prefers-reduced-motion: no-preference) {
+  .float-slow { animation: floatY 9s ease-in-out infinite; }
+}
+@keyframes floatY {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+/* =========================================================================
+   Motion safety — always provide a still alternative
+   ========================================================================= */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .marquee-track { animation: none; }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }
