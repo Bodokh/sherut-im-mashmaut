@@ -1,10 +1,8 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Image from "next/image";
 import { cn } from "@/lib/cn";
 
 export function StoryCard({
+  id,
   poster,
   alt,
   tag,
@@ -17,6 +15,7 @@ export function StoryCard({
   playLabel,
   className,
 }: {
+  id: string;
   poster: string;
   alt: string;
   tag: string;
@@ -29,24 +28,12 @@ export function StoryCard({
   playLabel: string;
   className?: string;
 }) {
-  const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = "";
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
+  const dialogId = `${id}-dialog`;
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
+      <a
+        href={`#${dialogId}`}
         aria-label={`${playLabel}: ${title}`}
         className={cn(
           "group block w-full text-start focus-visible:outline-offset-4",
@@ -84,49 +71,45 @@ export function StoryCard({
           {title}
         </h3>
         <p className="mt-1.5 leading-relaxed text-ink-600">{excerpt}</p>
-      </button>
+      </a>
 
-      {open ? (
+      <div
+        id={dialogId}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        className="pointer-events-none fixed inset-0 z-[400] flex items-center justify-center bg-brand-950/80 p-4 opacity-0 backdrop-blur-sm transition-opacity target:pointer-events-auto target:opacity-100"
+      >
+        <a href="#stories" aria-label={contactLabel} className="absolute inset-0" />
         <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={title}
-          onClick={() => setOpen(false)}
-          className="fixed inset-0 z-[400] flex items-center justify-center bg-brand-950/80 p-4 backdrop-blur-sm"
+          className="relative w-full max-w-md overflow-hidden rounded-3xl bg-paper p-8 text-center shadow-lift"
         >
+          <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-brand-100 text-brand-700">
+            <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="M8 5.2v13.6c0 .8.9 1.3 1.6.8l10.2-6.8a1 1 0 0 0 0-1.6L9.6 4.4c-.7-.5-1.6 0-1.6.8Z" />
+            </svg>
+          </div>
+          <h3 className="mt-5 font-display text-2xl font-bold text-ink-950">{title}</h3>
+          <p className="mt-2 leading-relaxed text-ink-600">{soon}</p>
           {videoUrl ? (
-            <div className="aspect-video w-full max-w-4xl overflow-hidden rounded-2xl shadow-lift" onClick={(e) => e.stopPropagation()}>
-              <iframe
-                src={videoUrl}
-                title={title}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                className="h-full w-full border-0"
-              />
-            </div>
-          ) : (
-            <div
-              className="relative w-full max-w-md overflow-hidden rounded-3xl bg-paper p-8 text-center shadow-lift"
-              onClick={(e) => e.stopPropagation()}
+            <a
+              href={videoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-6 inline-flex min-h-11 items-center justify-center rounded-full bg-brand-700 px-6 font-semibold text-white transition-colors hover:bg-brand-800"
             >
-              <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-brand-100 text-brand-700">
-                <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                  <path d="M8 5.2v13.6c0 .8.9 1.3 1.6.8l10.2-6.8a1 1 0 0 0 0-1.6L9.6 4.4c-.7-.5-1.6 0-1.6.8Z" />
-                </svg>
-              </div>
-              <h3 className="mt-5 font-display text-2xl font-bold text-ink-950">{title}</h3>
-              <p className="mt-2 leading-relaxed text-ink-600">{soon}</p>
-              <a
-                href="#contact"
-                onClick={() => setOpen(false)}
-                className="mt-6 inline-flex min-h-11 items-center justify-center rounded-full bg-brand-700 px-6 font-semibold text-white transition-colors hover:bg-brand-800"
-              >
-                {contactLabel}
-              </a>
-            </div>
+              {playLabel}
+            </a>
+          ) : (
+            <a
+              href="#contact"
+              className="mt-6 inline-flex min-h-11 items-center justify-center rounded-full bg-brand-700 px-6 font-semibold text-white transition-colors hover:bg-brand-800"
+            >
+              {contactLabel}
+            </a>
           )}
         </div>
-      ) : null}
+      </div>
     </>
   );
 }

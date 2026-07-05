@@ -22,29 +22,24 @@ export function Hero({ dict }: { dict: Dictionary }) {
       <div className="shell grid items-center gap-12 pb-16 lg:grid-cols-12 lg:gap-8 lg:pb-24">
         {/* Text */}
         <div className="lg:col-span-7 xl:col-span-6">
-          <div className="hero-rise" style={{ ["--rise-delay" as string]: "0ms" }}>
+          <div>
             <Eyebrow>{t.kicker}</Eyebrow>
           </div>
 
           <h1
-            className="hero-rise mt-5 text-pretty text-[clamp(2.35rem,4.6vw+0.5rem,4.5rem)] font-black leading-[1.04]"
-            style={{ ["--rise-delay" as string]: "90ms" }}
+            className="mt-5 text-pretty text-[clamp(2.35rem,4.6vw+0.5rem,4.5rem)] font-black leading-[1.04]"
           >
             <span className="block text-ink-950">{lines[0]}</span>
             {lines[1] ? <span className="block text-brand-700">{lines[1]}</span> : null}
           </h1>
 
           <p
-            className="hero-rise mt-6 max-w-[46ch] text-lg leading-relaxed text-ink-700 sm:text-xl"
-            style={{ ["--rise-delay" as string]: "170ms" }}
+            className="mt-6 max-w-[46ch] text-lg leading-relaxed text-ink-700 sm:text-xl"
           >
             {t.lead}
           </p>
 
-          <div
-            className="hero-rise mt-9 flex flex-wrap items-center gap-3"
-            style={{ ["--rise-delay" as string]: "250ms" }}
-          >
+          <div className="mt-9 flex flex-wrap items-center gap-3">
             <Button href="#contact" variant="primary" size="lg" arrow>
               {t.ctaPrimary}
             </Button>
@@ -55,10 +50,7 @@ export function Hero({ dict }: { dict: Dictionary }) {
         </div>
 
         {/* Video */}
-        <div
-          className="hero-rise lg:col-span-5 xl:col-span-6"
-          style={{ ["--rise-delay" as string]: "200ms" }}
-        >
+        <div className="hidden lg:col-span-5 lg:block xl:col-span-6">
           <div className="relative mx-auto max-w-[640px]">
             {/* glow plate behind the video */}
             <div
@@ -66,7 +58,6 @@ export function Hero({ dict }: { dict: Dictionary }) {
               className="absolute -inset-3 -z-10 rounded-[2rem] bg-brand-500/15 blur-2xl"
             />
             <VideoFacade
-              priority
               poster={media.heroPoster}
               playLabel={dict.a11y.playFilm}
               watchLabel={t.watch}

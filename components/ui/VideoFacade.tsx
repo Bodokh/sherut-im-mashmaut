@@ -1,6 +1,3 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Image from "next/image";
 import { cn } from "@/lib/cn";
 
@@ -25,19 +22,6 @@ export function VideoFacade({
   className?: string;
   priority?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = "";
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
   const PlayButton = (
     <span className="relative inline-flex h-[4.5rem] w-[4.5rem] items-center justify-center">
       <span className="absolute inset-0 rounded-full bg-white/25 transition-transform duration-500 ease-out-quart group-hover:scale-110" />
@@ -63,7 +47,10 @@ export function VideoFacade({
             src={poster}
             alt={posterAlt ?? ""}
             fill
-            priority={priority}
+            preload={priority}
+            fetchPriority={priority ? "high" : undefined}
+            decoding={priority ? "sync" : "async"}
+            unoptimized={poster.startsWith("/")}
             sizes="(max-width: 1024px) 92vw, 620px"
             className="object-cover transition-transform duration-[1.2s] ease-out-quart group-hover:scale-[1.04]"
           />
@@ -76,24 +63,15 @@ export function VideoFacade({
         <div className="absolute inset-0 bg-gradient-to-t from-brand-950/70 via-brand-950/15 to-brand-950/5" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_oklch(0.20_0.07_262/0.40),_transparent_58%)]" />
 
-        {videoUrl ? (
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            aria-label={playLabel}
-            className="absolute inset-0 flex items-center justify-center focus-visible:outline-offset-[-6px]"
-          >
-            {PlayButton}
-          </button>
-        ) : (
-          <a
-            href={fallbackHref}
-            aria-label={playLabel}
-            className="absolute inset-0 flex items-center justify-center focus-visible:outline-offset-[-6px]"
-          >
-            {PlayButton}
-          </a>
-        )}
+        <a
+          href={videoUrl ?? fallbackHref}
+          target={videoUrl ? "_blank" : undefined}
+          rel={videoUrl ? "noopener noreferrer" : undefined}
+          aria-label={playLabel}
+          className="absolute inset-0 flex items-center justify-center focus-visible:outline-offset-[-6px]"
+        >
+          {PlayButton}
+        </a>
 
         <div className="pointer-events-none absolute inset-inline-start-0 bottom-0 flex w-full items-end justify-between gap-3 p-5">
           <span className="font-display text-lg font-bold text-white drop-shadow-sm">{watchLabel}</span>
@@ -104,26 +82,6 @@ export function VideoFacade({
           ) : null}
         </div>
       </div>
-
-      {open && videoUrl ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={watchLabel}
-          onClick={() => setOpen(false)}
-          className="fixed inset-0 z-[400] flex items-center justify-center bg-brand-950/80 p-4 backdrop-blur-sm"
-        >
-          <div className="aspect-video w-full max-w-4xl overflow-hidden rounded-2xl shadow-lift" onClick={(e) => e.stopPropagation()}>
-            <iframe
-              src={videoUrl}
-              title={watchLabel}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              className="h-full w-full border-0"
-            />
-          </div>
-        </div>
-      ) : null}
     </>
   );
 }

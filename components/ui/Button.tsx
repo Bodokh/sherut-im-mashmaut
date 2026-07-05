@@ -1,5 +1,4 @@
-import Link from "next/link";
-import type { ComponentProps, ReactNode } from "react";
+import type { ComponentProps, MouseEventHandler, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 type Variant = "primary" | "give" | "outline" | "white" | "outlineLight" | "ghost";
@@ -57,8 +56,16 @@ type AsButton = CommonProps & ComponentProps<"button"> & { href?: undefined };
 type AsLink = CommonProps & {
   href: string;
   external?: boolean;
-  onClick?: React.MouseEventHandler<HTMLAnchorElement>;
+  onClick?: MouseEventHandler<HTMLAnchorElement>;
 };
+
+function buttonAttrs(props: AsButton): ComponentProps<"button"> {
+  const attrs = { ...props } as ComponentProps<"button"> & Partial<CommonProps>;
+  for (const key of ["variant", "size", "arrow", "className", "children"] as const) {
+    Reflect.deleteProperty(attrs, key);
+  }
+  return attrs;
+}
 
 export function Button(props: AsButton | AsLink) {
   const { variant = "primary", size = "md", arrow, className, children } = props;
@@ -72,22 +79,20 @@ export function Button(props: AsButton | AsLink) {
         {arrow ? <Arrow /> : null}
       </>
     );
-    if (external) {
-      return (
-        <a href={href} target="_blank" rel="noopener noreferrer" className={classes} onClick={onClick}>
-          {content}
-        </a>
-      );
-    }
     return (
-      <Link href={href} className={classes} onClick={onClick}>
+      <a
+        href={href}
+        target={external ? "_blank" : undefined}
+        rel={external ? "noopener noreferrer" : undefined}
+        className={classes}
+        onClick={onClick}
+      >
         {content}
-      </Link>
+      </a>
     );
   }
 
-  const { variant: _v, size: _s, arrow: _a, className: _c, children: _ch, ...rest } =
-    props as AsButton;
+  const rest = buttonAttrs(props as AsButton);
   return (
     <button className={classes} {...rest}>
       <span>{children}</span>

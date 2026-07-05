@@ -32,6 +32,7 @@ export function Stories({ dict }: { dict: Dictionary }) {
         {t.items.map((item, i) => (
           <li key={i} data-reveal style={{ ["--reveal-delay" as string]: `${i * 100}ms` }}>
             <StoryCard
+              id={`story-${i}`}
               poster={media.stories[i % media.stories.length]}
               alt={item.title}
               tag={item.tag}

@@ -1,7 +1,3 @@
-"use client";
-
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { otherLocale, type Locale } from "@/i18n/config";
 import { cn } from "@/lib/cn";
 
@@ -16,15 +12,11 @@ export function LangToggle({
   a11yLabel: string;
   className?: string;
 }) {
-  const pathname = usePathname() || `/${locale}`;
   const target = otherLocale(locale);
-  const segments = pathname.split("/");
-  segments[1] = target;
-  const href = segments.join("/") || `/${target}`;
 
   return (
-    <Link
-      href={href}
+    <a
+      href={`/${target}`}
       hrefLang={target}
       aria-label={a11yLabel}
       className={cn(
@@ -42,6 +34,6 @@ export function LangToggle({
         />
       </svg>
       {label}
-    </Link>
+    </a>
   );
 }

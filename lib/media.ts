@@ -8,7 +8,7 @@ const photo = (id: string, w = 1280) =>
 
 export const media = {
   // Dusk mountain ranges — cinematic, techelet-harmonious film poster.
-  heroPoster: photo("1500964757637-c85e8a162699", 1400),
+  heroPoster: "/images/hero-poster.webp",
 
   // Story moments — youth & togetherness, reflection.
   stories: [

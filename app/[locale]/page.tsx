@@ -1,9 +1,8 @@
 import { notFound } from "next/navigation";
 import { isLocale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
-import { Header } from "@/components/site/Header";
+import { Header, type HeaderCopy } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
-import { RevealController } from "@/components/motion/RevealController";
 import { Hero } from "@/components/sections/Hero";
 import { About } from "@/components/sections/About";
 import { Manifesto } from "@/components/sections/Manifesto";
@@ -19,10 +18,31 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
   const dict = getDictionary(locale);
+  const headerCopy = {
+    brandName: dict.brand.name,
+    langName: dict.langName,
+    nav: {
+      about: dict.nav.about,
+      stories: dict.nav.stories,
+      field: dict.nav.field,
+      events: dict.nav.events,
+      support: dict.nav.support,
+      partners: dict.nav.partners,
+      contact: dict.nav.contact,
+      donate: dict.nav.donate,
+    },
+    a11y: {
+      skip: dict.a11y.skip,
+      openMenu: dict.a11y.openMenu,
+      closeMenu: dict.a11y.closeMenu,
+      menu: dict.a11y.menu,
+      langSwitch: dict.a11y.langSwitch,
+    },
+  } satisfies HeaderCopy;
 
   return (
     <>
-      <Header locale={locale} dict={dict} />
+      <Header locale={locale} copy={headerCopy} />
       <main id="main">
         <Hero dict={dict} />
         <About dict={dict} />
@@ -36,7 +56,6 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
         <Contact dict={dict} />
       </main>
       <Footer locale={locale} dict={dict} />
-      <RevealController />
     </>
   );
 }
