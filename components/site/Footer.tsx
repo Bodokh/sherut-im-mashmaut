@@ -1,14 +1,16 @@
 import Link from "next/link";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
+import { contactLinks } from "@/lib/contact";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
 
 const FOOTER_LINKS = [
   "about",
+  "team",
   "stories",
   "field",
-  "events",
+  "testimonials",
   "support",
   "partners",
   "contact",
@@ -36,10 +38,14 @@ const SOCIAL = [
   {
     key: "whatsapp",
     label: "WhatsApp",
-    href: "#",
+    href: contactLinks.whatsapp,
     path: "M12 2.04c-5.5 0-9.96 4.46-9.96 9.96 0 1.76.46 3.45 1.34 4.96L2 22l5.16-1.35a9.9 9.9 0 0 0 4.84 1.25h.01c5.49 0 9.95-4.46 9.95-9.96 0-2.66-1.03-5.16-2.91-7.04A9.9 9.9 0 0 0 12 2.04Zm0 1.8c2.18 0 4.23.85 5.77 2.4a8.13 8.13 0 0 1 2.39 5.76c0 4.5-3.66 8.16-8.16 8.16a8.2 8.2 0 0 1-4.17-1.14l-.3-.18-3.06.8.82-2.98-.2-.31a8.1 8.1 0 0 1-1.25-4.35c0-4.5 3.66-8.16 8.16-8.16Zm4.71 11.62c-.26-.13-1.52-.75-1.75-.83-.24-.09-.41-.13-.58.13-.17.26-.67.83-.82 1-.15.17-.3.2-.56.07-.26-.13-1.08-.4-2.06-1.27-.76-.68-1.27-1.52-1.42-1.78-.15-.26-.02-.4.11-.53.12-.12.26-.3.39-.46.13-.15.17-.26.26-.43.09-.17.04-.32-.02-.45-.07-.13-.58-1.4-.79-1.92-.21-.5-.42-.43-.58-.44h-.5c-.17 0-.45.06-.68.32-.24.26-.9.88-.9 2.15 0 1.27.92 2.5 1.05 2.66.13.17 1.8 2.76 4.37 3.87.61.26 1.09.42 1.46.54.61.2 1.17.17 1.61.1.49-.07 1.52-.62 1.73-1.22.21-.6.21-1.1.15-1.22-.06-.11-.24-.18-.5-.31Z",
   },
 ];
+
+function footerHref(locale: Locale, id: (typeof FOOTER_LINKS)[number]): string {
+  return id === "team" ? `/${locale}/team` : `/${locale}#${id}`;
+}
 
 export function Footer({ locale, dict }: { locale: Locale; dict: Dictionary }) {
   return (
@@ -57,7 +63,7 @@ export function Footer({ locale, dict }: { locale: Locale; dict: Dictionary }) {
             <p className="mt-5 max-w-sm text-[0.98rem] leading-relaxed text-brand-200">
               {dict.footer.blurb}
             </p>
-            <Button href="#donate" variant="white" className="mt-7" arrow>
+            <Button href={`/${locale}#donate`} variant="white" className="mt-7" arrow>
               {dict.footer.donate}
             </Button>
           </div>
@@ -70,12 +76,12 @@ export function Footer({ locale, dict }: { locale: Locale; dict: Dictionary }) {
             <ul className="mt-4 space-y-2.5">
               {FOOTER_LINKS.map((id) => (
                 <li key={id}>
-                  <a
-                    href={`#${id}`}
+                  <Link
+                    href={footerHref(locale, id)}
                     className="text-brand-100 transition-colors hover:text-white"
                   >
                     {dict.nav[id]}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -88,12 +94,12 @@ export function Footer({ locale, dict }: { locale: Locale; dict: Dictionary }) {
             </h2>
             <ul className="mt-4 space-y-2.5 text-brand-100">
               <li>
-                <a className="transition-colors hover:text-white" href={`mailto:${dict.contact.details.email}`}>
+                <a className="transition-colors hover:text-white" href={contactLinks.email}>
                   {dict.contact.details.email}
                 </a>
               </li>
               <li>
-                <a className="transition-colors hover:text-white" href={`tel:${dict.contact.details.phone}`} dir="ltr">
+                <a className="transition-colors hover:text-white" href={contactLinks.phone} dir="ltr">
                   {dict.contact.details.phone}
                 </a>
               </li>

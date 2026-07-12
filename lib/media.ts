@@ -10,6 +10,14 @@ export const media = {
   // Dusk mountain ranges — cinematic, techelet-harmonious film poster.
   heroPoster: "/images/hero-poster.webp",
 
+  // Team portraits — order matches dictionary `about.members`.
+  team: [
+    "/images/team/michal-kramer-asaf.jpg",
+    "/images/team/odelia-kadmi.jpg",
+    "/images/team/tzofnat-nordman.jpg",
+    "/images/team/lizzy-hameiri.jpg",
+  ],
+
   // Story moments — youth & togetherness, reflection.
   stories: [
     photo("1523325343676-4136d25d013b"),

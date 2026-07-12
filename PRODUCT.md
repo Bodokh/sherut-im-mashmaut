@@ -8,7 +8,7 @@ brand
 
 The Hebrew-speaking Israeli audience of the nonprofit (עמותה) **שירות עם משמעות**:
 
-- Young people approaching meaningful (military / national / civilian) service, and their families.
+- **Young women** approaching meaningful (military / national / civilian) service, and their families. The organization serves young women only — site copy uses feminine Hebrew forms (צעירות, never צעירים).
 - Supporters and potential donors who want to back the mission.
 - Partner organizations, schools, pre-army academies, and institutions weighing collaboration.
 - People seeking the organization's lectures, guidance, and support.
@@ -17,7 +17,7 @@ Context: arriving from search, social, a shared video, or a talk they attended; 
 
 ## Product Purpose
 
-שירות עם משמעות ("Service with Meaning") is an Israeli nonprofit that **inspires meaningful service and cultivates values and identity**. It works through women lecturers who give talks, real stories and videos from the field, conferences and events, partnerships, and personal accompaniment & support (ליווי וסיוע).
+שירות עם משמעות ("Service with Meaning") is an Israeli nonprofit that **inspires meaningful service and cultivates values and identity among young women in Israel**. It works through women lecturers who give talks, real stories and videos from the field, partnerships, and personal, face-to-face accompaniment & support (ליווי וסיוע).
 
 The site exists to communicate the mission with impact, build trust, surface the lecturers and their stories, and convert visitors into one concrete action: **donate, invite a lecture, partner, or get in touch.** Success = a visitor *feels* the meaning, trusts the organization, and takes a step.
 

@@ -1,22 +1,81 @@
+import Link from "next/link";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { LangToggle } from "./LangToggle";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
 
-const SECTIONS = ["about", "stories", "field", "events", "support", "partners", "contact"] as const;
+const SECTIONS = ["stories", "field", "support", "contact"] as const;
+const ABOUT_ITEMS = ["team", "vision", "partners", "volunteer", "leadership"] as const;
 
-type HeaderNavKey = (typeof SECTIONS)[number] | "donate";
+type HeaderNavKey = (typeof SECTIONS)[number] | (typeof ABOUT_ITEMS)[number] | "about" | "donate";
 
 export type HeaderCopy = {
   brandName: string;
   langName: string;
   nav: Pick<Dictionary["nav"], HeaderNavKey>;
-  a11y: Pick<Dictionary["a11y"], "skip" | "openMenu" | "closeMenu" | "menu" | "langSwitch">;
+  a11y: Pick<
+    Dictionary["a11y"],
+    "skip" | "openMenu" | "closeMenu" | "menu" | "aboutMenu" | "langSwitch"
+  >;
 };
 
+export function buildHeaderCopy(dict: Dictionary): HeaderCopy {
+  return {
+    brandName: dict.brand.name,
+    langName: dict.langName,
+    nav: {
+      about: dict.nav.about,
+      team: dict.nav.team,
+      vision: dict.nav.vision,
+      partners: dict.nav.partners,
+      volunteer: dict.nav.volunteer,
+      leadership: dict.nav.leadership,
+      stories: dict.nav.stories,
+      field: dict.nav.field,
+      support: dict.nav.support,
+      contact: dict.nav.contact,
+      donate: dict.nav.donate,
+    },
+    a11y: {
+      skip: dict.a11y.skip,
+      openMenu: dict.a11y.openMenu,
+      closeMenu: dict.a11y.closeMenu,
+      menu: dict.a11y.menu,
+      aboutMenu: dict.a11y.aboutMenu,
+      langSwitch: dict.a11y.langSwitch,
+    },
+  };
+}
+
+function aboutLinks(locale: Locale, nav: HeaderCopy["nav"]) {
+  return [
+    { id: "team", label: nav.team, href: `/${locale}/team` },
+    { id: "vision", label: nav.vision, href: `/${locale}#manifesto` },
+    { id: "partners", label: nav.partners, href: `/${locale}#partners` },
+    { id: "volunteer", label: nav.volunteer, href: `/${locale}/contact` },
+    { id: "leadership", label: nav.leadership, href: `/${locale}/team#leadership` },
+  ];
+}
+
+function Chevron() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      className="h-4 w-4 opacity-70 transition-transform duration-200 ease-out-quart group-hover:rotate-180 group-focus-within:rotate-180"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function Header({ locale, copy }: { locale: Locale; copy: HeaderCopy }) {
-  const links = SECTIONS.map((id) => ({ id, label: copy.nav[id], href: `#${id}` }));
+  const links = SECTIONS.map((id) => ({ id, label: copy.nav[id], href: `/${locale}#${id}` }));
+  const about = aboutLinks(locale, copy.nav);
 
   return (
     <header className="fixed inset-x-0 top-0 z-[200] border-b border-line/80 bg-paper/90 shadow-soft backdrop-blur-md">
@@ -28,23 +87,53 @@ export function Header({ locale, copy }: { locale: Locale; copy: HeaderCopy }) {
       </a>
 
       <div className="shell flex h-[var(--header-h)] items-center justify-between gap-3">
-        <a
+        <Link
           href={`/${locale}`}
           aria-label={copy.brandName}
           className="shrink-0 rounded-lg text-ink-950 transition-opacity inline-flex hover:opacity-85"
         >
           <Logo name={copy.brandName} />
-        </a>
+        </Link>
 
         <nav aria-label={copy.a11y.menu} className="hidden items-center gap-0.5 xl:flex">
+          {/* אנחנו — dropdown */}
+          <div className="group relative">
+            <Link
+              href={`/${locale}#about`}
+              aria-haspopup="true"
+              className="inline-flex items-center gap-1 rounded-full px-3.5 py-2 text-[0.95rem] font-medium text-ink-700 transition-colors hover:bg-brand-50 hover:text-brand-800"
+            >
+              {copy.nav.about}
+              <Chevron />
+            </Link>
+            <div
+              role="group"
+              aria-label={copy.a11y.aboutMenu}
+              className="invisible absolute inset-inline-start-0 top-full w-56 translate-y-1 pt-2 opacity-0 transition-[opacity,transform,visibility] duration-200 ease-out-quart group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100"
+            >
+              <ul className="rounded-2xl border border-line bg-paper p-2 shadow-lift">
+                {about.map((l) => (
+                  <li key={l.id}>
+                    <Link
+                      href={l.href}
+                      className="block rounded-xl px-3.5 py-2.5 text-[0.95rem] font-medium text-ink-700 transition-colors hover:bg-brand-50 hover:text-brand-800"
+                    >
+                      {l.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
           {links.map((l) => (
-            <a
+            <Link
               key={l.id}
               href={l.href}
               className="rounded-full px-3.5 py-2 text-[0.95rem] font-medium text-ink-700 transition-colors hover:bg-brand-50 hover:text-brand-800"
             >
               {l.label}
-            </a>
+            </Link>
           ))}
         </nav>
 
@@ -56,7 +145,7 @@ export function Header({ locale, copy }: { locale: Locale; copy: HeaderCopy }) {
               a11yLabel={copy.a11y.langSwitch}
               className="text-ink-700 hover:bg-brand-50 hover:text-brand-800"
             />
-            <Button href="#donate" variant="give">
+            <Button href={`/${locale}#donate`} variant="give">
               {copy.nav.donate}
             </Button>
           </div>
@@ -94,18 +183,36 @@ export function Header({ locale, copy }: { locale: Locale; copy: HeaderCopy }) {
               <span className="absolute inset-x-0 top-1/2 h-0.5 -translate-y-1/2 -rotate-45 rounded-full bg-current" />
             </span>
           </a>
+
+          {/* אנחנו group */}
+          <p className="border-b border-line/70 py-4 font-display text-2xl font-bold text-ink-900">
+            {copy.nav.about}
+          </p>
+          <ul className="border-b border-line/70 pb-4 pt-1">
+            {about.map((l) => (
+              <li key={l.id}>
+                <Link
+                  href={l.href}
+                  className="block py-2.5 ps-4 text-lg font-semibold text-ink-700 transition-colors hover:text-brand-700"
+                >
+                  {l.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+
           {links.map((l, i) => (
-            <a
+            <Link
               key={l.id}
               href={l.href}
               style={{ transitionDelay: `${60 + i * 35}ms` }}
               className="border-b border-line/70 py-4 font-display text-2xl font-bold text-ink-900 transition-colors duration-300 hover:text-brand-700"
             >
               {l.label}
-            </a>
+            </Link>
           ))}
           <div className="mt-6 flex items-center gap-3">
-            <Button href="#donate" variant="give" size="lg" arrow className="flex-1">
+            <Button href={`/${locale}#donate`} variant="give" size="lg" arrow className="flex-1">
               {copy.nav.donate}
             </Button>
             <LangToggle
