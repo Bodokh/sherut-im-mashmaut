@@ -35,7 +35,6 @@ export const en: Dictionary = {
     volunteer: "Volunteer",
     leadership: "Leadership",
     stories: "Films & Stories",
-    field: "From the Field",
     testimonials: "What People Say",
     support: "Support",
     contact: "Contact",
@@ -63,11 +62,6 @@ export const en: Dictionary = {
     allTeam: "Meet the full team",
     members: [
       {
-        name: "Dr. Michal Kramer-Asaf",
-        role: "Lecturer & decision-making consultant",
-        bio: "Doctor of decision-making in leadership, consultant and lecturer at leading Israeli organizations, specializing in coaching for decision-making in complex situations. Developer of the 'Productivity Language for Managers' method, taught as a standard for commanders in the security forces and for managers in healthcare and hi-tech.",
-      },
-      {
         name: "Adv. Odelia Kadmi",
         role: "Founder",
         bio: "Founder of Service with Meaning. Mother of four, lawyer, member of the Zikhron Ya'akov council, entrepreneur, and activist for women's rights and civilian self-defense. Former squad commander and combat soldier in the CBRN unit of the Combat Engineering Corps.",
@@ -82,6 +76,24 @@ export const en: Dictionary = {
         role: "Activist & publicist",
         bio: "8200 alumna; studied law at Tel Aviv University. Activist and publicist — Im Tirtzu, the IDF Resilience Forum, and Shovrot Shivyon.",
       },
+    ],
+  },
+
+  reach: {
+    kicker: "A nationwide community",
+    title: "With you all the way",
+    lead: "Our community of women veterans stretches from north to south — continuing to guide, connect and support at every point along the way.",
+    mapLabel: "Map of Israel showing women veterans community locations",
+    cities: [
+      "Jerusalem",
+      "Jordan Valley",
+      "Judea & Samaria",
+      "Be'er Sheva",
+      "Mitzpe Ramon",
+      "Tel Aviv",
+      "Hadera",
+      "Zikhron Ya'akov",
+      "Golan Heights",
     ],
   },
 
@@ -121,33 +133,6 @@ export const en: Dictionary = {
         title: "From home to calling",
         excerpt: "Three young women, three paths, one connecting thread.",
         duration: "6:05",
-      },
-    ],
-  },
-
-  field: {
-    kicker: "From the Field",
-    title: "What's happening now",
-    lead: "Where we meet young women — in halls, on bases and in communities across the country.",
-    cta: "All updates",
-    items: [
-      {
-        date: "21 Sivan",
-        place: "Pre-military academy, North",
-        title: "Opening gathering before enlistment",
-        excerpt: "An evening of conversation on values and choice, with dozens of girls before service.",
-      },
-      {
-        date: "14 Sivan",
-        place: "Air Force base",
-        title: "Resilience & meaning workshop",
-        excerpt: "Meeting women soldiers in the routine of service — bringing back the why.",
-      },
-      {
-        date: "2 Sivan",
-        place: "Community center, South",
-        title: "Parents & young women gathering",
-        excerpt: "A shared conversation about the path to service — eye to eye.",
       },
     ],
   },
@@ -266,10 +251,15 @@ export const en: Dictionary = {
   teamPage: {
     metaTitle: "Our team — Service with Meaning",
     metaDescription:
-      "Meet the women leading Service with Meaning — lecturers, mentors and activists who have walked the path themselves.",
+      "Meet the team leading Service with Meaning — leadership, lecturers and mentors bringing personal experience and real work from the field.",
     kicker: "Who we are",
     title: "Our team",
-    lead: "The women behind Service with Meaning — lecturers, mentors and activists who bring personal story, honesty and simplicity to every gathering.",
+    lead: "The team behind Service with Meaning — leadership, lecturers and mentors bringing personal story, honesty and simplicity to every gathering.",
+    daniel: {
+      name: "Daniel Bodokh",
+      role: "Chairman & founder",
+      bio: "Married to Rivka and father of four. Chairman and founder of Service with Meaning, activist and publicist, and author of “Al Shtei HaSe'ipim.”",
+    },
     leadershipTitle: "Leadership",
     leadershipLead: "The nonprofit is led by its founder, together with the team of lecturers and mentors.",
     ctaTitle: "Want to bring us to you?",

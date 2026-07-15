@@ -5,10 +5,17 @@ import { LangToggle } from "./LangToggle";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
 
-const SECTIONS = ["stories", "field", "support", "contact"] as const;
-const ABOUT_ITEMS = ["team", "vision", "partners", "volunteer", "leadership"] as const;
+const SECTIONS = ["stories", "support", "contact"] as const;
 
-type HeaderNavKey = (typeof SECTIONS)[number] | (typeof ABOUT_ITEMS)[number] | "about" | "donate";
+type HeaderNavKey =
+  | (typeof SECTIONS)[number]
+  | "team"
+  | "vision"
+  | "partners"
+  | "volunteer"
+  | "leadership"
+  | "about"
+  | "donate";
 
 export type HeaderCopy = {
   brandName: string;
@@ -32,7 +39,6 @@ export function buildHeaderCopy(dict: Dictionary): HeaderCopy {
       volunteer: dict.nav.volunteer,
       leadership: dict.nav.leadership,
       stories: dict.nav.stories,
-      field: dict.nav.field,
       support: dict.nav.support,
       contact: dict.nav.contact,
       donate: dict.nav.donate,

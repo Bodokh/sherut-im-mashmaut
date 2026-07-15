@@ -12,11 +12,11 @@ export const media = {
 
   // Team portraits — order matches dictionary `about.members`.
   team: [
-    "/images/team/michal-kramer-asaf.jpg",
     "/images/team/odelia-kadmi.jpg",
     "/images/team/tzofnat-nordman.jpg",
     "/images/team/lizzy-hameiri.jpg",
   ],
+  danielBodokh: "/images/team/daniel-bodokh.webp",
 
   // Story moments — youth & togetherness, reflection.
   stories: [

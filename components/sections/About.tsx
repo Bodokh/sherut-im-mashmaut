@@ -16,7 +16,7 @@ export function About({ locale, dict }: { locale: Locale; dict: Dictionary }) {
         <p className="mt-5 text-lg leading-relaxed text-ink-700">{t.lead}</p>
       </div>
 
-      <ul className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <ul className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {t.members.map((m, i) => (
           <li
             key={m.name}

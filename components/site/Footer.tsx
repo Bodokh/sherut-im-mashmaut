@@ -9,7 +9,6 @@ const FOOTER_LINKS = [
   "about",
   "team",
   "stories",
-  "field",
   "testimonials",
   "support",
   "partners",

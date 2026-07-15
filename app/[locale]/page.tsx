@@ -7,7 +7,7 @@ import { Hero } from "@/components/sections/Hero";
 import { About } from "@/components/sections/About";
 import { Manifesto } from "@/components/sections/Manifesto";
 import { Stories } from "@/components/sections/Stories";
-import { Field } from "@/components/sections/Field";
+import { ReachMap } from "@/components/sections/ReachMap";
 import { Support } from "@/components/sections/Support";
 import { Partners } from "@/components/sections/Partners";
 import { Testimonials } from "@/components/sections/Testimonials";
@@ -27,7 +27,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
         <About locale={locale} dict={dict} />
         <Manifesto dict={dict} />
         <Stories dict={dict} />
-        <Field dict={dict} />
+        <ReachMap dict={dict} />
         <Support dict={dict} />
         <Partners locale={locale} dict={dict} />
         <Testimonials dict={dict} />

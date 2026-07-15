@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isLocale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
@@ -10,7 +9,7 @@ import { Section, Eyebrow } from "@/components/ui/Section";
 import { Button } from "@/components/ui/Button";
 import { media } from "@/lib/media";
 
-const FOUNDER_INDEX = 1; // אודליה קדמי — order matches `about.members` / `media.team`
+const FOUNDER_INDEX = 0; // אודליה קדמי — order matches `about.members` / `media.team`
 
 export async function generateMetadata({
   params,
@@ -34,8 +33,12 @@ export default async function TeamPage({
   if (!isLocale(locale)) notFound();
   const dict = getDictionary(locale);
   const t = dict.teamPage;
-  const members = dict.about.members;
-  const founder = members[FOUNDER_INDEX];
+  const lecturerMembers = dict.about.members;
+  const members = [
+    ...lecturerMembers.map((member, index) => ({ member, image: media.team[index] })),
+    { member: t.daniel, image: media.danielBodokh },
+  ];
+  const founder = lecturerMembers[FOUNDER_INDEX];
 
   return (
     <>
@@ -52,7 +55,7 @@ export default async function TeamPage({
           </div>
 
           <ul className="mt-14 grid gap-8 md:grid-cols-2">
-            {members.map((m, i) => (
+            {members.map(({ member: m, image }, i) => (
               <li
                 key={m.name}
                 data-reveal
@@ -61,7 +64,7 @@ export default async function TeamPage({
               >
                 <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-brand-100 sm:aspect-auto sm:min-h-44">
                   <Image
-                    src={media.team[i]}
+                    src={image}
                     alt={m.name}
                     fill
                     sizes="(max-width: 640px) 92vw, 176px"
