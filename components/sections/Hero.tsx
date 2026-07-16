@@ -70,7 +70,7 @@ export function Hero({ locale, dict }: { locale: Locale; dict: Dictionary }) {
       </div>
 
       {/* Values marquee — a quiet transition band */}
-      <div className="border-y border-line bg-surface/70 py-4">
+      <div className="hidden border-y border-line bg-surface/70 py-4 sm:block">
         <div className="marquee">
           <ul className="marquee-track items-center gap-0 text-ink-500">
             {values.map((v, i) => (

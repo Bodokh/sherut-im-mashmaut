@@ -76,6 +76,7 @@ export const he = {
     toTop: "חזרה למעלה",
     playFilm: "הפעלת הסרטון",
     langSwitch: "מעבר לאנגלית",
+    accessibilityMenu: "פתיחת תפריט הנגישות",
   },
 
   nav: {

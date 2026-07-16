@@ -1,4 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
+import devshiftLogo from "@/assets/devshift-logo.svg";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { contactLinks } from "@/lib/contact";
@@ -18,7 +20,7 @@ const FOOTER_LINKS = [
 
 export function Footer({ locale, dict }: { locale: Locale; dict: Dictionary }) {
   return (
-    <footer className="relative overflow-hidden bg-brand-950 text-brand-100" data-theme="dark">
+    <footer id="site-footer" className="relative overflow-hidden bg-brand-950 text-brand-100" data-theme="dark">
       <div aria-hidden className="weave absolute inset-0 opacity-50" />
       <div className="absolute inset-0 -z-0 bg-gradient-to-b from-brand-950 to-brand-900/60" aria-hidden />
 
@@ -91,9 +93,21 @@ export function Footer({ locale, dict }: { locale: Locale; dict: Dictionary }) {
 
         <div className="hr-brand mt-14 opacity-30" />
 
-        <div className="mt-6 flex flex-col items-start justify-between gap-2 text-sm text-brand-300 sm:flex-row sm:items-center">
+        <div className="mt-6 flex flex-col items-start justify-between gap-3 text-sm text-brand-300 sm:flex-row sm:items-center">
           <p>© {dict.brand.name} · {dict.footer.nonprofit} · {dict.footer.rights}</p>
-          <p>{dict.footer.madeWith}</p>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 sm:justify-end">
+            <p>{dict.footer.madeWith}</p>
+            <a
+              href="https://devshift.biz"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-brand-300 transition-colors hover:text-white focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+              dir="ltr"
+            >
+              <span>Built by</span>
+              <Image src={devshiftLogo} alt="DevShift" width={80} height={18} className="block opacity-85" />
+            </a>
+          </div>
         </div>
       </div>
     </footer>
