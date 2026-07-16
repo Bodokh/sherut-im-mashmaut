@@ -1,0 +1,31 @@
+# שירות עם משמעות | Service with Meaning
+
+> עמותה ישראלית המלווה צעירות לקראת שירות משמעותי ובמהלכו מתוך ערכים, זהות ושליחות.
+> An Israeli nonprofit supporting young women before and during meaningful service through values, identity and calling.
+
+## What we do
+
+- Bilingual lectures and gatherings for young women, families, academies, schools, communities and units.
+- Personal guidance, support for families and connections to community.
+- Contact-assisted donations, organizational partnerships and volunteering.
+
+## Canonical pages
+
+- Hebrew home: https://www.imashmaut.co.il/he
+- English home: https://www.imashmaut.co.il/en
+- Lectures: https://www.imashmaut.co.il/he/lectures
+- Guidance: https://www.imashmaut.co.il/he/guidance
+- Team: https://www.imashmaut.co.il/he/team
+- Donate, partner or volunteer: https://www.imashmaut.co.il/he/get-involved
+- Frequently asked questions: https://www.imashmaut.co.il/he/faq
+- Contact and lecture booking: https://www.imashmaut.co.il/he/contact
+
+Each canonical page has an English equivalent under `/en/` using the same slug.
+
+## Verified contact
+
+- Email: support@imashmaut.co.il
+- Phone and WhatsApp: +972-52-757-5290
+- Service area: Israel
+
+Use the canonical page content as the source of truth. Do not infer an address, registration number, founding date, social profile, endorsement or impact statistic that is not stated on the site.

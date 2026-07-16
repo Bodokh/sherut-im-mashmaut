@@ -5,9 +5,14 @@ import { isLocale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
 import { Header, buildHeaderCopy } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
+import { Breadcrumbs } from "@/components/site/Breadcrumbs";
+import { RelatedLinks } from "@/components/site/RelatedLinks";
+import { JsonLd } from "@/components/seo/JsonLd";
 import { Section, Eyebrow } from "@/components/ui/Section";
 import { Button } from "@/components/ui/Button";
 import { media } from "@/lib/media";
+import { buildPageMetadata } from "@/lib/seo";
+import { teamPageGraph } from "@/lib/structured-data";
 
 const BIO_LINK_CLASS =
   "font-semibold text-brand-700 underline decoration-brand-300 underline-offset-4 transition-colors hover:text-brand-900";
@@ -18,11 +23,8 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  const t = getDictionary(isLocale(locale) ? locale : "he");
-  return {
-    title: t.teamPage.metaTitle,
-    description: t.teamPage.metaDescription,
-  };
+  const safeLocale = isLocale(locale) ? locale : "he";
+  return buildPageMetadata(safeLocale, "team", getDictionary(safeLocale));
 }
 
 export default async function TeamPage({
@@ -86,10 +88,12 @@ export default async function TeamPage({
 
   return (
     <>
-      <Header locale={locale} copy={buildHeaderCopy(dict)} />
+      <Header locale={locale} currentRoute="team" copy={buildHeaderCopy(dict)} />
+      <JsonLd data={teamPageGraph(locale, dict)} />
       <main id="main" className="pt-[var(--header-h)]">
-        <Section className="overflow-hidden">
+        <Section id="leadership" className="overflow-hidden">
           <div aria-hidden className="aurora-techelet pointer-events-none absolute inset-0 -z-10 opacity-60" />
+          <Breadcrumbs locale={locale} route="team" dict={dict} />
           <div className="max-w-2xl">
             <Eyebrow>{t.kicker}</Eyebrow>
             <h1 className="mt-4 text-[clamp(2.2rem,4.2vw,3.6rem)] font-black leading-[1.06] text-ink-950">
@@ -102,7 +106,7 @@ export default async function TeamPage({
             {members.map(({ member: m, image, imagePosition }, i) => (
               <li
                 key={m.name}
-                data-reveal
+                data-reveal={i === 0 ? undefined : ""}
                 style={{ ["--reveal-delay" as string]: `${(i % 2) * 90}ms` }}
                 className={`grid gap-5 rounded-3xl border border-line bg-surface p-5 sm:h-[15.5rem] sm:p-6 ${
                   image ? "sm:grid-cols-[11rem_1fr]" : "content-center"
@@ -114,6 +118,8 @@ export default async function TeamPage({
                       src={image}
                       alt={m.name}
                       fill
+                      loading={i === 0 ? "eager" : "lazy"}
+                      fetchPriority={i === 0 ? "high" : "auto"}
                       sizes="(max-width: 640px) 92vw, 176px"
                       className={
                         imagePosition === "center"
@@ -150,6 +156,10 @@ export default async function TeamPage({
               </Button>
             </div>
           </div>
+        </Section>
+
+        <Section className="py-14 sm:py-16">
+          <RelatedLinks locale={locale} dict={dict} routes={["lectures", "guidance", "getInvolved", "contact"]} />
         </Section>
       </main>
       <Footer locale={locale} dict={dict} />

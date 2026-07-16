@@ -10,7 +10,7 @@ export function About({ locale, dict }: { locale: Locale; dict: Dictionary }) {
 
   return (
     <Section id="about">
-      <div className="max-w-3xl" data-reveal>
+      <div className="max-w-3xl" data-reveal="move">
         <Eyebrow>{t.kicker}</Eyebrow>
         <h2 className="mt-4 text-[clamp(2rem,3.6vw,3.25rem)] font-bold text-balance">{t.title}</h2>
         <p className="mt-5 text-lg leading-relaxed text-ink-700">{t.lead}</p>

@@ -4,16 +4,16 @@ import { Button } from "@/components/ui/Button";
 import { LangToggle } from "./LangToggle";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
+import { localizedPath, type SiteRouteKey } from "@/lib/routes";
 
-const SECTIONS = ["stories", "support", "contact"] as const;
+const PRIMARY_ROUTES = ["lectures", "guidance", "getInvolved", "faq", "contact"] as const;
 
 type HeaderNavKey =
-  | (typeof SECTIONS)[number]
+  | (typeof PRIMARY_ROUTES)[number]
   | "team"
   | "vision"
   | "partners"
-  | "volunteer"
-  | "leadership"
+  | "stories"
   | "about"
   | "donate";
 
@@ -23,7 +23,12 @@ export type HeaderCopy = {
   nav: Pick<Dictionary["nav"], HeaderNavKey>;
   a11y: Pick<
     Dictionary["a11y"],
-    "skip" | "openMenu" | "closeMenu" | "menu" | "aboutMenu" | "langSwitch"
+    | "skip"
+    | "openMenu"
+    | "closeMenu"
+    | "menu"
+    | "aboutMenu"
+    | "langSwitch"
   >;
 };
 
@@ -36,12 +41,13 @@ export function buildHeaderCopy(dict: Dictionary): HeaderCopy {
       team: dict.nav.team,
       vision: dict.nav.vision,
       partners: dict.nav.partners,
-      volunteer: dict.nav.volunteer,
-      leadership: dict.nav.leadership,
       stories: dict.nav.stories,
-      support: dict.nav.support,
       contact: dict.nav.contact,
       donate: dict.nav.donate,
+      lectures: dict.nav.lectures,
+      guidance: dict.nav.guidance,
+      getInvolved: dict.nav.getInvolved,
+      faq: dict.nav.faq,
     },
     a11y: {
       skip: dict.a11y.skip,
@@ -56,11 +62,10 @@ export function buildHeaderCopy(dict: Dictionary): HeaderCopy {
 
 function aboutLinks(locale: Locale, nav: HeaderCopy["nav"]) {
   return [
-    { id: "team", label: nav.team, href: `/${locale}/team` },
-    { id: "vision", label: nav.vision, href: `/${locale}#manifesto` },
-    { id: "partners", label: nav.partners, href: `/${locale}#partners` },
-    { id: "volunteer", label: nav.volunteer, href: `/${locale}/contact` },
-    { id: "leadership", label: nav.leadership, href: `/${locale}/team#leadership` },
+    { id: "team", label: nav.team, href: localizedPath(locale, "team") },
+    { id: "vision", label: nav.vision, href: `${localizedPath(locale, "home")}#manifesto` },
+    { id: "stories", label: nav.stories, href: `${localizedPath(locale, "home")}#stories` },
+    { id: "partners", label: nav.partners, href: `${localizedPath(locale, "home")}#partners` },
   ];
 }
 
@@ -79,8 +84,20 @@ function Chevron() {
   );
 }
 
-export function Header({ locale, copy }: { locale: Locale; copy: HeaderCopy }) {
-  const links = SECTIONS.map((id) => ({ id, label: copy.nav[id], href: `/${locale}#${id}` }));
+export function Header({
+  locale,
+  currentRoute,
+  copy,
+}: {
+  locale: Locale;
+  currentRoute: SiteRouteKey;
+  copy: HeaderCopy;
+}) {
+  const links = PRIMARY_ROUTES.map((id) => ({
+    id,
+    label: copy.nav[id],
+    href: localizedPath(locale, id),
+  }));
   const about = aboutLinks(locale, copy.nav);
 
   return (
@@ -94,19 +111,19 @@ export function Header({ locale, copy }: { locale: Locale; copy: HeaderCopy }) {
 
       <div className="shell flex h-[var(--header-h)] items-center justify-between gap-3">
         <Link
-          href={`/${locale}`}
+          href={localizedPath(locale, "home")}
           aria-label={copy.brandName}
-          className="shrink-0 rounded-lg text-ink-950 transition-opacity inline-flex hover:opacity-85"
+          className="inline-flex shrink-0 rounded-lg text-ink-950 transition-opacity hover:opacity-85"
         >
           <Logo name={copy.brandName} />
         </Link>
 
         <nav aria-label={copy.a11y.menu} className="hidden items-center gap-0.5 xl:flex">
-          {/* אנחנו — dropdown */}
           <div className="group relative">
             <Link
-              href={`/${locale}#about`}
+              href={`${localizedPath(locale, "home")}#about`}
               aria-haspopup="true"
+              aria-current={currentRoute === "team" ? "page" : undefined}
               className="inline-flex items-center gap-1 rounded-full px-3.5 py-2 text-[0.95rem] font-medium text-ink-700 transition-colors hover:bg-brand-50 hover:text-brand-800"
             >
               {copy.nav.about}
@@ -118,13 +135,13 @@ export function Header({ locale, copy }: { locale: Locale; copy: HeaderCopy }) {
               className="invisible absolute inset-inline-start-0 top-full w-56 translate-y-1 pt-2 opacity-0 transition-[opacity,transform,visibility] duration-200 ease-out-quart group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100"
             >
               <ul className="rounded-2xl border border-line bg-paper p-2 shadow-lift">
-                {about.map((l) => (
-                  <li key={l.id}>
+                {about.map((link) => (
+                  <li key={link.id}>
                     <Link
-                      href={l.href}
+                      href={link.href}
                       className="block rounded-xl px-3.5 py-2.5 text-[0.95rem] font-medium text-ink-700 transition-colors hover:bg-brand-50 hover:text-brand-800"
                     >
-                      {l.label}
+                      {link.label}
                     </Link>
                   </li>
                 ))}
@@ -132,13 +149,14 @@ export function Header({ locale, copy }: { locale: Locale; copy: HeaderCopy }) {
             </div>
           </div>
 
-          {links.map((l) => (
+          {links.map((link) => (
             <Link
-              key={l.id}
-              href={l.href}
+              key={link.id}
+              href={link.href}
+              aria-current={currentRoute === link.id ? "page" : undefined}
               className="rounded-full px-3.5 py-2 text-[0.95rem] font-medium text-ink-700 transition-colors hover:bg-brand-50 hover:text-brand-800"
             >
-              {l.label}
+              {link.label}
             </Link>
           ))}
         </nav>
@@ -149,9 +167,10 @@ export function Header({ locale, copy }: { locale: Locale; copy: HeaderCopy }) {
               locale={locale}
               label={copy.langName}
               a11yLabel={copy.a11y.langSwitch}
+              currentRoute={currentRoute}
               className="text-ink-700 hover:bg-brand-50 hover:text-brand-800"
             />
-            <Button href={`/${locale}#donate`} variant="give">
+            <Button href={localizedPath(locale, "getInvolved")} variant="give">
               {copy.nav.donate}
             </Button>
           </div>
@@ -170,7 +189,6 @@ export function Header({ locale, copy }: { locale: Locale; copy: HeaderCopy }) {
         </div>
       </div>
 
-      {/* Mobile menu */}
       <div
         id="mobile-menu"
         role="dialog"
@@ -190,41 +208,42 @@ export function Header({ locale, copy }: { locale: Locale; copy: HeaderCopy }) {
             </span>
           </a>
 
-          {/* אנחנו group */}
           <p className="border-b border-line/70 py-4 font-display text-2xl font-bold text-ink-900">
             {copy.nav.about}
           </p>
           <ul className="border-b border-line/70 pb-4 pt-1">
-            {about.map((l) => (
-              <li key={l.id}>
+            {about.map((link) => (
+              <li key={link.id}>
                 <Link
-                  href={l.href}
+                  href={link.href}
                   className="block py-2.5 ps-4 text-lg font-semibold text-ink-700 transition-colors hover:text-brand-700"
                 >
-                  {l.label}
+                  {link.label}
                 </Link>
               </li>
             ))}
           </ul>
 
-          {links.map((l, i) => (
+          {links.map((link, index) => (
             <Link
-              key={l.id}
-              href={l.href}
-              style={{ transitionDelay: `${60 + i * 35}ms` }}
+              key={link.id}
+              href={link.href}
+              aria-current={currentRoute === link.id ? "page" : undefined}
+              style={{ transitionDelay: `${60 + index * 35}ms` }}
               className="border-b border-line/70 py-4 font-display text-2xl font-bold text-ink-900 transition-colors duration-300 hover:text-brand-700"
             >
-              {l.label}
+              {link.label}
             </Link>
           ))}
           <div className="mt-6 flex items-center gap-3">
-            <Button href={`/${locale}#donate`} variant="give" size="lg" arrow className="flex-1">
+            <Button href={localizedPath(locale, "getInvolved")} variant="give" size="lg" arrow className="flex-1">
               {copy.nav.donate}
             </Button>
             <LangToggle
               locale={locale}
               label={copy.langName}
               a11yLabel={copy.a11y.langSwitch}
+              currentRoute={currentRoute}
               className="min-h-12 border border-line text-ink-800"
             />
           </div>
