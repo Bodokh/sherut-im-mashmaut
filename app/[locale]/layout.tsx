@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import Script from "next/script";
 import "../globals.css";
 import { locales, isLocale, dir } from "@/i18n/config";
-import { getDictionary } from "@/i18n/dictionaries";
+import { SITE_ORIGIN } from "@/lib/routes";
 import {
   USERWAY_ACCOUNT_ID,
   USERWAY_TRIGGER_ID,
@@ -14,30 +14,19 @@ export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ locale: string }>;
-}): Promise<Metadata> {
-  const { locale } = await params;
-  const t = getDictionary(isLocale(locale) ? locale : "he");
-  return {
-    metadataBase: new URL("https://imashmaut.co.il"),
-    title: t.meta.title,
-    description: t.meta.description,
-    openGraph: {
-      title: t.meta.title,
-      description: t.meta.description,
-      type: "website",
-      url: `/${locale}`,
-      locale: isLocale(locale) && locale === "en" ? "en_US" : "he_IL",
-    },
-    alternates: {
-      canonical: `/${locale}`,
-      languages: { he: "/he", en: "/en" },
-    },
-  };
-}
+export const metadata: Metadata = {
+  metadataBase: new URL(SITE_ORIGIN),
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: "/icon.png",
+    apple: "/apple-icon.png",
+  },
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+};
 
 export const viewport: Viewport = {
   themeColor: "#ffffff",

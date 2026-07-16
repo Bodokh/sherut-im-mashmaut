@@ -1,0 +1,821 @@
+{
+  "baseUrl": "http://127.0.0.1:3100",
+  "generatedAt": "2026-07-16T19:33:37.336Z",
+  "minimumScore": 92,
+  "pages": {
+    "/he": {
+      "performance": {
+        "min": 98,
+        "median": 98,
+        "max": 98
+      },
+      "accessibility": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      },
+      "best-practices": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      },
+      "seo": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      }
+    },
+    "/en": {
+      "performance": {
+        "min": 95,
+        "median": 95,
+        "max": 98
+      },
+      "accessibility": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      },
+      "best-practices": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      },
+      "seo": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      }
+    },
+    "/he/lectures": {
+      "performance": {
+        "min": 99,
+        "median": 99,
+        "max": 99
+      },
+      "accessibility": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      },
+      "best-practices": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      },
+      "seo": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      }
+    },
+    "/en/lectures": {
+      "performance": {
+        "min": 99,
+        "median": 99,
+        "max": 99
+      },
+      "accessibility": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      },
+      "best-practices": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      },
+      "seo": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      }
+    },
+    "/he/guidance": {
+      "performance": {
+        "min": 99,
+        "median": 99,
+        "max": 99
+      },
+      "accessibility": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      },
+      "best-practices": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      },
+      "seo": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      }
+    },
+    "/en/guidance": {
+      "performance": {
+        "min": 99,
+        "median": 99,
+        "max": 99
+      },
+      "accessibility": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      },
+      "best-practices": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      },
+      "seo": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      }
+    },
+    "/he/team": {
+      "performance": {
+        "min": 97,
+        "median": 97,
+        "max": 97
+      },
+      "accessibility": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      },
+      "best-practices": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      },
+      "seo": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      }
+    },
+    "/en/team": {
+      "performance": {
+        "min": 92,
+        "median": 97,
+        "max": 97
+      },
+      "accessibility": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      },
+      "best-practices": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      },
+      "seo": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      }
+    },
+    "/he/get-involved": {
+      "performance": {
+        "min": 99,
+        "median": 99,
+        "max": 99
+      },
+      "accessibility": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      },
+      "best-practices": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      },
+      "seo": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      }
+    },
+    "/en/get-involved": {
+      "performance": {
+        "min": 97,
+        "median": 99,
+        "max": 99
+      },
+      "accessibility": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      },
+      "best-practices": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      },
+      "seo": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      }
+    },
+    "/he/faq": {
+      "performance": {
+        "min": 97,
+        "median": 99,
+        "max": 99
+      },
+      "accessibility": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      },
+      "best-practices": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      },
+      "seo": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      }
+    },
+    "/en/faq": {
+      "performance": {
+        "min": 97,
+        "median": 99,
+        "max": 99
+      },
+      "accessibility": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      },
+      "best-practices": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      },
+      "seo": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      }
+    },
+    "/he/contact": {
+      "performance": {
+        "min": 99,
+        "median": 99,
+        "max": 99
+      },
+      "accessibility": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      },
+      "best-practices": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      },
+      "seo": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      }
+    },
+    "/en/contact": {
+      "performance": {
+        "min": 97,
+        "median": 99,
+        "max": 99
+      },
+      "accessibility": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      },
+      "best-practices": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      },
+      "seo": {
+        "min": 100,
+        "median": 100,
+        "max": 100
+      }
+    }
+  },
+  "results": [
+    {
+      "path": "/he",
+      "pass": 1,
+      "scores": {
+        "performance": 98,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2483,
+      "cls": 0
+    },
+    {
+      "path": "/he",
+      "pass": 2,
+      "scores": {
+        "performance": 98,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2490,
+      "cls": 0
+    },
+    {
+      "path": "/he",
+      "pass": 3,
+      "scores": {
+        "performance": 98,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2481,
+      "cls": 0
+    },
+    {
+      "path": "/en",
+      "pass": 1,
+      "scores": {
+        "performance": 95,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2894,
+      "cls": 0
+    },
+    {
+      "path": "/en",
+      "pass": 2,
+      "scores": {
+        "performance": 95,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2894,
+      "cls": 0
+    },
+    {
+      "path": "/en",
+      "pass": 3,
+      "scores": {
+        "performance": 98,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2481,
+      "cls": 0
+    },
+    {
+      "path": "/he/lectures",
+      "pass": 1,
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2179,
+      "cls": 0
+    },
+    {
+      "path": "/he/lectures",
+      "pass": 2,
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2180,
+      "cls": 0
+    },
+    {
+      "path": "/he/lectures",
+      "pass": 3,
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2179,
+      "cls": 0
+    },
+    {
+      "path": "/en/lectures",
+      "pass": 1,
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2180,
+      "cls": 0
+    },
+    {
+      "path": "/en/lectures",
+      "pass": 2,
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2181,
+      "cls": 0
+    },
+    {
+      "path": "/en/lectures",
+      "pass": 3,
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2177,
+      "cls": 0
+    },
+    {
+      "path": "/he/guidance",
+      "pass": 1,
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2178,
+      "cls": 0
+    },
+    {
+      "path": "/he/guidance",
+      "pass": 2,
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2179,
+      "cls": 0
+    },
+    {
+      "path": "/he/guidance",
+      "pass": 3,
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2102,
+      "cls": 0
+    },
+    {
+      "path": "/en/guidance",
+      "pass": 1,
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2181,
+      "cls": 0
+    },
+    {
+      "path": "/en/guidance",
+      "pass": 2,
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2182,
+      "cls": 0
+    },
+    {
+      "path": "/en/guidance",
+      "pass": 3,
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2181,
+      "cls": 0
+    },
+    {
+      "path": "/he/team",
+      "pass": 1,
+      "scores": {
+        "performance": 97,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2632,
+      "cls": 0
+    },
+    {
+      "path": "/he/team",
+      "pass": 2,
+      "scores": {
+        "performance": 97,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2630,
+      "cls": 0
+    },
+    {
+      "path": "/he/team",
+      "pass": 3,
+      "scores": {
+        "performance": 97,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2632,
+      "cls": 0
+    },
+    {
+      "path": "/en/team",
+      "pass": 1,
+      "scores": {
+        "performance": 97,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2635,
+      "cls": 0
+    },
+    {
+      "path": "/en/team",
+      "pass": 2,
+      "scores": {
+        "performance": 97,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2634,
+      "cls": 0
+    },
+    {
+      "path": "/en/team",
+      "pass": 3,
+      "scores": {
+        "performance": 92,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 3321,
+      "cls": 0
+    },
+    {
+      "path": "/he/get-involved",
+      "pass": 1,
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2187,
+      "cls": 0
+    },
+    {
+      "path": "/he/get-involved",
+      "pass": 2,
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2185,
+      "cls": 0
+    },
+    {
+      "path": "/he/get-involved",
+      "pass": 3,
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2193,
+      "cls": 0
+    },
+    {
+      "path": "/en/get-involved",
+      "pass": 1,
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2179,
+      "cls": 0
+    },
+    {
+      "path": "/en/get-involved",
+      "pass": 2,
+      "scores": {
+        "performance": 97,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2630,
+      "cls": 0
+    },
+    {
+      "path": "/en/get-involved",
+      "pass": 3,
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2188,
+      "cls": 0
+    },
+    {
+      "path": "/he/faq",
+      "pass": 1,
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2183,
+      "cls": 0
+    },
+    {
+      "path": "/he/faq",
+      "pass": 2,
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2184,
+      "cls": 0
+    },
+    {
+      "path": "/he/faq",
+      "pass": 3,
+      "scores": {
+        "performance": 97,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2596,
+      "cls": 0
+    },
+    {
+      "path": "/en/faq",
+      "pass": 1,
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2184,
+      "cls": 0
+    },
+    {
+      "path": "/en/faq",
+      "pass": 2,
+      "scores": {
+        "performance": 97,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2554,
+      "cls": 0
+    },
+    {
+      "path": "/en/faq",
+      "pass": 3,
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2184,
+      "cls": 0
+    },
+    {
+      "path": "/he/contact",
+      "pass": 1,
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2185,
+      "cls": 0
+    },
+    {
+      "path": "/he/contact",
+      "pass": 2,
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2260,
+      "cls": 0
+    },
+    {
+      "path": "/he/contact",
+      "pass": 3,
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2256,
+      "cls": 0
+    },
+    {
+      "path": "/en/contact",
+      "pass": 1,
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2257,
+      "cls": 0
+    },
+    {
+      "path": "/en/contact",
+      "pass": 2,
+      "scores": {
+        "performance": 97,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2592,
+      "cls": 0
+    },
+    {
+      "path": "/en/contact",
+      "pass": 3,
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "lcpMs": 2256,
+      "cls": 0
+    }
+  ]
+}

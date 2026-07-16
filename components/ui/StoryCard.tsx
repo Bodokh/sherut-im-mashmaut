@@ -89,7 +89,7 @@ export function StoryCard({
               <path d="M8 5.2v13.6c0 .8.9 1.3 1.6.8l10.2-6.8a1 1 0 0 0 0-1.6L9.6 4.4c-.7-.5-1.6 0-1.6.8Z" />
             </svg>
           </div>
-          <h3 className="mt-5 font-display text-2xl font-bold text-ink-950">{title}</h3>
+          <p className="mt-5 font-display text-2xl font-bold leading-tight text-ink-950">{title}</p>
           <p className="mt-2 leading-relaxed text-ink-600">{soon}</p>
           {videoUrl ? (
             <a

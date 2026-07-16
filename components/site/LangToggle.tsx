@@ -1,22 +1,26 @@
+import Link from "next/link";
 import { otherLocale, type Locale } from "@/i18n/config";
 import { cn } from "@/lib/cn";
+import { localizedPath, type SiteRouteKey } from "@/lib/routes";
 
 export function LangToggle({
   locale,
   label,
   a11yLabel,
+  currentRoute,
   className,
 }: {
   locale: Locale;
   label: string;
   a11yLabel: string;
+  currentRoute: SiteRouteKey;
   className?: string;
 }) {
   const target = otherLocale(locale);
 
   return (
-    <a
-      href={`/${target}`}
+    <Link
+      href={localizedPath(target, currentRoute)}
       hrefLang={target}
       aria-label={a11yLabel}
       className={cn(
@@ -34,6 +38,6 @@ export function LangToggle({
         />
       </svg>
       {label}
-    </a>
+    </Link>
   );
 }

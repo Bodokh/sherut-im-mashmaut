@@ -14,18 +14,12 @@ export function Manifesto({ dict }: { dict: Dictionary }) {
           {t.kicker}
         </p>
 
-        <div className="mt-6 space-y-1">
-          {t.lines.map((line, i) => (
-            <h2
-              key={i}
-              data-reveal
-              style={{ ["--reveal-delay" as string]: `${i * 140}ms` }}
-              className="text-balance text-[clamp(2rem,4.6vw,3.75rem)] font-bold leading-[1.08] text-white"
-            >
-              {line}
-            </h2>
-          ))}
-        </div>
+        <h2
+          data-reveal
+          className="mt-6 text-balance text-[clamp(2rem,4.6vw,3.75rem)] font-bold leading-[1.08] text-white"
+        >
+          {t.lines.map((line) => <span key={line} className="block">{line}</span>)}
+        </h2>
 
         <p
           className="mx-auto mt-7 max-w-2xl text-lg leading-relaxed text-brand-100"
