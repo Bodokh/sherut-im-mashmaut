@@ -1,16 +1,25 @@
+import Image from "next/image";
+
 import { Eyebrow, Section } from "@/components/ui/Section";
 import type { Dictionary } from "@/i18n/dictionaries";
 
-const mapPoints = [
-  { x: 65, y: 49, side: "right" }, // Jerusalem
-  { x: 72, y: 45, side: "right" }, // Jordan Valley
-  { x: 66, y: 38, side: "right" }, // Judea & Samaria
-  { x: 52, y: 64, side: "right" }, // Be'er Sheva
-  { x: 49, y: 78, side: "right" }, // Mitzpe Ramon
-  { x: 38, y: 43, side: "left" }, // Tel Aviv
-  { x: 39, y: 34, side: "left" }, // Hadera
-  { x: 40, y: 29, side: "left" }, // Zikhron Ya'akov
-  { x: 66, y: 13, side: "right" }, // Golan Heights
+type MapPoint = {
+  x: number;
+  y: number;
+  side: "left" | "right";
+  labelOffset?: number;
+};
+
+const mapPoints: readonly MapPoint[] = [
+  { x: 57.72, y: 42.31, side: "right" }, // Jerusalem
+  { x: 74.49, y: 33.89, side: "right", labelOffset: 15 }, // Jordan Valley
+  { x: 61.6, y: 31.85, side: "right", labelOffset: -15 }, // Judea & Samaria
+  { x: 32.98, y: 55.4, side: "right" }, // Be'er Sheva
+  { x: 33.54, y: 71.74, side: "right" }, // Mitzpe Ramon
+  { x: 32.41, y: 34.26, side: "left" }, // Tel Aviv
+  { x: 40.48, y: 25.4, side: "left", labelOffset: 6 }, // Hadera
+  { x: 42.37, y: 21.92, side: "left", labelOffset: -6 }, // Zikhron Ya'akov
+  { x: 85.04, y: 11.54, side: "right" }, // Golan Heights
 ] as const;
 
 export function ReachMap({ dict }: { dict: Dictionary }) {
@@ -43,58 +52,60 @@ export function ReachMap({ dict }: { dict: Dictionary }) {
 
         <div className="relative mx-auto aspect-[4/5] w-full max-w-[35rem]" data-reveal="scale">
           <div className="absolute inset-[4%_7%] rounded-[3rem] border border-white/10 bg-white/[0.035] shadow-glow" />
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 360 640"
-            className="absolute inset-0 h-full w-full drop-shadow-[0_28px_50px_rgba(4,20,55,0.35)]"
-          >
-            <defs>
-              <linearGradient id="israel-map-fill" x1="0" x2="1" y1="0" y2="1">
-                <stop offset="0" stopColor="var(--color-brand-300)" stopOpacity="0.95" />
-                <stop offset="0.55" stopColor="var(--color-brand-500)" stopOpacity="0.88" />
-                <stop offset="1" stopColor="var(--color-brand-700)" stopOpacity="0.96" />
-              </linearGradient>
-              <linearGradient id="israel-route-line" x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0" stopColor="var(--color-green-300)" />
-                <stop offset="1" stopColor="var(--color-brand-50)" />
-              </linearGradient>
-            </defs>
-            <path
-              d="M180 23c18 7 28 22 42 29l17 18-9 22 12 22-10 27 12 25-8 23 14 25-11 34 8 32-12 31 9 29-14 35-10 42-14 48-16 53-15 69-15 31-14-28 5-41-12-43 10-42-12-38 8-40-10-40 6-41-9-42 9-41-9-35 9-33-7-27 11-30-5-26 17-27Z"
-              fill="url(#israel-map-fill)"
-              stroke="var(--color-brand-100)"
-              strokeOpacity="0.72"
-              strokeWidth="2"
+          <div className="absolute left-1/2 top-1/2 h-[94%] aspect-[294.62534/792.60406] -translate-x-1/2 -translate-y-1/2">
+            <Image
+              aria-hidden="true"
+              alt=""
+              src="/media/israel-map.svg"
+              width={2357}
+              height={6341}
+              sizes="(max-width: 640px) 45vw, 18rem"
+              unoptimized
+              className="absolute inset-0 h-full w-full drop-shadow-[0_28px_50px_rgba(4,20,55,0.42)]"
             />
-            <path
-              d="M223 84c-25 61-26 110 1 158 23 42 8 72-20 108-34 44-19 90-28 154"
-              fill="none"
-              stroke="url(#israel-route-line)"
-              strokeDasharray="4 11"
-              strokeLinecap="round"
-              strokeWidth="2.5"
-              opacity="0.75"
-            />
-          </svg>
 
-          <ul aria-hidden className="absolute inset-0">
-            {mapPoints.map((point, index) => (
-              <li
-                key={t.cities[index]}
-                className="absolute -translate-x-1/2 -translate-y-1/2"
-                style={{ left: `${point.x}%`, top: `${point.y}%` }}
-              >
-                <span className="relative block h-3.5 w-3.5 rounded-full border-[3px] border-brand-950 bg-green-300 shadow-[0_0_0_5px_rgba(255,255,255,0.18),0_0_24px_rgba(123,224,167,0.75)]" />
-                <span
-                  className={`absolute top-1/2 hidden -translate-y-1/2 whitespace-nowrap rounded-full border border-white/10 bg-brand-950/80 px-2.5 py-1 text-xs font-semibold text-white shadow-soft backdrop-blur-sm sm:block ${
-                    point.side === "right" ? "left-5" : "right-5"
-                  }`}
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 294.62534 792.60406"
+              className="pointer-events-none absolute inset-0 h-full w-full"
+            >
+              <defs>
+                <linearGradient id="israel-route-line" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0" stopColor="var(--color-green-300)" />
+                  <stop offset="1" stopColor="var(--color-brand-50)" />
+                </linearGradient>
+              </defs>
+              <path
+                d="M250 92C222 148 165 170 139 220c-21 41-18 78 30 115 26 20-6 68-70 104-22 44-16 87 0 129 17 44 11 107 25 165"
+                fill="none"
+                stroke="url(#israel-route-line)"
+                strokeDasharray="4 11"
+                strokeLinecap="round"
+                strokeWidth="2.5"
+                opacity="0.72"
+              />
+            </svg>
+
+            <ul aria-hidden className="absolute inset-0 z-10">
+              {mapPoints.map((point, index) => (
+                <li
+                  key={t.cities[index]}
+                  className="absolute -translate-x-1/2 -translate-y-1/2"
+                  style={{ left: `${point.x}%`, top: `${point.y}%` }}
                 >
-                  {t.cities[index]}
-                </span>
-              </li>
-            ))}
-          </ul>
+                  <span className="relative block h-3.5 w-3.5 rounded-full border-[3px] border-brand-950 bg-green-300 shadow-[0_0_0_5px_rgba(255,255,255,0.18),0_0_24px_rgba(123,224,167,0.75)]" />
+                  <span
+                    className={`absolute top-1/2 hidden -translate-y-1/2 whitespace-nowrap rounded-full border border-white/10 bg-brand-950/80 px-2.5 py-1 text-xs font-semibold text-white shadow-soft backdrop-blur-sm sm:block ${
+                      point.side === "right" ? "left-5" : "right-5"
+                    }`}
+                    style={{ marginTop: point.labelOffset }}
+                  >
+                    {t.cities[index]}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
     </Section>

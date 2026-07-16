@@ -35,8 +35,16 @@ export default async function TeamPage({
   const t = dict.teamPage;
   const lecturerMembers = dict.about.members;
   const members = [
-    ...lecturerMembers.map((member, index) => ({ member, image: media.team[index] })),
-    { member: t.daniel, image: media.danielBodokh },
+    ...lecturerMembers.map((member, index) => ({
+      member,
+      image: media.team[index],
+      imagePosition: "top" as const,
+    })),
+    {
+      member: t.daniel,
+      image: media.danielBodokh,
+      imagePosition: "center" as const,
+    },
   ];
   const founder = lecturerMembers[FOUNDER_INDEX];
 
@@ -55,7 +63,7 @@ export default async function TeamPage({
           </div>
 
           <ul className="mt-14 grid gap-8 md:grid-cols-2">
-            {members.map(({ member: m, image }, i) => (
+            {members.map(({ member: m, image, imagePosition }, i) => (
               <li
                 key={m.name}
                 data-reveal
@@ -68,7 +76,11 @@ export default async function TeamPage({
                     alt={m.name}
                     fill
                     sizes="(max-width: 640px) 92vw, 176px"
-                    className="object-cover object-top"
+                    className={
+                      imagePosition === "center"
+                        ? "object-cover object-[center_30%]"
+                        : "object-cover object-top"
+                    }
                   />
                 </div>
                 <div>
