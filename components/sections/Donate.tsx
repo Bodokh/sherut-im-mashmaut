@@ -1,7 +1,9 @@
 import { Section } from "@/components/ui/Section";
+import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
+import { localizedPath } from "@/lib/routes";
 
-export function Donate({ dict }: { dict: Dictionary }) {
+export function Donate({ locale, dict }: { locale: Locale; dict: Dictionary }) {
   const t = dict.donate;
 
   return (
@@ -31,7 +33,7 @@ export function Donate({ dict }: { dict: Dictionary }) {
           {t.amounts.map((amount) => (
             <a
               key={amount}
-              href="#donate"
+              href={`${localizedPath(locale, "contact")}#contact-form`}
               className="min-w-20 rounded-full border border-white/35 px-5 py-2.5 font-display text-lg font-bold text-white transition-colors hover:bg-white hover:text-green-800"
             >
               <span dir="ltr">{t.currency}{amount}</span>
@@ -42,7 +44,7 @@ export function Donate({ dict }: { dict: Dictionary }) {
 
         <div className="mt-9 flex flex-col items-center justify-center gap-4 sm:flex-row" data-reveal style={{ ["--reveal-delay" as string]: "120ms" }}>
           <a
-            href="#donate"
+            href={`${localizedPath(locale, "contact")}#contact-form`}
             className="group inline-flex min-h-13 items-center justify-center gap-2 rounded-full bg-white px-8 text-base font-semibold text-green-800 shadow-lift transition-all duration-200 ease-out-quart hover:scale-[1.02] active:scale-[0.98]"
           >
             {t.cta}
@@ -50,7 +52,7 @@ export function Donate({ dict }: { dict: Dictionary }) {
               <path d="M5 12h14m0 0-5-5m5 5-5 5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </a>
-          <a href="#contact" className="font-semibold text-white/90 underline-offset-4 hover:text-white hover:underline">
+          <a href={localizedPath(locale, "getInvolved")} className="font-semibold text-white/90 underline-offset-4 hover:text-white hover:underline">
             {t.otherWays}
           </a>
         </div>

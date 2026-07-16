@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { isLocale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
@@ -13,6 +14,19 @@ import { Partners } from "@/components/sections/Partners";
 import { Testimonials } from "@/components/sections/Testimonials";
 import { Donate } from "@/components/sections/Donate";
 import { Contact } from "@/components/sections/Contact";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { buildPageMetadata } from "@/lib/seo";
+import { homeGraph } from "@/lib/structured-data";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const safeLocale = isLocale(locale) ? locale : "he";
+  return buildPageMetadata(safeLocale, "home", getDictionary(safeLocale));
+}
 
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -21,7 +35,8 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
   return (
     <>
-      <Header locale={locale} copy={buildHeaderCopy(dict)} />
+      <Header locale={locale} currentRoute="home" copy={buildHeaderCopy(dict)} />
+      <JsonLd data={homeGraph(locale, dict)} />
       <main id="main">
         <Hero locale={locale} dict={dict} />
         <About locale={locale} dict={dict} />
@@ -31,7 +46,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
         <Support dict={dict} />
         <Partners locale={locale} dict={dict} />
         <Testimonials dict={dict} />
-        <Donate dict={dict} />
+        <Donate locale={locale} dict={dict} />
         <Contact locale={locale} dict={dict} />
       </main>
       <Footer locale={locale} dict={dict} />
