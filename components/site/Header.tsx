@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { LangToggle } from "./LangToggle";
+import { UserWayAccessibilityTrigger } from "./UserWayAccessibilityTrigger";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
 
@@ -23,7 +24,13 @@ export type HeaderCopy = {
   nav: Pick<Dictionary["nav"], HeaderNavKey>;
   a11y: Pick<
     Dictionary["a11y"],
-    "skip" | "openMenu" | "closeMenu" | "menu" | "aboutMenu" | "langSwitch"
+    | "skip"
+    | "openMenu"
+    | "closeMenu"
+    | "menu"
+    | "aboutMenu"
+    | "langSwitch"
+    | "accessibilityMenu"
   >;
 };
 
@@ -50,6 +57,7 @@ export function buildHeaderCopy(dict: Dictionary): HeaderCopy {
       menu: dict.a11y.menu,
       aboutMenu: dict.a11y.aboutMenu,
       langSwitch: dict.a11y.langSwitch,
+      accessibilityMenu: dict.a11y.accessibilityMenu,
     },
   };
 }
@@ -144,6 +152,8 @@ export function Header({ locale, copy }: { locale: Locale; copy: HeaderCopy }) {
         </nav>
 
         <div className="flex items-center gap-1.5">
+          <UserWayAccessibilityTrigger label={copy.a11y.accessibilityMenu} />
+
           <div className="hidden items-center gap-1.5 sm:flex">
             <LangToggle
               locale={locale}

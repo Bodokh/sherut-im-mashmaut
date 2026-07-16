@@ -24,6 +24,7 @@ export const en: Dictionary = {
     toTop: "Back to top",
     playFilm: "Play the film",
     langSwitch: "Switch to Hebrew",
+    accessibilityMenu: "Open accessibility menu",
   },
 
   nav: {
