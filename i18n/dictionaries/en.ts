@@ -69,7 +69,7 @@ export const en: Dictionary = {
       {
         name: "Adv. Tzofnat Nordman",
         role: "CEO, Liberty & Human Dignity Forum",
-        bio: "Independent lawyer, CEO of the Liberty & Human Dignity Forum, representing the true interests of women. Mother of seven. Served in the State Attorney's Office and the civil service.",
+        bio: "Tzofnat Nordman is an independent attorney and CEO of the Liberty & Human Dignity Forum. She specializes in administrative and civil litigation. In High Court petitions, she represents concerns for the health of women participating in trials in the IDF.",
       },
       {
         name: "Lizzy HaMeiri",
@@ -250,19 +250,33 @@ export const en: Dictionary = {
   },
 
   teamPage: {
-    metaTitle: "Our team — Service with Meaning",
+    metaTitle: "Leadership team — Service with Meaning",
     metaDescription:
       "Meet the team leading Service with Meaning — leadership, lecturers and mentors bringing personal experience and real work from the field.",
     kicker: "Who we are",
-    title: "Our team",
+    title: "Leadership team",
     lead: "The team behind Service with Meaning — leadership, lecturers and mentors bringing personal story, honesty and simplicity to every gathering.",
     daniel: {
       name: "Daniel Bodokh",
       role: "Chairman & founder",
       bio: "Married to Rivka and father of four. Chairman and founder of Service with Meaning, activist and publicist, and author of “Al Shtei HaSe'ipim.”",
     },
-    leadershipTitle: "Leadership",
-    leadershipLead: "The nonprofit is led by its founder, together with the team of lecturers and mentors.",
+    eran: {
+      name: "Eran Bodokh",
+      role: "Chief Technology Officer",
+      bioExperience:
+        "Technology entrepreneur with more than a decade of experience building software and leading teams and AI products.",
+      bioBeforeDevShift: "Co-founder and CEO of ",
+      devshiftName: "DevShift",
+      bioBetweenCompanies: ", CTO of ",
+      aiCraftersName: "AI Crafters",
+      bioAfterCompanies: ", and activist.",
+    },
+    talia: {
+      name: "Talia Reuven",
+      role: "Graphic designer",
+      bio: "Graduate of Midreshet Danieli, part of the Bnei David institutions in Eli; activist and project leader.",
+    },
     ctaTitle: "Want to bring us to you?",
     ctaText: "A lecture, a talk or a gathering — for your institution, community or unit.",
     cta: "Invite a lecture",

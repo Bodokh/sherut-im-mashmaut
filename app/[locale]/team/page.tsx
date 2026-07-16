@@ -9,7 +9,8 @@ import { Section, Eyebrow } from "@/components/ui/Section";
 import { Button } from "@/components/ui/Button";
 import { media } from "@/lib/media";
 
-const FOUNDER_INDEX = 0; // אודליה קדמי — order matches `about.members` / `media.team`
+const BIO_LINK_CLASS =
+  "font-semibold text-brand-700 underline decoration-brand-300 underline-offset-4 transition-colors hover:text-brand-900";
 
 export async function generateMetadata({
   params,
@@ -45,8 +46,43 @@ export default async function TeamPage({
       image: media.danielBodokh,
       imagePosition: "center" as const,
     },
+    {
+      member: {
+        name: t.eran.name,
+        role: t.eran.role,
+        bio: (
+          <>
+            {t.eran.bioExperience} {t.eran.bioBeforeDevShift}
+            <a
+              href="https://devshift.biz"
+              target="_blank"
+              rel="noreferrer"
+              className={BIO_LINK_CLASS}
+            >
+              <bdi>{t.eran.devshiftName}</bdi>
+            </a>
+            {t.eran.bioBetweenCompanies}
+            <a
+              href="https://www.ai-crafters.com/"
+              target="_blank"
+              rel="noreferrer"
+              className={BIO_LINK_CLASS}
+            >
+              <bdi>{t.eran.aiCraftersName}</bdi>
+            </a>
+            {t.eran.bioAfterCompanies}
+          </>
+        ),
+      },
+      image: media.eranBodokh,
+      imagePosition: "center" as const,
+    },
+    {
+      member: t.talia,
+      image: null,
+      imagePosition: "top" as const,
+    },
   ];
-  const founder = lecturerMembers[FOUNDER_INDEX];
 
   return (
     <>
@@ -68,22 +104,26 @@ export default async function TeamPage({
                 key={m.name}
                 data-reveal
                 style={{ ["--reveal-delay" as string]: `${(i % 2) * 90}ms` }}
-                className="grid gap-5 rounded-3xl border border-line bg-surface p-5 sm:grid-cols-[11rem_1fr] sm:p-6"
+                className={`grid gap-5 rounded-3xl border border-line bg-surface p-5 sm:h-[15.5rem] sm:p-6 ${
+                  image ? "sm:grid-cols-[11rem_1fr]" : "content-center"
+                }`}
               >
-                <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-brand-100 sm:aspect-auto sm:min-h-44">
-                  <Image
-                    src={image}
-                    alt={m.name}
-                    fill
-                    sizes="(max-width: 640px) 92vw, 176px"
-                    className={
-                      imagePosition === "center"
-                        ? "object-cover object-[center_30%]"
-                        : "object-cover object-top"
-                    }
-                  />
-                </div>
-                <div>
+                {image ? (
+                  <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-brand-100 sm:aspect-auto sm:min-h-44">
+                    <Image
+                      src={image}
+                      alt={m.name}
+                      fill
+                      sizes="(max-width: 640px) 92vw, 176px"
+                      className={
+                        imagePosition === "center"
+                          ? "object-cover object-[center_30%]"
+                          : "object-cover object-top"
+                      }
+                    />
+                  </div>
+                ) : null}
+                <div className={image ? undefined : "self-center sm:px-4"}>
                   <h2 className="font-display text-2xl font-bold text-ink-950">{m.name}</h2>
                   <p className="mt-1 text-sm font-semibold text-brand-700">{m.role}</p>
                   <p className="mt-3 leading-relaxed text-ink-600">{m.bio}</p>
@@ -91,36 +131,6 @@ export default async function TeamPage({
               </li>
             ))}
           </ul>
-        </Section>
-
-        {/* צוות הנהלה */}
-        <Section id="leadership" tone="surface">
-          <div className="max-w-2xl" data-reveal>
-            <h2 className="text-[clamp(1.85rem,3.2vw,2.75rem)] font-bold text-balance">
-              {t.leadershipTitle}
-            </h2>
-            <p className="mt-4 text-lg leading-relaxed text-ink-700">{t.leadershipLead}</p>
-          </div>
-
-          <div
-            className="mt-10 grid max-w-3xl gap-5 rounded-3xl border border-line bg-paper p-5 sm:grid-cols-[10rem_1fr] sm:p-6"
-            data-reveal
-          >
-            <div className="relative aspect-square overflow-hidden rounded-2xl bg-brand-100">
-              <Image
-                src={media.team[FOUNDER_INDEX]}
-                alt={founder.name}
-                fill
-                sizes="(max-width: 640px) 92vw, 160px"
-                className="object-cover object-top"
-              />
-            </div>
-            <div>
-              <h3 className="font-display text-2xl font-bold text-ink-950">{founder.name}</h3>
-              <p className="mt-1 text-sm font-semibold text-brand-700">{founder.role}</p>
-              <p className="mt-3 leading-relaxed text-ink-600">{founder.bio}</p>
-            </div>
-          </div>
         </Section>
 
         {/* CTA */}

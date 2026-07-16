@@ -17,6 +17,7 @@ export const media = {
     "/images/team/lizzy-hameiri.jpg",
   ],
   danielBodokh: "/images/team/daniel-bodokh.webp",
+  eranBodokh: "/images/team/eran-bodokh.jpg",
 
   // Story moments — youth & togetherness, reflection.
   stories: [
