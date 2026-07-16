@@ -80,7 +80,7 @@ export default async function ContactPage({
 
           <div className="mt-12 grid gap-8 lg:grid-cols-12">
             <div className="lg:col-span-7">
-              <ContactForm form={dict.contact.form} email={d.email} />
+              <ContactForm form={dict.contact.form} />
             </div>
 
             <aside className="lg:col-span-5">

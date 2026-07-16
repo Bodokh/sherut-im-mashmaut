@@ -243,10 +243,11 @@ export const he = {
       again: "לשליחת הודעה נוספת",
       errorRequired: "נא למלא שדה זה",
       errorEmail: "כתובת דוא״ל לא תקינה",
+      errorSubmit: "לא הצלחנו לשלוח את ההודעה. נסו שוב בעוד רגע.",
     },
     details: {
       emailLabel: "דוא״ל",
-      email: "sherut.em.mashmaut@gmail.com",
+      email: "support@imashmaut.co.il",
       phoneLabel: "טלפון",
       phone: "052-7575-290",
       whatsappLabel: "וואטסאפ",

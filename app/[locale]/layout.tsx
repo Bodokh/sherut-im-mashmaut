@@ -16,15 +16,20 @@ export async function generateMetadata({
   const { locale } = await params;
   const t = getDictionary(isLocale(locale) ? locale : "he");
   return {
+    metadataBase: new URL("https://imashmaut.co.il"),
     title: t.meta.title,
     description: t.meta.description,
     openGraph: {
       title: t.meta.title,
       description: t.meta.description,
       type: "website",
+      url: `/${locale}`,
       locale: isLocale(locale) && locale === "en" ? "en_US" : "he_IL",
     },
-    alternates: { languages: { he: "/he", en: "/en" } },
+    alternates: {
+      canonical: `/${locale}`,
+      languages: { he: "/he", en: "/en" },
+    },
   };
 }
 

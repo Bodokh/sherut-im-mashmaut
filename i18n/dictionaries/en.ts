@@ -224,10 +224,11 @@ export const en: Dictionary = {
       again: "Send another message",
       errorRequired: "Please fill in this field",
       errorEmail: "Invalid email address",
+      errorSubmit: "We couldn't send your message. Please try again in a moment.",
     },
     details: {
       emailLabel: "Email",
-      email: "sherut.em.mashmaut@gmail.com",
+      email: "support@imashmaut.co.il",
       phoneLabel: "Phone",
       phone: "052-7575-290",
       whatsappLabel: "WhatsApp",
