@@ -1,4 +1,4 @@
-import type { Locale } from "@/i18n/config";
+import { defaultLocale, type Locale } from "@/i18n/config";
 
 export const SITE_ORIGIN = "https://www.imashmaut.co.il";
 
@@ -22,7 +22,9 @@ export const nonHomeRouteKeys = siteRouteKeys.filter(
 
 export function localizedPath(locale: Locale, route: SiteRouteKey): string {
   const slug = siteRoutes[route].slug;
-  return `/${locale}${slug ? `/${slug}` : ""}`;
+  const localePrefix = locale === defaultLocale ? "" : `/${locale}`;
+  if (!slug) return localePrefix || "/";
+  return `${localePrefix}/${slug}`;
 }
 
 export function absoluteUrl(locale: Locale, route: SiteRouteKey): string {

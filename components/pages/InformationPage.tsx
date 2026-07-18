@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Eyebrow, Section } from "@/components/ui/Section";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
-import type { SiteRouteKey } from "@/lib/routes";
+import { localizedPath, type SiteRouteKey } from "@/lib/routes";
 
 type InformationPageCopy = Dictionary["lecturesPage"];
 
@@ -81,7 +81,7 @@ export function InformationPage({
           <div className="relative mx-auto max-w-2xl text-center">
             <h2 className="text-[clamp(1.9rem,3.5vw,3rem)] font-bold text-white">{copy.ctaTitle}</h2>
             <p className="mt-4 text-lg leading-relaxed text-brand-100">{copy.ctaText}</p>
-            <Button href={`/${locale}/contact#contact-form`} variant="white" size="lg" arrow className="mt-8">
+            <Button href={`${localizedPath(locale, "contact")}#contact-form`} variant="white" size="lg" arrow className="mt-8">
               {copy.cta}
             </Button>
           </div>

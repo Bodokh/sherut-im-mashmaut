@@ -5,19 +5,19 @@ import { resolve } from "node:path";
 const baseUrl = process.env.SEO_BASE_URL ?? "http://127.0.0.1:3100";
 const outputDirectory = resolve("artifacts/seo-lighthouse-2026-07-16");
 const paths = [
-  "/he",
+  "/",
   "/en",
-  "/he/lectures",
+  "/lectures",
   "/en/lectures",
-  "/he/guidance",
+  "/guidance",
   "/en/guidance",
-  "/he/team",
+  "/team",
   "/en/team",
-  "/he/get-involved",
+  "/get-involved",
   "/en/get-involved",
-  "/he/faq",
+  "/faq",
   "/en/faq",
-  "/he/contact",
+  "/contact",
   "/en/contact",
 ];
 const categories = ["performance", "accessibility", "best-practices", "seo"];

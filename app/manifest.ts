@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "עמותה ישראלית המלווה צעירות אל שירות משמעותי מתוך ערכים, זהות ושליחות.",
     lang: "he",
     dir: "rtl",
-    start_url: "/he",
+    start_url: "/",
     display: "standalone",
     background_color: "#ffffff",
     theme_color: "#ffffff",

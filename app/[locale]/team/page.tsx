@@ -11,6 +11,7 @@ import { JsonLd } from "@/components/seo/JsonLd";
 import { Section, Eyebrow } from "@/components/ui/Section";
 import { Button } from "@/components/ui/Button";
 import { media } from "@/lib/media";
+import { localizedPath } from "@/lib/routes";
 import { buildPageMetadata } from "@/lib/seo";
 import { teamPageGraph } from "@/lib/structured-data";
 
@@ -151,7 +152,7 @@ export default async function TeamPage({
               {t.ctaText}
             </p>
             <div className="mt-8" data-reveal>
-              <Button href={`/${locale}/contact`} variant="white" size="lg" arrow>
+              <Button href={localizedPath(locale, "contact")} variant="white" size="lg" arrow>
                 {t.cta}
               </Button>
             </div>

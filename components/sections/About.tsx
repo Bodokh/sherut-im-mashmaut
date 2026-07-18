@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Section, Eyebrow } from "@/components/ui/Section";
 import { media } from "@/lib/media";
+import { localizedPath } from "@/lib/routes";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
 
@@ -44,7 +45,7 @@ export function About({ locale, dict }: { locale: Locale; dict: Dictionary }) {
 
       <div className="mt-8">
         <Link
-          href={`/${locale}/team`}
+          href={localizedPath(locale, "team")}
           className="group inline-flex items-center gap-1.5 font-semibold text-brand-700 transition-colors hover:text-brand-800"
         >
           {t.allTeam}

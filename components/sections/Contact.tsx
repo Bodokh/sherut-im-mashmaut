@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Section, Eyebrow } from "@/components/ui/Section";
 import { contactLinks } from "@/lib/contact";
+import { localizedPath } from "@/lib/routes";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
 
@@ -66,7 +67,7 @@ export function Contact({ locale, dict }: { locale: Locale; dict: Dictionary }) 
             <p className="mt-1 text-[0.95rem] leading-relaxed text-ink-600">{t.inviteText}</p>
           </div>
           <Link
-            href={`/${locale}/contact`}
+            href={localizedPath(locale, "contact")}
             className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-brand-700 px-6 font-semibold text-white shadow-soft transition-all duration-200 ease-out-quart hover:bg-brand-800 hover:shadow-lift"
           >
             {t.inviteCta}

@@ -10,6 +10,7 @@ import { Eyebrow, Section } from "@/components/ui/Section";
 import { isLocale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
 import { buildPageMetadata } from "@/lib/seo";
+import { localizedPath } from "@/lib/routes";
 import { faqPageGraph } from "@/lib/structured-data";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
@@ -62,7 +63,7 @@ export default async function FaqPage({ params }: { params: Promise<{ locale: st
           <div className="relative mx-auto max-w-2xl text-center">
             <h2 className="text-[clamp(1.9rem,3.5vw,3rem)] font-bold text-white">{copy.ctaTitle}</h2>
             <p className="mt-4 text-lg leading-relaxed text-brand-100">{copy.ctaText}</p>
-            <Button href={`/${locale}/contact#contact-form`} variant="white" size="lg" arrow className="mt-8">
+            <Button href={`${localizedPath(locale, "contact")}#contact-form`} variant="white" size="lg" arrow className="mt-8">
               {copy.cta}
             </Button>
           </div>

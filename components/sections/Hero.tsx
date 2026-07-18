@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Section";
 import { VideoFacade } from "@/components/ui/VideoFacade";
 import { media } from "@/lib/media";
+import { localizedPath } from "@/lib/routes";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
 
@@ -41,7 +42,7 @@ export function Hero({ locale, dict }: { locale: Locale; dict: Dictionary }) {
           </p>
 
           <div className="mt-9 flex flex-wrap items-center gap-3">
-            <Button href={`/${locale}/contact`} variant="primary" size="lg" arrow>
+            <Button href={localizedPath(locale, "contact")} variant="primary" size="lg" arrow>
               {t.ctaPrimary}
             </Button>
             <Button href="#about" variant="outline" size="lg">

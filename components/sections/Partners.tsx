@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Section } from "@/components/ui/Section";
+import { localizedPath } from "@/lib/routes";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
 
@@ -37,7 +38,7 @@ export function Partners({ locale, dict }: { locale: Locale; dict: Dictionary })
       <div className="mt-10 flex flex-col items-center gap-3 text-center">
         <p className="text-sm text-ink-500">{t.note}</p>
         <Link
-          href={`/${locale}/contact`}
+          href={localizedPath(locale, "contact")}
           className="group inline-flex items-center gap-1.5 font-semibold text-brand-700 transition-colors hover:text-brand-800"
         >
           {t.cta}

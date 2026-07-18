@@ -1,21 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { locales, defaultLocale } from "@/i18n/config";
-import { knownUnprefixedPaths } from "@/lib/routes";
+import { defaultLocale } from "@/i18n/config";
 
-// Ensure every visitor lands on a locale-prefixed path (/he by default).
+// Permanently clean up the old explicit prefix for the default Hebrew locale.
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const hasLocale = locales.some(
-    (locale) => pathname === `/${locale}` || pathname.startsWith(`/${locale}/`),
-  );
-  if (hasLocale) return NextResponse.next();
+  const defaultPrefix = `/${defaultLocale}`;
+  if (pathname === defaultPrefix || pathname.startsWith(`${defaultPrefix}/`)) {
+    const url = request.nextUrl.clone();
+    url.pathname = pathname.slice(defaultPrefix.length) || "/";
+    return NextResponse.redirect(url, 308);
+  }
 
-  if (!knownUnprefixedPaths.includes(pathname)) return NextResponse.next();
-
-  const url = request.nextUrl.clone();
-  url.pathname = `/${defaultLocale}${pathname === "/" ? "" : pathname}`;
-  return NextResponse.redirect(url, 308);
+  return NextResponse.next();
 }
 
 export const config = {

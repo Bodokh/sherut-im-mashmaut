@@ -2,8 +2,17 @@ const baseUrl = process.env.SEO_BASE_URL ?? "http://127.0.0.1:3100";
 const origin = "https://www.imashmaut.co.il";
 const locales = ["he", "en"];
 const slugs = ["", "lectures", "guidance", "team", "get-involved", "faq", "contact"];
-const paths = locales.flatMap((locale) =>
-  slugs.map((slug) => `/${locale}${slug ? `/${slug}` : ""}`),
+const localizedPath = (locale, slug) => {
+  const localePrefix = locale === "he" ? "" : `/${locale}`;
+  if (!slug) return localePrefix || "/";
+  return `${localePrefix}/${slug}`;
+};
+const metadataUrl = (locale, slug) => {
+  const path = localizedPath(locale, slug);
+  return path === "/" ? origin : `${origin}${path}`;
+};
+const pages = locales.flatMap((locale) =>
+  slugs.map((slug) => ({ locale, slug, path: localizedPath(locale, slug) })),
 );
 
 function assert(condition, message) {
@@ -48,7 +57,7 @@ function schemaTypes(html) {
 }
 
 function expectedSchema(path) {
-  if (/^\/(he|en)$/.test(path)) return ["NGO", "WebSite", "WebPage"];
+  if (path === "/" || path === "/en") return ["NGO", "WebSite", "WebPage"];
   if (path.endsWith("/team")) return ["AboutPage", "Person", "BreadcrumbList"];
   if (path.endsWith("/contact")) return ["ContactPage", "BreadcrumbList"];
   if (path.endsWith("/lectures") || path.endsWith("/guidance")) return ["Service", "BreadcrumbList"];
@@ -59,11 +68,10 @@ function expectedSchema(path) {
 const titles = new Set();
 const descriptions = new Set();
 
-for (const path of paths) {
+for (const { locale, path, slug } of pages) {
   const response = await fetch(`${baseUrl}${path}`);
   assert(response.status === 200, `${path}: expected 200, received ${response.status}`);
   const html = await response.text();
-  const locale = path.split("/")[1];
   const expectedDir = locale === "he" ? "rtl" : "ltr";
   const htmlTag = tags(html, "html")[0];
   assert(attr(htmlTag, "lang") === locale, `${path}: incorrect lang`);
@@ -79,10 +87,9 @@ for (const path of paths) {
   descriptions.add(description);
 
   const canonical = linkHref(html, "canonical");
-  assert(canonical === `${origin}${path}`, `${path}: incorrect canonical ${canonical}`);
-  const slug = path.split("/").slice(2).join("/");
-  const heUrl = `${origin}/he${slug ? `/${slug}` : ""}`;
-  const enUrl = `${origin}/en${slug ? `/${slug}` : ""}`;
+  assert(canonical === metadataUrl(locale, slug), `${path}: incorrect canonical ${canonical}`);
+  const heUrl = metadataUrl("he", slug);
+  const enUrl = metadataUrl("en", slug);
   assert(linkHref(html, "alternate", "he") === heUrl, `${path}: incorrect he alternate`);
   assert(linkHref(html, "alternate", "en") === enUrl, `${path}: incorrect en alternate`);
   assert(linkHref(html, "alternate", "x-default") === heUrl, `${path}: incorrect x-default`);
@@ -108,7 +115,11 @@ for (const path of paths) {
 
   const internalLinks = tags(html, "a")
     .map((tag) => attr(tag, "href"))
-    .filter((href) => href?.startsWith(`/${locale}`));
+    .filter((href) =>
+      locale === "he"
+        ? href === "/" || slugs.slice(1).some((knownSlug) => href?.startsWith(`/${knownSlug}`))
+        : href?.startsWith("/en"),
+    );
   assert(new Set(internalLinks).size >= 5, `${path}: fewer than five distinct localized internal links`);
   assert(!html.includes('href="#"'), `${path}: contains a placeholder href`);
 }
@@ -119,7 +130,8 @@ assert(sitemapResponse.headers.get("content-type")?.includes("xml"), "sitemap: i
 const sitemap = await sitemapResponse.text();
 const sitemapLocations = [...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map((match) => match[1]);
 assert(sitemapLocations.length === 14, `sitemap: expected 14 URLs, received ${sitemapLocations.length}`);
-for (const path of paths) assert(sitemapLocations.includes(`${origin}${path}`), `sitemap: missing ${path}`);
+for (const { path } of pages) assert(sitemapLocations.includes(`${origin}${path}`), `sitemap: missing ${path}`);
+assert(!sitemapLocations.some((location) => new URL(location).pathname.startsWith("/he")), "sitemap: legacy /he URL found");
 assert((sitemap.match(/hreflang=/g) ?? []).length === 42, "sitemap: expected three language alternates per URL");
 
 const robotsResponse = await fetch(`${baseUrl}/robots.txt`);
@@ -142,11 +154,12 @@ for (const [resource, contentType] of [
   assert(response.headers.get("content-type")?.includes(contentType), `${resource}: incorrect content type`);
 }
 
-for (const path of ["/", "/lectures", "/guidance", "/team", "/get-involved", "/faq", "/contact"]) {
-  const response = await fetch(`${baseUrl}${path}`, { redirect: "manual" });
-  assert(response.status === 308, `${path}: expected permanent 308, received ${response.status}`);
+for (const slug of slugs) {
+  const legacyPath = `/he${slug ? `/${slug}` : ""}`;
+  const response = await fetch(`${baseUrl}${legacyPath}`, { redirect: "manual" });
+  assert(response.status === 308, `${legacyPath}: expected permanent 308, received ${response.status}`);
   const target = new URL(response.headers.get("location"), baseUrl);
-  assert(target.pathname === `/he${path === "/" ? "" : path}`, `${path}: incorrect redirect target`);
+  assert(target.pathname === localizedPath("he", slug), `${legacyPath}: incorrect redirect target`);
 }
 
 const unknown = await fetch(`${baseUrl}/not-a-real-page`, { redirect: "manual" });
@@ -157,4 +170,4 @@ if (flyer.status === 200) {
   assert(flyer.headers.get("x-robots-tag") === "noindex, nofollow", "flyer: missing X-Robots-Tag");
 }
 
-console.log(`SEO validation passed for ${paths.length} localized pages.`);
+console.log(`SEO validation passed for ${pages.length} localized pages.`);
