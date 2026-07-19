@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <title>שירות עם משמעות — פלייר A4</title>
+    <style>
+      @page { size: A4 portrait; margin: 0; }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; width: 210mm; height: 297mm; }
+      body { font-family: "Assistant", "Arial Hebrew", Arial, sans-serif; }
+      .page {
+        position: relative;
+        width: 210mm;
+        height: 297mm;
+        overflow: hidden;
+        background: #071427 url("http://127.0.0.1:3000/images/hero-poster.webp") center / cover no-repeat;
+        color: #fff;
+      }
+      .wash {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background:
+          linear-gradient(180deg, rgba(8, 20, 37, .82) 0%, rgba(8, 20, 37, .12) 43%, rgba(6, 16, 31, .36) 66%, rgba(4, 13, 27, .96) 100%),
+          linear-gradient(90deg, rgba(7, 17, 32, .12), rgba(7, 17, 32, .42));
+      }
+      .brand {
+        position: absolute;
+        top: 12mm;
+        right: 13mm;
+        display: block;
+        width: 72mm;
+        height: 12mm;
+      }
+      .brand img { position: absolute; top: 0; right: 0; width: 12mm; height: 12mm; border-radius: 50%; }
+      .brand div { position: absolute; top: 1mm; right: 15mm; width: 55mm; }
+      .brand strong { display: block; font-size: 6.7mm; line-height: 1; font-weight: 700; }
+      .brand span { display: block; margin-top: 1.4mm; font-size: 3.4mm; line-height: 1; font-weight: 700; }
+      .kicker {
+        position: absolute;
+        top: 38mm;
+        right: 13mm;
+        color: #d9efff;
+        font-size: 4.8mm;
+        font-weight: 700;
+      }
+      .kicker::before,
+      .questions li::before {
+        display: inline-block;
+        border-radius: 50%;
+        background: #62cb83;
+        content: "";
+      }
+      .kicker::before { width: 1.6mm; height: 1.6mm; margin-left: 2mm; vertical-align: 1mm; }
+      h1 {
+        position: absolute;
+        top: 50mm;
+        right: auto;
+        left: 13mm;
+        width: 184mm;
+        margin: 0;
+        color: #fff;
+        font-size: 22mm;
+        font-weight: 700;
+        letter-spacing: -.035em;
+        line-height: .93;
+        direction: rtl;
+        text-align: right;
+      }
+      h1 span { display: block; white-space: nowrap; }
+      h1 em { display: block; color: #aaddff; font-style: normal; white-space: nowrap; }
+      .questions {
+        position: absolute;
+        top: 96mm;
+        right: auto;
+        left: 13mm;
+        width: 184mm;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        direction: rtl;
+        text-align: right;
+      }
+      .questions li {
+        position: relative;
+        margin: 0 0 4mm;
+        padding-right: 5mm;
+        font-size: 6.1mm;
+        font-weight: 700;
+        line-height: 1.16;
+      }
+      .questions li::before {
+        position: absolute;
+        top: 2.2mm;
+        right: 0;
+        width: 1.6mm;
+        height: 1.6mm;
+      }
+      .lead {
+        position: absolute;
+        top: 131mm;
+        right: auto;
+        left: 13mm;
+        width: 184mm;
+        margin: 0;
+        color: #edf8ff;
+        font-size: 4.65mm;
+        font-weight: 400;
+        line-height: 1.36;
+        direction: rtl;
+        text-align: right;
+      }
+      .values {
+        position: absolute;
+        top: 176mm;
+        right: 12.5mm;
+        width: 185mm;
+        padding: 7mm 0;
+        border-top: .25mm solid rgba(255,255,255,.34);
+        border-bottom: .25mm solid rgba(255,255,255,.34);
+        background: rgba(8, 18, 33, .22);
+        color: rgba(255,255,255,.72);
+        font-size: 8.7mm;
+        font-weight: 700;
+        text-align: center;
+      }
+      .footer-panel {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        height: 90mm;
+        background: linear-gradient(180deg, rgba(4, 14, 28, .48), rgba(3, 12, 25, .92));
+      }
+      .footer-rule {
+        position: absolute;
+        top: 0;
+        right: 12.5mm;
+        left: 12.5mm;
+        border-top: .25mm solid rgba(255,255,255,.22);
+      }
+      .footer-copy {
+        position: absolute;
+        top: 21mm;
+        right: 13mm;
+        width: 140mm;
+        text-align: right;
+      }
+      .footer-copy .label {
+        margin: 0 0 2mm;
+        color: #62cb83;
+        font-size: 4.7mm;
+        font-weight: 700;
+      }
+      .footer-copy p {
+        margin: 0 0 2.2mm;
+        color: #d7e9f6;
+        font-size: 4.45mm;
+        font-weight: 400;
+        line-height: 1.32;
+      }
+      .footer-copy strong {
+        display: block;
+        margin-top: 2.5mm;
+        font-size: 6.7mm;
+        line-height: 1;
+      }
+      .footer-copy .phone {
+        margin-top: 2.5mm;
+        color: #fff;
+        font-size: 5.8mm;
+        font-weight: 700;
+        letter-spacing: .04em;
+        direction: ltr;
+        text-align: right;
+      }
+      .qr {
+        position: absolute;
+        top: 30mm;
+        left: 12.5mm;
+        width: 34mm;
+        padding: 4mm 3mm;
+        border-radius: 5mm;
+        background: #fff;
+        color: #14233b;
+        text-align: center;
+      }
+      .qr img { width: 22mm; height: 22mm; margin: 0 auto 2mm; }
+      .qr span { font-size: 3.3mm; font-weight: 700; white-space: nowrap; }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <div class="wash"></div>
+      <header class="brand">
+        <img src="http://127.0.0.1:3000/images/logo-mark.png" alt="" />
+        <div><strong>שירות עם משמעות</strong><span>ערכים · זהות · שליחות</span></div>
+      </header>
+      <div class="kicker">שיחה לצעירות לקראת שירות לאומי/צבאי</div>
+      <h1><span>לבחור נכון.</span><em>באמת.</em></h1>
+      <ul class="questions">
+        <li>איך לקבל החלטה מושכלת?</li>
+        <li>איפה התרומה שלי הכי משמעותית?</li>
+        <li>איך אני מתחברת לעוצמה הנשית שבי?</li>
+      </ul>
+      <p class="lead">בשיחה מרתקת ומחזקת, דרך דברים שיוצאים מן הלב ונכנסים אל הלב ומתוך סיפור אישי של צמיחה ולמידה — מהפרטי אל הלאומי — אנו נסייע לצעירות למצוא בתוכן את היכולת לבחור נכון באמת.</p>
+      <div class="values">בחירה · משמעות · נשיות</div>
+      <footer class="footer-panel">
+        <div class="footer-rule"></div>
+        <div class="footer-copy">
+          <div class="label">אנחנו מכירות את השטח</div>
+          <p>אנחנו צוות נשים שמקשיבות לבנות ומכירות את המורכבויות. הכנה נכונה לפני השירות תיתן כלים להפעיל שיקול דעת מקיף יותר, כדי לקבל את ההחלטה הנכונה עבורן.</p>
+          <p>בוגרות צבא מגיעות כדי לשתף את הבנות בחוויות האישיות ובתובנות שלהן ממקור ראשון.</p>
+          <strong>לתיאום שיחה</strong>
+          <p class="phone" dir="ltr">052-7575-290</p>
+        </div>
+        <div class="qr">
+          <img src="http://127.0.0.1:3000/flyers/assets/whatsapp-qr.svg" alt="" />
+          <span>לתיאום בוואטסאפ</span>
+        </div>
+      </footer>
+    </main>
+  </body>
+</html>

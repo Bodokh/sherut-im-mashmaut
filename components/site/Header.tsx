@@ -13,8 +13,6 @@ type HeaderNavKey =
   | (typeof PRIMARY_ROUTES)[number]
   | "team"
   | "vision"
-  | "partners"
-  | "stories"
   | "about"
   | "donate";
 
@@ -42,8 +40,6 @@ export function buildHeaderCopy(dict: Dictionary): HeaderCopy {
       about: dict.nav.about,
       team: dict.nav.team,
       vision: dict.nav.vision,
-      partners: dict.nav.partners,
-      stories: dict.nav.stories,
       contact: dict.nav.contact,
       donate: dict.nav.donate,
       lectures: dict.nav.lectures,
@@ -67,8 +63,6 @@ function aboutLinks(locale: Locale, nav: HeaderCopy["nav"]) {
   return [
     { id: "team", label: nav.team, href: localizedPath(locale, "team") },
     { id: "vision", label: nav.vision, href: `${localizedPath(locale, "home")}#manifesto` },
-    { id: "stories", label: nav.stories, href: `${localizedPath(locale, "home")}#stories` },
-    { id: "partners", label: nav.partners, href: `${localizedPath(locale, "home")}#partners` },
   ];
 }
 

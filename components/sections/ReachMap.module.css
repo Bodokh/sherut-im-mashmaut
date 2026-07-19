@@ -1,0 +1,184 @@
+.mapStage {
+  isolation: isolate;
+}
+
+.mapBody {
+  isolation: isolate;
+}
+
+.mapHalo {
+  position: absolute;
+  z-index: -1;
+  inset: 8% -95%;
+  background: radial-gradient(
+    ellipse at center,
+    oklch(0.748 0.138 150 / 0.2) 0%,
+    oklch(0.622 0.16 248 / 0.14) 34%,
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+.mapPoint {
+  transform: translate(-50%, -50%);
+}
+
+.pointMarker::after {
+  content: "";
+  position: absolute;
+  inset: -0.7rem;
+  border: 1px solid oklch(0.822 0.112 150 / 0.78);
+  border-radius: inherit;
+  opacity: 0;
+  transform: scale(0.45);
+}
+
+.mapStage[data-map-debug]::after {
+  content: attr(data-map-debug);
+  position: absolute;
+  z-index: 30;
+  top: 6%;
+  left: 50%;
+  direction: ltr;
+  transform: translateX(-50%);
+  border: 1px solid oklch(1 0 0 / 0.25);
+  border-radius: 999px;
+  background: oklch(0.224 0.072 262 / 0.92);
+  padding: 0.35rem 0.7rem;
+  color: white;
+  font: 600 0.72rem/1 system-ui, sans-serif;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.mapStage[data-map-motion="armed"] .stageFrame {
+    opacity: 0;
+    transform: scale(0.955);
+  }
+
+  .mapStage[data-map-motion="armed"] .mapHalo {
+    opacity: 0;
+    transform: scale(0.55);
+  }
+
+  .mapStage[data-map-motion="armed"] .mapSilhouette {
+    opacity: 0;
+    transform: translateY(2.75rem) scale(0.9);
+  }
+
+  .mapStage[data-map-motion="armed"] .routeTrail,
+  .mapStage[data-map-motion="armed"] .routeDraw,
+  .mapStage[data-map-motion="armed"] .mapPoint {
+    opacity: 0;
+  }
+
+  .mapStage[data-map-motion="armed"] .mapPoint {
+    transform: translate(-50%, -50%) scale(0.25);
+  }
+
+  .mapStage[data-map-motion="visible"] .stageFrame {
+    animation: frameArrive 0.8s var(--ease-out-expo) both;
+  }
+
+  .mapStage[data-map-motion="visible"] .mapHalo {
+    animation: haloArrive 0.95s 80ms var(--ease-out-quint) both;
+  }
+
+  .mapStage[data-map-motion="visible"] .mapSilhouette {
+    animation: landArrive 0.9s 80ms var(--ease-out-expo) both;
+    transform-origin: 50% 58%;
+  }
+
+  .mapStage[data-map-motion="visible"] .routeTrail {
+    animation: routeAppear 0.45s 420ms ease-out both;
+  }
+
+  .mapStage[data-map-motion="visible"] .routeDraw {
+    animation: drawRoute 1.05s 430ms linear both;
+  }
+
+  .mapStage[data-map-motion="visible"] .mapPoint {
+    animation: pointPop 0.52s var(--point-delay) var(--ease-out-expo) both;
+  }
+
+.mapStage[data-map-motion="visible"] .pointMarker::after {
+    animation: pointRipple 0.58s var(--point-delay) ease-out both;
+}
+
+@keyframes frameArrive {
+  from {
+    opacity: 0;
+    transform: scale(0.955);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes haloArrive {
+  from {
+    opacity: 0;
+    transform: scale(0.55);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes landArrive {
+  from {
+    opacity: 0;
+    transform: translateY(2.75rem) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes routeAppear {
+  from { opacity: 0; }
+  to { opacity: 0.72; }
+}
+
+@keyframes drawRoute {
+  from {
+    opacity: 0.9;
+    stroke-dashoffset: 1;
+  }
+  to {
+    opacity: 0.18;
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes pointPop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.25);
+  }
+  65% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.28);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes pointRipple {
+  0% {
+    opacity: 0;
+    transform: scale(0.45);
+  }
+  38% {
+    opacity: 0.82;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.75);
+  }
+}

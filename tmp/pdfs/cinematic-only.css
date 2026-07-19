@@ -1,0 +1,7 @@
+.poster:not(.d1) {
+  display: none !important;
+}
+
+.d1 {
+  display: block !important;
+}

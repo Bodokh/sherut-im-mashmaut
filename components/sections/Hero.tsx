@@ -1,7 +1,5 @@
 import { Button } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Section";
-import { VideoFacade } from "@/components/ui/VideoFacade";
-import { media } from "@/lib/media";
 import { localizedPath } from "@/lib/routes";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
@@ -51,23 +49,6 @@ export function Hero({ locale, dict }: { locale: Locale; dict: Dictionary }) {
           </div>
         </div>
 
-        {/* Video */}
-        <div className="hidden lg:col-span-5 lg:block xl:col-span-6">
-          <div className="relative mx-auto max-w-[640px]">
-            {/* glow plate behind the video */}
-            <div
-              aria-hidden
-              className="absolute -inset-3 -z-10 rounded-[2rem] bg-brand-500/15 blur-2xl"
-            />
-            <VideoFacade
-              poster={media.heroPoster}
-              playLabel={dict.a11y.playFilm}
-              watchLabel={t.watch}
-              note={t.watchNote}
-              posterAlt={dict.meta.ogAlt}
-            />
-          </div>
-        </div>
       </div>
 
       {/* Values marquee — a quiet transition band */}

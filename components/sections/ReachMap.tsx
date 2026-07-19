@@ -1,26 +1,34 @@
+import type { CSSProperties } from "react";
 import Image from "next/image";
 
 import { Eyebrow, Section } from "@/components/ui/Section";
 import type { Dictionary } from "@/i18n/dictionaries";
 
+import styles from "./ReachMap.module.css";
+import { ReachMapMotion } from "./ReachMapMotion";
+
 type MapPoint = {
   x: number;
   y: number;
   side: "left" | "right";
+  revealOrder: number;
   labelOffset?: number;
 };
 
 const mapPoints: readonly MapPoint[] = [
-  { x: 57.72, y: 42.31, side: "right" }, // Jerusalem
-  { x: 74.49, y: 33.89, side: "right", labelOffset: 15 }, // Jordan Valley
-  { x: 61.6, y: 31.85, side: "right", labelOffset: -15 }, // Judea & Samaria
-  { x: 32.98, y: 55.4, side: "right" }, // Be'er Sheva
-  { x: 33.54, y: 71.74, side: "right" }, // Mitzpe Ramon
-  { x: 32.41, y: 34.26, side: "left" }, // Tel Aviv
-  { x: 40.48, y: 25.4, side: "left", labelOffset: 6 }, // Hadera
-  { x: 42.37, y: 21.92, side: "left", labelOffset: -6 }, // Zikhron Ya'akov
-  { x: 85.04, y: 11.54, side: "right" }, // Golan Heights
+  { x: 57.72, y: 42.31, side: "right", revealOrder: 6 }, // Jerusalem
+  { x: 74.49, y: 33.89, side: "right", revealOrder: 4, labelOffset: 15 }, // Jordan Valley
+  { x: 61.6, y: 31.85, side: "right", revealOrder: 3, labelOffset: -15 }, // Judea & Samaria
+  { x: 32.98, y: 55.4, side: "right", revealOrder: 7 }, // Be'er Sheva
+  { x: 33.54, y: 71.74, side: "right", revealOrder: 8 }, // Mitzpe Ramon
+  { x: 32.41, y: 34.26, side: "left", revealOrder: 5 }, // Tel Aviv
+  { x: 40.48, y: 25.4, side: "left", revealOrder: 2, labelOffset: 6 }, // Hadera
+  { x: 42.37, y: 21.92, side: "left", revealOrder: 1, labelOffset: -6 }, // Zikhron Ya'akov
+  { x: 85.04, y: 11.54, side: "right", revealOrder: 0 }, // Golan Heights
 ] as const;
+
+const routePath =
+  "M250 92C222 148 165 170 139 220c-21 41-18 78 30 115 26 20-6 68-70 104-22 44-16 87 0 129 17 44 11 107 25 165";
 
 export function ReachMap({ dict }: { dict: Dictionary }) {
   const t = dict.reach;
@@ -50,9 +58,18 @@ export function ReachMap({ dict }: { dict: Dictionary }) {
           </ul>
         </div>
 
-        <div className="relative mx-auto aspect-[4/5] w-full max-w-[35rem]" data-reveal="scale">
-          <div className="absolute inset-[4%_7%] rounded-[3rem] border border-white/10 bg-white/[0.035] shadow-glow" />
-          <div className="absolute left-1/2 top-1/2 h-[94%] aspect-[294.62534/792.60406] -translate-x-1/2 -translate-y-1/2">
+        <div
+          id="reach-map-visual"
+          className={`relative mx-auto aspect-[4/5] w-full max-w-[35rem] ${styles.mapStage}`}
+        >
+          <div
+            aria-hidden
+            className={`absolute inset-[4%_7%] rounded-[3rem] border border-white/10 bg-white/[0.035] shadow-glow ${styles.stageFrame}`}
+          />
+          <div
+            className={`absolute left-1/2 top-1/2 h-[94%] aspect-[294.62534/792.60406] -translate-x-1/2 -translate-y-1/2 ${styles.mapBody}`}
+          >
+            <div aria-hidden className={styles.mapHalo} />
             <Image
               aria-hidden="true"
               alt=""
@@ -61,7 +78,7 @@ export function ReachMap({ dict }: { dict: Dictionary }) {
               height={6341}
               sizes="(max-width: 640px) 45vw, 18rem"
               unoptimized
-              className="absolute inset-0 h-full w-full drop-shadow-[0_28px_50px_rgba(4,20,55,0.42)]"
+              className={`absolute inset-0 h-full w-full drop-shadow-[0_28px_50px_rgba(4,20,55,0.42)] ${styles.mapSilhouette}`}
             />
 
             <svg
@@ -76,7 +93,8 @@ export function ReachMap({ dict }: { dict: Dictionary }) {
                 </linearGradient>
               </defs>
               <path
-                d="M250 92C222 148 165 170 139 220c-21 41-18 78 30 115 26 20-6 68-70 104-22 44-16 87 0 129 17 44 11 107 25 165"
+                className={styles.routeTrail}
+                d={routePath}
                 fill="none"
                 stroke="url(#israel-route-line)"
                 strokeDasharray="4 11"
@@ -84,16 +102,35 @@ export function ReachMap({ dict }: { dict: Dictionary }) {
                 strokeWidth="2.5"
                 opacity="0.72"
               />
+              <path
+                className={styles.routeDraw}
+                d={routePath}
+                fill="none"
+                pathLength="1"
+                stroke="var(--color-brand-50)"
+                strokeDasharray="1"
+                strokeDashoffset="1"
+                strokeLinecap="round"
+                strokeWidth="3.25"
+              />
             </svg>
 
             <ul aria-hidden className="absolute inset-0 z-10">
               {mapPoints.map((point, index) => (
                 <li
                   key={t.cities[index]}
-                  className="absolute -translate-x-1/2 -translate-y-1/2"
-                  style={{ left: `${point.x}%`, top: `${point.y}%` }}
+                  className={`absolute ${styles.mapPoint}`}
+                  style={
+                    {
+                      left: `${point.x}%`,
+                      top: `${point.y}%`,
+                      "--point-delay": `${620 + point.revealOrder * 95}ms`,
+                    } as CSSProperties
+                  }
                 >
-                  <span className="relative block h-3.5 w-3.5 rounded-full border-[3px] border-brand-950 bg-green-300 shadow-[0_0_0_5px_rgba(255,255,255,0.18),0_0_24px_rgba(123,224,167,0.75)]" />
+                  <span
+                    className={`relative block h-3.5 w-3.5 rounded-full border-[3px] border-brand-950 bg-green-300 shadow-[0_0_0_5px_rgba(255,255,255,0.18),0_0_24px_rgba(123,224,167,0.75)] ${styles.pointMarker}`}
+                  />
                   <span
                     className={`absolute top-1/2 hidden -translate-y-1/2 whitespace-nowrap rounded-full border border-white/10 bg-brand-950/80 px-2.5 py-1 text-xs font-semibold text-white shadow-soft backdrop-blur-sm sm:block ${
                       point.side === "right" ? "left-5" : "right-5"
@@ -108,6 +145,7 @@ export function ReachMap({ dict }: { dict: Dictionary }) {
           </div>
         </div>
       </div>
+      <ReachMapMotion />
     </Section>
   );
 }
