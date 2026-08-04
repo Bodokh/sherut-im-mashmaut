@@ -196,7 +196,7 @@ export function teamPageGraph(locale: Locale, dict: Dictionary): Graph {
     about: { "@id": ORGANIZATION_ID },
   };
   const people = [
-    ...dict.about.members.map((member) => ({
+    ...dict.teamPage.members.map((member) => ({
       name: member.name,
       description: member.bio,
     })),

@@ -112,24 +112,6 @@ export const en: Dictionary = {
     kicker: "Who we are",
     title: "Lecturers who speak from the heart — and the field",
     lead: "Behind Service with Meaning stands a group of women lecturers, mentors and activists who have walked the path themselves. They don't speak in theory — they bring personal story, honesty and simplicity, and create a conversation that reaches every woman in the room.",
-    allTeam: "Meet the full team",
-    members: [
-      {
-        name: "Adv. Odelia Kadmi",
-        role: "Founder",
-        bio: "Founder of Service with Meaning. Mother of four, lawyer, member of the Zikhron Ya'akov council, entrepreneur, and activist for women's rights and civilian self-defense. Former squad commander and combat soldier in the CBRN unit of the Combat Engineering Corps.",
-      },
-      {
-        name: "Adv. Tzofnat Nordman",
-        role: "CEO, Liberty & Human Dignity Forum",
-        bio: "Tzofnat Nordman is an independent attorney and CEO of the Liberty & Human Dignity Forum. She specializes in administrative and civil litigation. In High Court petitions, she represents concerns for the health of women participating in trials in the IDF.",
-      },
-      {
-        name: "Lizzy HaMeiri",
-        role: "Activist & publicist",
-        bio: "8200 alumna; studied law at Tel Aviv University. Activist and publicist — Im Tirtzu, the IDF Resilience Forum, and Shovrot Shivyon.",
-      },
-    ],
   },
 
   reach: {
@@ -428,6 +410,28 @@ export const en: Dictionary = {
     kicker: "Who we are",
     title: "Our team",
     lead: "The team behind Service with Meaning — leadership, lecturers and mentors bringing personal story, honesty and simplicity to every gathering.",
+    members: [
+      {
+        name: "Adv. Odelia Kadmi",
+        role: "Founder",
+        bio: "Founder of Service with Meaning. Mother of four, lawyer, member of the Zikhron Ya'akov council, entrepreneur, and activist for women's rights and civilian self-defense. Former squad commander and combat soldier in the CBRN unit of the Combat Engineering Corps.",
+      },
+      {
+        name: "Adv. Tzofnat Nordman",
+        role: "CEO, Liberty & Human Dignity Forum",
+        bio: "Tzofnat Nordman is an independent attorney and CEO of the Liberty & Human Dignity Forum. She specializes in administrative and civil litigation. In High Court petitions, she represents concerns for the health of women participating in trials in the IDF.",
+      },
+      {
+        name: "Lizzy HaMeiri",
+        role: "Activist & publicist",
+        bio: "8200 alumna; studied law at Tel Aviv University. Activist and publicist — Im Tirtzu, the IDF Resilience Forum, and Shovrot Shivyon.",
+      },
+      {
+        name: "Hillel Cohen",
+        role: "Activist & social advocate",
+        bio: "Graduate of Midreshet Danieli, part of the Bnei David institutions; studies and works in social media, and volunteers in national service.",
+      },
+    ],
     daniel: {
       name: "Daniel Bodokh",
       role: "Chairman & founder",

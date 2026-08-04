@@ -37,9 +37,8 @@ export default async function TeamPage({
   if (!isLocale(locale)) notFound();
   const dict = getDictionary(locale);
   const t = dict.teamPage;
-  const lecturerMembers = dict.about.members;
   const members = [
-    ...lecturerMembers.map((member, index) => ({
+    ...t.members.map((member, index) => ({
       member,
       image: media.team[index],
       imagePosition: "top" as const,

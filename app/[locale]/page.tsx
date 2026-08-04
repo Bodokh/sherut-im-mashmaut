@@ -36,7 +36,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
       <JsonLd data={homeGraph(locale, dict)} />
       <main id="main">
         <Hero locale={locale} dict={dict} />
-        <About locale={locale} dict={dict} />
+        <About dict={dict} />
         <Manifesto dict={dict} />
         <ReachMap dict={dict} />
         <Support dict={dict} />
