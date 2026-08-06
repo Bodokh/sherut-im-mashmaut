@@ -431,6 +431,12 @@ export const en: Dictionary = {
         role: "Activist & social advocate",
         bio: "Graduate of Midreshet Danieli, part of the Bnei David institutions; studies and works in social media, and volunteers in national service.",
       },
+      {
+        name: "Roi Kfir",
+        role: "Content & Research Lead",
+        bio: "26, from Ma'ale Efrayim. A student of philosophy, economics and political science. Activist.",
+        anonymousAvatar: true,
+      },
     ],
     daniel: {
       name: "Daniel Bodokh",

@@ -41,11 +41,13 @@ export default async function TeamPage({
     ...t.members.map((member, index) => ({
       member,
       image: media.team[index],
+      anonymousAvatar: "anonymousAvatar" in member && member.anonymousAvatar,
       imagePosition: "top" as const,
     })),
     {
       member: t.daniel,
       image: media.danielBodokh,
+      anonymousAvatar: false,
       imagePosition: "center" as const,
     },
     {
@@ -77,11 +79,13 @@ export default async function TeamPage({
         ),
       },
       image: media.eranBodokh,
+      anonymousAvatar: false,
       imagePosition: "center" as const,
     },
     {
       member: t.talia,
       image: null,
+      anonymousAvatar: false,
       imagePosition: "top" as const,
     },
   ];
@@ -103,13 +107,13 @@ export default async function TeamPage({
           </div>
 
           <ul className="mt-14 grid gap-8 md:grid-cols-2">
-            {members.map(({ member: m, image, imagePosition }, i) => (
+            {members.map(({ member: m, image, anonymousAvatar, imagePosition }, i) => (
               <li
                 key={m.name}
                 data-reveal={i === 0 ? undefined : ""}
                 style={{ ["--reveal-delay" as string]: `${(i % 2) * 90}ms` }}
                 className={`grid gap-5 rounded-3xl border border-line bg-surface p-5 sm:h-[15.5rem] sm:p-6 ${
-                  image ? "sm:grid-cols-[11rem_1fr]" : "content-center"
+                  image || anonymousAvatar ? "sm:grid-cols-[11rem_1fr]" : "content-center"
                 }`}
               >
                 {image ? (
@@ -128,8 +132,22 @@ export default async function TeamPage({
                       }
                     />
                   </div>
+                ) : anonymousAvatar ? (
+                  <div
+                    aria-hidden="true"
+                    className="relative flex aspect-[4/5] items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-brand-100 to-brand-200 text-brand-700 sm:aspect-auto sm:min-h-44"
+                  >
+                    <svg viewBox="0 0 96 96" className="h-28 w-28" fill="none">
+                      <circle cx="48" cy="35" r="18" fill="currentColor" opacity="0.78" />
+                      <path
+                        d="M16 88c2.8-19.6 15.1-29.4 32-29.4S77.2 68.4 80 88"
+                        fill="currentColor"
+                        opacity="0.78"
+                      />
+                    </svg>
+                  </div>
                 ) : null}
-                <div className={image ? undefined : "self-center sm:px-4"}>
+                <div className={image || anonymousAvatar ? undefined : "self-center sm:px-4"}>
                   <h2 className="font-display text-2xl font-bold text-ink-950">{m.name}</h2>
                   <p className="mt-1 text-sm font-semibold text-brand-700">{m.role}</p>
                   <p className="mt-3 leading-relaxed text-ink-600">{m.bio}</p>
