@@ -74,6 +74,39 @@ export function InformationPage({
               ))}
             </ul>
           </div>
+
+          <div className="mt-16 border-t border-line pt-14">
+            <h2 className="text-[clamp(1.75rem,3vw,2.5rem)] font-bold text-ink-950">
+              {copy.processTitle}
+            </h2>
+            <ol className="mt-8 grid gap-5 md:grid-cols-3">
+              {copy.process.map((item, index) => (
+                <li key={item.title} className="rounded-3xl border border-line bg-paper p-6 shadow-soft sm:p-7">
+                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-brand-100 font-bold text-brand-800">
+                    {index + 1}
+                  </span>
+                  <h3 className="mt-5 text-xl font-bold text-ink-950">{item.title}</h3>
+                  <p className="mt-3 leading-relaxed text-ink-700">{item.text}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
+
+          <div className="mt-16 border-t border-line pt-14">
+            <h2 className="text-[clamp(1.75rem,3vw,2.5rem)] font-bold text-ink-950">
+              {copy.faqTitle}
+            </h2>
+            <div className="mt-8 grid gap-4 lg:grid-cols-2">
+              {copy.faq.map((item) => (
+                <details key={item.question} className="group rounded-2xl border border-line bg-paper p-5 shadow-soft open:border-brand-200 sm:p-6">
+                  <summary className="cursor-pointer list-none pe-8 text-lg font-bold text-ink-950 marker:hidden">
+                    {item.question}
+                  </summary>
+                  <p className="mt-4 leading-relaxed text-ink-700">{item.answer}</p>
+                </details>
+              ))}
+            </div>
+          </div>
         </Section>
 
         <Section tone="navy" className="overflow-hidden py-16 sm:py-20">

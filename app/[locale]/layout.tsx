@@ -55,7 +55,7 @@ export default async function LocaleLayout({
           <Script
             id="userway-widget"
             src={USERWAY_WIDGET_SRC}
-            strategy="afterInteractive"
+            strategy="lazyOnload"
             data-account={USERWAY_ACCOUNT_ID}
             data-trigger={USERWAY_TRIGGER_ID}
             data-mobile="true"

@@ -110,6 +110,7 @@ export default async function TeamPage({
             {members.map(({ member: m, image, anonymousAvatar, imagePosition }, i) => (
               <li
                 key={m.name}
+                id={`team-member-${i + 1}`}
                 data-reveal={i === 0 ? undefined : ""}
                 style={{ ["--reveal-delay" as string]: `${(i % 2) * 90}ms` }}
                 className={`grid gap-5 rounded-3xl border border-line bg-surface p-5 sm:h-[15.5rem] sm:p-6 ${

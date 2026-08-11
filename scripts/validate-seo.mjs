@@ -2,6 +2,15 @@ const baseUrl = process.env.SEO_BASE_URL ?? "http://127.0.0.1:3100";
 const origin = "https://www.imashmaut.co.il";
 const locales = ["he", "en"];
 const slugs = ["", "lectures", "guidance", "team", "get-involved", "faq", "contact"];
+const routeBySlug = {
+  "": "home",
+  lectures: "lectures",
+  guidance: "guidance",
+  team: "team",
+  "get-involved": "getInvolved",
+  faq: "faq",
+  contact: "contact",
+};
 const localizedPath = (locale, slug) => {
   const localePrefix = locale === "he" ? "" : `/${locale}`;
   if (!slug) return localePrefix || "/";
@@ -12,7 +21,7 @@ const metadataUrl = (locale, slug) => {
   return path === "/" ? origin : `${origin}${path}`;
 };
 const pages = locales.flatMap((locale) =>
-  slugs.map((slug) => ({ locale, slug, path: localizedPath(locale, slug) })),
+  slugs.map((slug) => ({ locale, route: routeBySlug[slug], slug, path: localizedPath(locale, slug) })),
 );
 
 function assert(condition, message) {
@@ -23,8 +32,15 @@ function tags(html, name) {
   return html.match(new RegExp(`<${name}\\b[^>]*>`, "gi")) ?? [];
 }
 
+function decodeEntities(value) {
+  return value
+    ?.replaceAll("&amp;", "&")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&#39;", "'");
+}
+
 function attr(tag, name) {
-  return tag.match(new RegExp(`\\s${name}=["']([^"']*)["']`, "i"))?.[1];
+  return decodeEntities(tag.match(new RegExp(`\\s${name}=["']([^"']*)["']`, "i"))?.[1]);
 }
 
 function metaContent(html, name) {
@@ -44,16 +60,26 @@ function linkHref(html, rel, hreflang) {
   return tag ? attr(tag, "href") : undefined;
 }
 
-function schemaTypes(html) {
+function schemaNodes(html) {
   const scripts = [
     ...html.matchAll(/<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi),
   ];
   assert(scripts.length > 0, "missing JSON-LD");
   return scripts.flatMap((match) => {
     const parsed = JSON.parse(match[1]);
-    const nodes = parsed["@graph"] ?? [parsed];
-    return nodes.flatMap((node) => node["@type"] ?? []);
+    return parsed["@graph"] ?? [parsed];
   });
+}
+
+function visibleMainWordCount(html) {
+  const main = html.match(/<main\b[^>]*>([\s\S]*?)<\/main>/i)?.[1] ?? "";
+  const text = main
+    .replace(/<(script|style|noscript)\b[^>]*>[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&(?:nbsp|amp|quot|#39);/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return text ? text.split(" ").length : 0;
 }
 
 function expectedSchema(path) {
@@ -68,7 +94,7 @@ function expectedSchema(path) {
 const titles = new Set();
 const descriptions = new Set();
 
-for (const { locale, path, slug } of pages) {
+for (const { locale, route, path, slug } of pages) {
   const response = await fetch(`${baseUrl}${path}`);
   assert(response.status === 200, `${path}: expected 200, received ${response.status}`);
   const html = await response.text();
@@ -77,10 +103,11 @@ for (const { locale, path, slug } of pages) {
   assert(attr(htmlTag, "lang") === locale, `${path}: incorrect lang`);
   assert(attr(htmlTag, "dir") === expectedDir, `${path}: incorrect dir`);
 
-  const title = html.match(/<title>([\s\S]*?)<\/title>/i)?.[1];
+  const title = decodeEntities(html.match(/<title>([\s\S]*?)<\/title>/i)?.[1]);
   const description = metaContent(html, "description");
   assert(title, `${path}: missing title`);
   assert(description, `${path}: missing description`);
+  if (route === "team") assert(title.length >= 35, `${path}: team title is not descriptive enough`);
   assert(!titles.has(title), `${path}: duplicate title`);
   assert(!descriptions.has(description), `${path}: duplicate description`);
   titles.add(title);
@@ -96,9 +123,10 @@ for (const { locale, path, slug } of pages) {
   assert(metaProperty(html, "og:title") === title, `${path}: incorrect Open Graph title`);
   assert(metaProperty(html, "og:description") === description, `${path}: incorrect Open Graph description`);
   assert(metaProperty(html, "og:url") === canonical, `${path}: incorrect Open Graph URL`);
-  assert(metaProperty(html, "og:image") === `${origin}/og`, `${path}: incorrect Open Graph image`);
+  const socialImage = `${origin}/og?locale=${locale}&route=${route}`;
+  assert(metaProperty(html, "og:image") === socialImage, `${path}: incorrect Open Graph image`);
   assert(metaContent(html, "twitter:card") === "summary_large_image", `${path}: missing Twitter card`);
-  assert(metaContent(html, "twitter:image") === `${origin}/og`, `${path}: incorrect Twitter image`);
+  assert(metaContent(html, "twitter:image") === socialImage, `${path}: incorrect Twitter image`);
   assert(metaContent(html, "robots")?.includes("index, follow"), `${path}: incorrect robots meta`);
   assert(metaContent(html, "googlebot")?.includes("max-image-preview:large"), `${path}: incomplete Googlebot previews`);
 
@@ -108,9 +136,27 @@ for (const { locale, path, slug } of pages) {
     assert(headings[index] <= headings[index - 1] + 1, `${path}: heading level skips from h${headings[index - 1]} to h${headings[index]}`);
   }
 
-  const types = schemaTypes(html);
+  const nodes = schemaNodes(html);
+  const types = nodes.flatMap((node) => node["@type"] ?? []);
   for (const type of expectedSchema(path)) {
     assert(types.includes(type), `${path}: missing ${type} schema`);
+  }
+
+  const organization = nodes.find((node) => node["@type"] === "NGO");
+  assert(Array.isArray(organization?.alternateName), `${path}: organization alternate names are incomplete`);
+  assert(organization?.slogan, `${path}: organization schema is missing its slogan`);
+
+  if (["lectures", "guidance", "getInvolved"].includes(route)) {
+    assert(visibleMainWordCount(html) >= 280, `${path}: service content is still too brief`);
+  }
+
+  if (route === "team") {
+    const people = nodes.filter((node) => node["@type"] === "Person");
+    assert(people.length >= 8, `${path}: incomplete team schema`);
+    for (const person of people) {
+      assert(person.jobTitle, `${path}: ${person.name} is missing a job title`);
+      assert(person.url, `${path}: ${person.name} is missing a profile URL`);
+    }
   }
 
   const internalLinks = tags(html, "a")
@@ -133,6 +179,7 @@ assert(sitemapLocations.length === 14, `sitemap: expected 14 URLs, received ${si
 for (const { path } of pages) assert(sitemapLocations.includes(`${origin}${path}`), `sitemap: missing ${path}`);
 assert(!sitemapLocations.some((location) => new URL(location).pathname.startsWith("/he")), "sitemap: legacy /he URL found");
 assert((sitemap.match(/hreflang=/g) ?? []).length === 42, "sitemap: expected three language alternates per URL");
+assert((sitemap.match(/<lastmod>/g) ?? []).length === 14, "sitemap: expected an accurate last-modified date per URL");
 
 const robotsResponse = await fetch(`${baseUrl}/robots.txt`);
 assert(robotsResponse.status === 200, "robots: expected 200");
@@ -147,11 +194,16 @@ assert(robots.includes("Disallow: /api/"), "robots: API route is not disallowed"
 for (const [resource, contentType] of [
   ["/manifest.webmanifest", "application/manifest+json"],
   ["/llms.txt", "text/plain"],
-  ["/og", "image/png"],
 ]) {
   const response = await fetch(`${baseUrl}${resource}`);
   assert(response.status === 200, `${resource}: expected 200`);
   assert(response.headers.get("content-type")?.includes(contentType), `${resource}: incorrect content type`);
+}
+
+for (const { locale, route } of pages) {
+  const response = await fetch(`${baseUrl}/og?locale=${locale}&route=${route}`);
+  assert(response.status === 200, `/og?locale=${locale}&route=${route}: expected 200`);
+  assert(response.headers.get("content-type")?.includes("image/png"), `/og?locale=${locale}&route=${route}: incorrect content type`);
 }
 
 for (const slug of slugs) {

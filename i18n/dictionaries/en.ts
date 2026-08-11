@@ -16,7 +16,7 @@ export const en: Dictionary = {
         "Service with Meaning helps young women in Israel prepare for meaningful service through lectures, field stories and personal guidance rooted in values and identity.",
     },
     team: {
-      title: "Our Team | Service with Meaning",
+      title: "Leadership, Lecturers & Mentors | Service with Meaning",
       description:
         "Meet the leaders, lecturers and mentors behind Service with Meaning, bringing personal experience, public action and honest field stories to every gathering.",
     },
@@ -319,6 +319,40 @@ export const en: Dictionary = {
     ],
     highlightsTitle: "Who is the lecture for?",
     highlights: ["Young women preparing to serve", "Parents and families", "Academies and schools", "Communities and units"],
+    processTitle: "How do we arrange a gathering?",
+    process: [
+      {
+        title: "Define the audience and need",
+        text: "In a short conversation, tell us who will attend, where they are on the path to service, and which questions or outcomes should be central to the gathering.",
+      },
+      {
+        title: "Tailor the content",
+        text: "Together, we choose the stories, subjects and emphasis that fit the setting, the participants' age and the time available for the gathering.",
+      },
+      {
+        title: "Hold an open conversation",
+        text: "The lecture combines story, ideas and audience questions, aiming to leave participants with practical reflection for the road ahead rather than a moment of inspiration alone.",
+      },
+    ],
+    faqTitle: "Questions before inviting a lecture",
+    faq: [
+      {
+        question: "Can the lecture be tailored to a specific audience?",
+        answer: "Yes. Content is shaped around the setting, participants' age, their stage of service and the subjects the educational team or community wants to address.",
+      },
+      {
+        question: "Who can invite a gathering?",
+        answer: "Lectures are suitable for young women before and during service, parents, academies, schools, communities and units seeking a practical conversation grounded in values.",
+      },
+      {
+        question: "What information should we include in our request?",
+        answer: "Please include the audience, approximate number of participants, setting, preferred date and primary goal. Let us know about any accessibility needs as well.",
+      },
+      {
+        question: "How does coordination begin?",
+        answer: "Leave details through the form, WhatsApp, phone or email. Our team will respond to understand the need and explore the best fit and available options.",
+      },
+    ],
     ctaTitle: "Want to invite a lecture?",
     ctaText: "Tell us about the audience and what you want the gathering to offer, and we will get back to coordinate.",
     cta: "Invite a lecture",
@@ -346,6 +380,40 @@ export const en: Dictionary = {
     ],
     highlightsTitle: "When can you reach out?",
     highlights: ["Before choosing a path", "Before recruitment or service", "At a decision point", "When you need someone to listen"],
+    processTitle: "How does guidance begin?",
+    process: [
+      {
+        title: "Reach out in the way that suits you",
+        text: "Write briefly through the form, WhatsApp, phone or email. You do not need to know in advance how to define the exact kind of support you need.",
+      },
+      {
+        title: "Explore the need together",
+        text: "In an initial conversation, we listen to what is on your mind, understand where you are on the path and consider whether personal, family or community support could help.",
+      },
+      {
+        title: "Choose a practical next step",
+        text: "We conclude by identifying a possible next step: another conversation, relevant information, a suitable connection or referral to a professional or official source when needed.",
+      },
+    ],
+    faqTitle: "Questions about guidance and support",
+    faq: [
+      {
+        question: "When is a good time to reach out?",
+        answer: "You can contact us before choosing a path, ahead of service, during a dilemma or difficulty, or when a parent or relative wants to understand how to provide support.",
+      },
+      {
+        question: "Can parents contact you too?",
+        answer: "Yes. You may reach out for yourself or as a family member seeking tools, direction and a respectful conversation about how to support a young woman.",
+      },
+      {
+        question: "Does guidance replace therapy or official information?",
+        answer: "No. It is not medical or mental-health treatment, legal advice or a substitute for information from the IDF or national-service authorities. Contact the qualified authority when those are needed.",
+      },
+      {
+        question: "What happens after I leave my details?",
+        answer: "Our team returns for an initial conversation, listens to the need and considers the appropriate next step with you. Reaching out does not commit you to an ongoing process.",
+      },
+    ],
     ctaTitle: "Want to speak with a mentor?",
     ctaText: "Leave a few details. We will get back to you and explore what could help right now.",
     cta: "Request personal guidance",
@@ -373,6 +441,40 @@ export const en: Dictionary = {
     ],
     highlightsTitle: "What can we advance together?",
     highlights: ["Lectures and gatherings", "Personal guidance", "Community circles", "Connections to organizations and audiences"],
+    processTitle: "How does an intention become a partnership?",
+    process: [
+      {
+        title: "Tell us how you would like to help",
+        text: "Let us know whether you are considering a donation, organizational partnership or volunteering, and what experience, resources or time you would like to offer.",
+      },
+      {
+        title: "Match the offer to a real need",
+        text: "Our team considers where the offer can support current work, which details are needed and what would be the most responsible and effective way to proceed.",
+      },
+      {
+        title: "Agree on a clear course of action",
+        text: "Before beginning, we clarify the goal, responsibilities and next steps so that the donation, partnership or volunteering creates practical and lasting value.",
+      },
+    ],
+    faqTitle: "Questions about donating, partnering and volunteering",
+    faq: [
+      {
+        question: "How do I receive current donation details?",
+        answer: "Contact our team through the form, WhatsApp, phone or email. We will provide the current official details before you make a contribution.",
+      },
+      {
+        question: "Which organizations can become partners?",
+        answer: "Schools, academies, communities, units, companies and donors can approach us with a need or idea. Each proposal is considered against the nonprofit's mission and current work.",
+      },
+      {
+        question: "How can I offer to volunteer?",
+        answer: "Tell us about your experience, skills, availability and where you can help. Our team will check whether there is a suitable need and respond with a possible next step.",
+      },
+      {
+        question: "Can I request official information and documents?",
+        answer: "Yes. Before a donation or partnership, you can ask the team for the nonprofit's details and the information relevant to the engagement or contribution.",
+      },
+    ],
     ctaTitle: "Want to take part?",
     ctaText: "Contact us about donating, partnering or volunteering, and we will respond with the relevant details.",
     cta: "Contact us",
@@ -406,6 +508,18 @@ export const en: Dictionary = {
         answer: "Contact us through the donate and partner page or the contact page. We will respond with information about donation, organizational partnership or volunteering options.",
       },
       {
+        question: "What is the difference between a lecture and personal guidance?",
+        answer: "A lecture is a group gathering tailored to its audience and purpose. Guidance begins with a personal or family request and focuses on a specific need and a practical next step.",
+      },
+      {
+        question: "Is the work only for people before service begins?",
+        answer: "No. You can contact us before or during service, particularly at decision points, in complex periods or when a family needs tools to provide support.",
+      },
+      {
+        question: "What information should I include when contacting you?",
+        answer: "For a gathering, include the audience, setting and goal. For a personal request, briefly describe what is on your mind and how you prefer us to contact you.",
+      },
+      {
         question: "Which languages are available on the site?",
         answer: "The site is available in Hebrew and English. You can switch language on any page using the language control in the header.",
       },
@@ -417,7 +531,7 @@ export const en: Dictionary = {
 
   teamPage: {
     kicker: "Who we are",
-    title: "Our team",
+    title: "Our leadership, lecturers and mentors",
     lead: "The team behind Service with Meaning — leadership, lecturers and mentors bringing personal story, honesty and simplicity to every gathering.",
     members: [
       {

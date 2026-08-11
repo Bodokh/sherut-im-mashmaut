@@ -18,6 +18,13 @@ import { routeLabel } from "@/lib/seo";
 const ORGANIZATION_ID = `${SITE_ORIGIN}/#organization`;
 const WEBSITE_ID = `${SITE_ORIGIN}/#website`;
 const LOGO_URL = `${SITE_ORIGIN}/images/logo-mark.png`;
+const TEAM_IMAGE_PATHS: Record<number, string> = {
+  0: "/images/team/odelia-kadmi.jpg",
+  1: "/images/team/tzofnat-nordman.jpg",
+  2: "/images/team/lizzy-hameiri.jpg",
+  5: "/images/team/daniel-bodokh.webp",
+  6: "/images/team/eran-bodokh.jpg",
+};
 
 function language(locale: Locale): string {
   return locale === "he" ? "he-IL" : "en-US";
@@ -28,7 +35,8 @@ function organizationNode(dict: Dictionary): NGO {
     "@type": "NGO",
     "@id": ORGANIZATION_ID,
     name: dict.brand.name,
-    alternateName: dict.brand.short,
+    alternateName: ["Service with Meaning", "שע״מ", "SwM"],
+    slogan: "ערכים · זהות · שליחות | Values · Identity · Calling",
     url: SITE_ORIGIN,
     description: dict.seo.home.description,
     logo: {
@@ -198,21 +206,30 @@ export function teamPageGraph(locale: Locale, dict: Dictionary): Graph {
   const people = [
     ...dict.teamPage.members.map((member) => ({
       name: member.name,
+      role: member.role,
       description: member.bio,
     })),
-    { name: dict.teamPage.daniel.name, description: dict.teamPage.daniel.bio },
+    { name: dict.teamPage.daniel.name, role: dict.teamPage.daniel.role, description: dict.teamPage.daniel.bio },
     {
       name: dict.teamPage.eran.name,
+      role: dict.teamPage.eran.role,
       description: `${dict.teamPage.eran.bioExperience} ${dict.teamPage.eran.bioBeforeDevShift}${dict.teamPage.eran.devshiftName}${dict.teamPage.eran.bioBetweenCompanies}${dict.teamPage.eran.aiCraftersName}${dict.teamPage.eran.bioAfterCompanies}`,
     },
-    { name: dict.teamPage.talia.name, description: dict.teamPage.talia.bio },
+    { name: dict.teamPage.talia.name, role: dict.teamPage.talia.role, description: dict.teamPage.talia.bio },
   ].map(
-    ({ name, description }): Person => ({
-      "@type": "Person",
-      name,
-      description,
-      affiliation: { "@id": ORGANIZATION_ID },
-    }),
+    ({ name, role, description }, index): Person => {
+      const imagePath = TEAM_IMAGE_PATHS[index];
+      return {
+        "@type": "Person",
+        "@id": `${url}#team-member-${index + 1}`,
+        name,
+        jobTitle: role,
+        description,
+        url: `${url}#team-member-${index + 1}`,
+        image: imagePath ? `${SITE_ORIGIN}${imagePath}` : undefined,
+        worksFor: { "@id": ORGANIZATION_ID },
+      };
+    },
   );
 
   return {

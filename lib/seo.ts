@@ -12,7 +12,7 @@ export function buildPageMetadata(
   const canonical = absoluteUrl(locale, route);
   const hebrewUrl = absoluteUrl("he", route);
   const englishUrl = absoluteUrl("en", route);
-  const imageUrl = `${SITE_ORIGIN}/og`;
+  const imageUrl = `${SITE_ORIGIN}/og?locale=${locale}&route=${route}`;
 
   return {
     title: copy.title,
