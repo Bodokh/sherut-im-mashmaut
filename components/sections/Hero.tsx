@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/Button";
+import { HomeFilmPlayer } from "@/components/ui/HomeFilmPlayer";
 import { Eyebrow } from "@/components/ui/Section";
 import { localizedPath } from "@/lib/routes";
 import type { Locale } from "@/i18n/config";
@@ -49,6 +50,22 @@ export function Hero({ locale, dict }: { locale: Locale; dict: Dictionary }) {
           </div>
         </div>
 
+        {/* Home film */}
+        <div
+          className="hero-rise relative [--rise-delay:160ms] lg:col-span-5 xl:col-span-6"
+        >
+          <div
+            aria-hidden
+            className="absolute -inset-4 -z-10 rounded-[2.25rem] bg-brand-300/25 blur-2xl"
+          />
+          <HomeFilmPlayer
+            src="/media/home-film/sherut-im-mashmaut.da4289b5a150.mp4"
+            poster="/media/home-film/poster.f4397c3c4adb.webp"
+            title={t.watch}
+            durationLabel={t.watchNote}
+            labels={t.player}
+          />
+        </div>
       </div>
 
       {/* Values marquee — a quiet transition band */}

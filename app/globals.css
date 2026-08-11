@@ -185,6 +185,64 @@
     background-image: linear-gradient(transparent 62%, oklch(0.748 0.138 150 / 0.45) 0);
     background-repeat: no-repeat;
   }
+
+  /* Keep the seek line slim while preserving a comfortable pointer target. */
+  .home-film-progress {
+    height: 1.5rem;
+    appearance: none;
+    cursor: pointer;
+    background-image: linear-gradient(
+      90deg,
+      var(--color-green-400) 0%,
+      var(--color-green-400) var(--progress),
+      oklch(1 0 0 / 0.2) var(--progress),
+      oklch(1 0 0 / 0.2) 100%
+    );
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 100% 0.3rem;
+  }
+
+  .home-film-progress::-webkit-slider-thumb {
+    width: 0.9rem;
+    height: 0.9rem;
+    appearance: none;
+    border: 3px solid white;
+    border-radius: 999px;
+    background: var(--color-green-500);
+    box-shadow: 0 2px 8px oklch(0.15 0.03 260 / 0.45);
+  }
+
+  .home-film-progress::-moz-range-thumb {
+    width: 0.9rem;
+    height: 0.9rem;
+    border: 3px solid white;
+    border-radius: 999px;
+    background: var(--color-green-500);
+    box-shadow: 0 2px 8px oklch(0.15 0.03 260 / 0.45);
+  }
+
+  .home-film-player:fullscreen {
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+    flex-direction: column;
+    justify-content: center;
+    border-radius: 0;
+    background: var(--color-brand-950);
+  }
+
+  .home-film-player:fullscreen > div {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    align-items: center;
+  }
+
+  .home-film-player:fullscreen video {
+    max-height: 100%;
+    object-fit: contain;
+  }
 }
 
 /* =========================================================================
