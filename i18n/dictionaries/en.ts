@@ -235,7 +235,7 @@ export const en: Dictionary = {
     amountsNote: "Amounts in multiples of Chai (18) — the symbol of life",
     amounts: ["36", "180", "360", "1,800"],
     currency: "₪",
-    cta: "Ask about donation options",
+    cta: "Donate now",
     other: "Other amount",
     otherWays: "Donate, partner or volunteer",
   },

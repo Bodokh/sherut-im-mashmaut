@@ -5,6 +5,7 @@ import { LangToggle } from "./LangToggle";
 import { UserWayAccessibilityTrigger } from "./UserWayAccessibilityTrigger";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
+import { donationLink } from "@/lib/contact";
 import { localizedPath, type SiteRouteKey } from "@/lib/routes";
 
 const PRIMARY_ROUTES = ["lectures", "guidance", "getInvolved", "faq", "contact"] as const;
@@ -169,7 +170,7 @@ export function Header({
               currentRoute={currentRoute}
               className="text-ink-700 hover:bg-brand-50 hover:text-brand-800"
             />
-            <Button href={localizedPath(locale, "getInvolved")} variant="give">
+            <Button href={donationLink} external variant="give">
               {copy.nav.donate}
             </Button>
           </div>
@@ -235,7 +236,7 @@ export function Header({
             </Link>
           ))}
           <div className="mt-6 flex items-center gap-3">
-            <Button href={localizedPath(locale, "getInvolved")} variant="give" size="lg" arrow className="flex-1">
+            <Button href={donationLink} external variant="give" size="lg" arrow className="flex-1">
               {copy.nav.donate}
             </Button>
             <LangToggle

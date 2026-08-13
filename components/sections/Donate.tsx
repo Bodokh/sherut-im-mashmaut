@@ -1,6 +1,7 @@
 import { Section } from "@/components/ui/Section";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
+import { donationLink } from "@/lib/contact";
 import { localizedPath } from "@/lib/routes";
 
 export function Donate({ locale, dict }: { locale: Locale; dict: Dictionary }) {
@@ -33,7 +34,9 @@ export function Donate({ locale, dict }: { locale: Locale; dict: Dictionary }) {
           {t.amounts.map((amount) => (
             <a
               key={amount}
-              href={`${localizedPath(locale, "contact")}#contact-form`}
+              href={donationLink}
+              target="_blank"
+              rel="noopener noreferrer"
               className="min-w-20 rounded-full border border-white/35 px-5 py-2.5 font-display text-lg font-bold text-white transition-colors hover:bg-white hover:text-green-800"
             >
               <span dir="ltr">{t.currency}{amount}</span>
@@ -44,7 +47,9 @@ export function Donate({ locale, dict }: { locale: Locale; dict: Dictionary }) {
 
         <div className="mt-9 flex flex-col items-center justify-center gap-4 sm:flex-row" data-reveal style={{ ["--reveal-delay" as string]: "120ms" }}>
           <a
-            href={`${localizedPath(locale, "contact")}#contact-form`}
+            href={donationLink}
+            target="_blank"
+            rel="noopener noreferrer"
             className="group inline-flex min-h-13 items-center justify-center gap-2 rounded-full bg-white px-8 text-base font-semibold text-green-800 shadow-lift transition-all duration-200 ease-out-quart hover:scale-[1.02] active:scale-[0.98]"
           >
             {t.cta}

@@ -3,7 +3,7 @@ import Link from "next/link";
 import devshiftLogo from "@/assets/devshift-logo.svg";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
-import { contactLinks } from "@/lib/contact";
+import { contactLinks, donationLink } from "@/lib/contact";
 import { localizedPath, type SiteRouteKey } from "@/lib/routes";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
@@ -33,7 +33,7 @@ export function Footer({ locale, dict }: { locale: Locale; dict: Dictionary }) {
             <p className="mt-5 max-w-sm text-[0.98rem] leading-relaxed text-brand-200">
               {dict.footer.blurb}
             </p>
-            <Button href={localizedPath(locale, "getInvolved")} variant="white" className="mt-7" arrow>
+            <Button href={donationLink} external variant="white" className="mt-7" arrow>
               {dict.footer.donate}
             </Button>
           </div>
