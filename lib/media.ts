@@ -26,8 +26,8 @@ export const media = {
     photo("1502444330042-d1a1ddf9bb5b"),
   ],
 
-  // Clasped hands — personal accompaniment & support.
-  support: photo("1551847677-dc82d764e1eb", 1100),
+  // Conversation in confidence — personal accompaniment & support.
+  support: "/images/support.jpg",
 
   // A rooted tree against blue sky — values, roots, growth.
   roots: photo("1502082553048-f009c37129b9", 1400),

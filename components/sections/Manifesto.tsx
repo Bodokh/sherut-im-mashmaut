@@ -30,7 +30,7 @@ export function Manifesto({ dict }: { dict: Dictionary }) {
         </p>
       </div>
 
-      <ul className="relative mx-auto mt-16 grid max-w-5xl gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
+      <ul className="relative mx-auto mt-16 grid max-w-4xl gap-x-8 gap-y-10 sm:grid-cols-3">
         {t.pillars.map((p, i) => (
           <li
             key={i}

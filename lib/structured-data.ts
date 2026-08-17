@@ -12,6 +12,7 @@ import type {
 } from "schema-dts";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
+import { socialLinks } from "@/lib/contact";
 import { absoluteUrl, SITE_ORIGIN, type SiteRouteKey } from "@/lib/routes";
 import { routeLabel } from "@/lib/seo";
 
@@ -19,11 +20,11 @@ const ORGANIZATION_ID = `${SITE_ORIGIN}/#organization`;
 const WEBSITE_ID = `${SITE_ORIGIN}/#website`;
 const LOGO_URL = `${SITE_ORIGIN}/images/logo-mark.png`;
 const TEAM_IMAGE_PATHS: Record<number, string> = {
-  0: "/images/team/odelia-kadmi.jpg",
-  1: "/images/team/tzofnat-nordman.jpg",
-  2: "/images/team/lizzy-hameiri.jpg",
-  5: "/images/team/daniel-bodokh.webp",
-  6: "/images/team/eran-bodokh.jpg",
+  0: "/images/team/daniel-bodokh.webp",
+  1: "/images/team/odelia-kadmi.jpg",
+  4: "/images/team/eran-bodokh.jpg",
+  6: "/images/team/tzofnat-nordman.jpg",
+  7: "/images/team/lizzy-hameiri.jpg",
 };
 
 function language(locale: Locale): string {
@@ -47,6 +48,7 @@ function organizationNode(dict: Dictionary): NGO {
     },
     email: "support@imashmaut.co.il",
     telephone: "+972527575290",
+    sameAs: [socialLinks.facebook, socialLinks.instagram, socialLinks.youtube, socialLinks.x],
     areaServed: {
       "@type": "Country",
       name: "Israel",
@@ -203,19 +205,20 @@ export function teamPageGraph(locale: Locale, dict: Dictionary): Graph {
     isPartOf: { "@id": WEBSITE_ID },
     about: { "@id": ORGANIZATION_ID },
   };
+  const [odelia, tzofnat, lizzy, hillel, roi] = dict.teamPage.members;
   const people = [
-    ...dict.teamPage.members.map((member) => ({
-      name: member.name,
-      role: member.role,
-      description: member.bio,
-    })),
     { name: dict.teamPage.daniel.name, role: dict.teamPage.daniel.role, description: dict.teamPage.daniel.bio },
+    { name: odelia.name, role: odelia.role, description: odelia.bio },
+    { name: hillel.name, role: hillel.role, description: hillel.bio },
+    { name: roi.name, role: roi.role, description: roi.bio },
     {
       name: dict.teamPage.eran.name,
       role: dict.teamPage.eran.role,
       description: `${dict.teamPage.eran.bioExperience} ${dict.teamPage.eran.bioBeforeDevShift}${dict.teamPage.eran.devshiftName}${dict.teamPage.eran.bioBetweenCompanies}${dict.teamPage.eran.aiCraftersName}${dict.teamPage.eran.bioAfterCompanies}`,
     },
     { name: dict.teamPage.talia.name, role: dict.teamPage.talia.role, description: dict.teamPage.talia.bio },
+    { name: tzofnat.name, role: tzofnat.role, description: tzofnat.bio },
+    { name: lizzy.name, role: lizzy.role, description: lizzy.bio },
   ].map(
     ({ name, role, description }, index): Person => {
       const imagePath = TEAM_IMAGE_PATHS[index];

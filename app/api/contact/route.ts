@@ -123,6 +123,31 @@ export async function POST(request: Request) {
       return Response.json({ error: "email_send_failed" }, { status: 502 });
     }
 
+    const confirmation = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: [email],
+      subject: "קיבלנו את פנייתך | שירות עם משמעות",
+      text: [
+        `שלום ${name},`,
+        "",
+        "קיבלנו את פנייתך באתר שירות עם משמעות.",
+        "הצוות יחזור אליך בהקדם.",
+        "",
+        "אין צורך להשיב להודעה זו.",
+      ].join("\n"),
+      html: `
+        <div dir="rtl" style="font-family: Arial, sans-serif; line-height: 1.6; color: #172033">
+          <p>שלום ${safeName},</p>
+          <p>קיבלנו את פנייתך באתר שירות עם משמעות. הצוות יחזור אליך בהקדם.</p>
+          <p style="color: #5b6578">אין צורך להשיב להודעה זו.</p>
+        </div>
+      `,
+    });
+
+    if (confirmation.error) {
+      console.error("Resend rejected confirmation email", confirmation.error);
+    }
+
     return Response.json({ success: true });
   } catch (error) {
     console.error("Contact email failed", error);

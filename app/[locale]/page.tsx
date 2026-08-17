@@ -11,6 +11,7 @@ import { ReachMap } from "@/components/sections/ReachMap";
 import { Support } from "@/components/sections/Support";
 import { Donate } from "@/components/sections/Donate";
 import { Contact } from "@/components/sections/Contact";
+import { Comments } from "@/components/sections/Comments";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { buildPageMetadata } from "@/lib/seo";
 import { homeGraph } from "@/lib/structured-data";
@@ -42,6 +43,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
         <Support dict={dict} />
         <Donate locale={locale} dict={dict} />
         <Contact locale={locale} dict={dict} />
+        <Comments dict={dict} />
       </main>
       <Footer locale={locale} dict={dict} />
     </>

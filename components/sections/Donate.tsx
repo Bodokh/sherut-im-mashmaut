@@ -29,22 +29,6 @@ export function Donate({ locale, dict }: { locale: Locale; dict: Dictionary }) {
           {t.lead}
         </p>
 
-        {/* Amount chips */}
-        <div className="mt-9 flex flex-wrap items-center justify-center gap-3" data-reveal style={{ ["--reveal-delay" as string]: "160ms" }}>
-          {t.amounts.map((amount) => (
-            <a
-              key={amount}
-              href={donationLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="min-w-20 rounded-full border border-white/35 px-5 py-2.5 font-display text-lg font-bold text-white transition-colors hover:bg-white hover:text-green-800"
-            >
-              <span dir="ltr">{t.currency}{amount}</span>
-            </a>
-          ))}
-        </div>
-        <p className="mt-4 text-sm text-green-100/90" data-reveal>{t.amountsNote}</p>
-
         <div className="mt-9 flex flex-col items-center justify-center gap-4 sm:flex-row" data-reveal style={{ ["--reveal-delay" as string]: "120ms" }}>
           <a
             href={donationLink}

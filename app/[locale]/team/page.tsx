@@ -37,13 +37,35 @@ export default async function TeamPage({
   if (!isLocale(locale)) notFound();
   const dict = getDictionary(locale);
   const t = dict.teamPage;
+  const [odelia, tzofnat, lizzy, hillel, roi] = t.members;
+  const eranCard = {
+    name: t.eran.name,
+    role: t.eran.role,
+    bio: (
+      <>
+        {t.eran.bioExperience} {t.eran.bioBeforeDevShift}
+        <a
+          href="https://devshift.biz"
+          target="_blank"
+          rel="noreferrer"
+          className={BIO_LINK_CLASS}
+        >
+          <bdi>{t.eran.devshiftName}</bdi>
+        </a>
+        {t.eran.bioBetweenCompanies}
+        <a
+          href="https://www.ai-crafters.com/"
+          target="_blank"
+          rel="noreferrer"
+          className={BIO_LINK_CLASS}
+        >
+          <bdi>{t.eran.aiCraftersName}</bdi>
+        </a>
+        {t.eran.bioAfterCompanies}
+      </>
+    ),
+  };
   const members = [
-    ...t.members.map((member, index) => ({
-      member,
-      image: media.team[index],
-      anonymousAvatar: "anonymousAvatar" in member && member.anonymousAvatar,
-      imagePosition: "top" as const,
-    })),
     {
       member: t.daniel,
       image: media.danielBodokh,
@@ -51,33 +73,25 @@ export default async function TeamPage({
       imagePosition: "center" as const,
     },
     {
-      member: {
-        name: t.eran.name,
-        role: t.eran.role,
-        bio: (
-          <>
-            {t.eran.bioExperience} {t.eran.bioBeforeDevShift}
-            <a
-              href="https://devshift.biz"
-              target="_blank"
-              rel="noreferrer"
-              className={BIO_LINK_CLASS}
-            >
-              <bdi>{t.eran.devshiftName}</bdi>
-            </a>
-            {t.eran.bioBetweenCompanies}
-            <a
-              href="https://www.ai-crafters.com/"
-              target="_blank"
-              rel="noreferrer"
-              className={BIO_LINK_CLASS}
-            >
-              <bdi>{t.eran.aiCraftersName}</bdi>
-            </a>
-            {t.eran.bioAfterCompanies}
-          </>
-        ),
-      },
+      member: odelia,
+      image: media.team[0],
+      anonymousAvatar: false,
+      imagePosition: "top" as const,
+    },
+    {
+      member: hillel,
+      image: null,
+      anonymousAvatar: false,
+      imagePosition: "top" as const,
+    },
+    {
+      member: roi,
+      image: null,
+      anonymousAvatar: Boolean(roi && "anonymousAvatar" in roi && roi.anonymousAvatar),
+      imagePosition: "top" as const,
+    },
+    {
+      member: eranCard,
       image: media.eranBodokh,
       anonymousAvatar: false,
       imagePosition: "center" as const,
@@ -85,6 +99,18 @@ export default async function TeamPage({
     {
       member: t.talia,
       image: null,
+      anonymousAvatar: false,
+      imagePosition: "top" as const,
+    },
+    {
+      member: tzofnat,
+      image: media.team[1],
+      anonymousAvatar: false,
+      imagePosition: "top" as const,
+    },
+    {
+      member: lizzy,
+      image: media.team[2],
       anonymousAvatar: false,
       imagePosition: "top" as const,
     },
@@ -156,6 +182,10 @@ export default async function TeamPage({
               </li>
             ))}
           </ul>
+
+          <p className="mx-auto mt-12 max-w-2xl text-center text-lg leading-relaxed text-ink-700">
+            {t.volunteersNote}
+          </p>
         </Section>
 
         {/* CTA */}

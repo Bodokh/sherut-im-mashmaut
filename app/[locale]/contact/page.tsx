@@ -9,7 +9,9 @@ import { RelatedLinks } from "@/components/site/RelatedLinks";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { Section, Eyebrow } from "@/components/ui/Section";
 import { ContactForm } from "@/components/forms/ContactForm";
-import { contactLinks } from "@/lib/contact";
+import { SocialLinks } from "@/components/site/SocialLinks";
+import { WhatsAppIcon } from "@/components/site/WhatsAppIcon";
+import { communityLinks, contactLinks } from "@/lib/contact";
 import { buildPageMetadata } from "@/lib/seo";
 import { contactPageGraph } from "@/lib/structured-data";
 
@@ -91,17 +93,51 @@ export default async function ContactPage({
             <aside className="lg:col-span-5">
               <h2 className="mb-5 text-2xl font-bold text-ink-950">{t.detailsTitle}</h2>
               <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-                <DetailRow label={d.emailLabel} value={d.email} href={contactLinks.email} ltr />
+                <div className="rounded-2xl border border-line bg-surface p-4">
+                  <dt className="text-sm font-semibold text-ink-500">{d.emailLabel}</dt>
+                  <dd className="mt-0.5 font-display text-lg font-bold text-ink-950" dir="ltr">
+                    {d.email}
+                  </dd>
+                </div>
                 <DetailRow
                   label={d.whatsappLabel}
                   value={dict.contact.whatsappCta}
                   href={contactLinks.whatsapp}
                   external
                 />
-                <DetailRow label={d.phoneLabel} value={d.phone} href={contactLinks.phone} ltr />
+                <DetailRow label={dict.contact.hotlineCta} value={d.phone} href={contactLinks.phone} ltr />
+                <div className="rounded-2xl border border-line bg-surface p-4 sm:col-span-2 lg:col-span-1">
+                  <dt className="text-sm font-semibold text-ink-500">{dict.contact.groupsTitle}</dt>
+                  <dd className="mt-3 flex flex-col gap-2">
+                    {(
+                      [
+                        [communityLinks.educators, dict.contact.groups.educators],
+                        [communityLinks.parents, dict.contact.groups.parents],
+                        [communityLinks.girlsBlog, dict.contact.groups.girlsBlog],
+                      ] as const
+                    ).map(([href, label]) => (
+                      <a
+                        key={label}
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-800 transition-colors hover:bg-green-100"
+                      >
+                        <WhatsAppIcon className="h-4 w-4" />
+                        {label}
+                      </a>
+                    ))}
+                  </dd>
+                </div>
                 <div className="rounded-2xl border border-line bg-surface p-4">
                   <dt className="text-sm font-semibold text-ink-500">{d.hoursLabel}</dt>
                   <dd className="mt-0.5 font-display text-lg font-bold text-ink-950">{d.hours}</dd>
+                </div>
+                <div className="rounded-2xl border border-line bg-surface p-4 sm:col-span-2 lg:col-span-1">
+                  <dt className="text-sm font-semibold text-ink-500">{dict.footer.followTitle}</dt>
+                  <dd className="mt-3">
+                    <SocialLinks labels={dict.footer.social} />
+                  </dd>
                 </div>
               </dl>
             </aside>

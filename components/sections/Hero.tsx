@@ -62,8 +62,7 @@ export function Hero({ locale, dict }: { locale: Locale; dict: Dictionary }) {
             src="/media/home-film/sherut-im-mashmaut.da4289b5a150.mp4"
             poster="/media/home-film/poster.f4397c3c4adb.webp"
             title={t.watch}
-            durationLabel={t.watchNote}
-            labels={t.player}
+            playLabel={t.player.play}
           />
         </div>
       </div>

@@ -111,9 +111,9 @@ export function Header({
         <Link
           href={localizedPath(locale, "home")}
           aria-label={copy.brandName}
-          className="inline-flex shrink-0 rounded-lg text-ink-950 transition-opacity hover:opacity-85"
+          className="inline-flex min-w-0 shrink-0 rounded-lg text-ink-950 transition-opacity hover:opacity-85"
         >
-          <Logo name={copy.brandName} />
+          <Logo name={copy.brandName} priority />
         </Link>
 
         <nav aria-label={copy.a11y.menu} className="hidden items-center gap-0.5 xl:flex">
