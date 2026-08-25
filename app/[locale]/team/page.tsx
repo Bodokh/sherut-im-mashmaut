@@ -37,7 +37,7 @@ export default async function TeamPage({
   if (!isLocale(locale)) notFound();
   const dict = getDictionary(locale);
   const t = dict.teamPage;
-  const [odelia, tzofnat, lizzy, hillel, roi] = t.members;
+  const [odelia, tzofnat, hillel, roi] = t.members;
   const eranCard = {
     name: t.eran.name,
     role: t.eran.role,
@@ -105,12 +105,6 @@ export default async function TeamPage({
     {
       member: tzofnat,
       image: media.team[1],
-      anonymousAvatar: false,
-      imagePosition: "top" as const,
-    },
-    {
-      member: lizzy,
-      image: media.team[2],
       anonymousAvatar: false,
       imagePosition: "top" as const,
     },

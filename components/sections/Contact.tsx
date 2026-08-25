@@ -43,12 +43,12 @@ export function Contact({ locale, dict }: { locale: Locale; dict: Dictionary }) 
             {t.whatsappCta}
           </a>
           <a
-            href={contactLinks.phone}
+            href={contactLinks.hotline}
             className="inline-flex min-h-13 w-full items-center justify-center gap-2.5 rounded-full border border-brand-700/25 bg-white/40 px-7 text-base font-semibold text-brand-800 transition-colors hover:border-brand-700/40 hover:bg-brand-50 sm:w-auto"
           >
             <PhoneIcon className="h-5 w-5" />
             <span>
-              {t.hotlineCta} · <span dir="ltr" className="tabular-nums">{d.phone}</span>
+              {t.hotlineCta} · <span dir="ltr" className="tabular-nums">{d.hotline}</span>
             </span>
           </a>
         </div>

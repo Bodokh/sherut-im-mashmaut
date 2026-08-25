@@ -74,14 +74,14 @@ export function Support({ dict }: { dict: Dictionary }) {
               {t.girlsBlogCta}
             </a>
             <a
-              href={contactLinks.phone}
+              href={contactLinks.hotline}
               className="inline-flex min-h-12 items-center justify-center gap-2.5 rounded-full border border-brand-700/25 bg-white/40 px-6 text-base font-semibold text-brand-800 transition-colors hover:border-brand-700/40 hover:bg-brand-50"
             >
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true">
                 <path d="M5 4.5C5 3.7 5.7 3 6.5 3h2.1c.7 0 1.3.5 1.5 1.2l.8 2.9a1.5 1.5 0 0 1-.6 1.6l-1.3 1a12.6 12.6 0 0 0 5.3 5.3l1-1.3a1.5 1.5 0 0 1 1.6-.6l2.9.8c.7.2 1.2.8 1.2 1.5v2.1c0 .8-.7 1.5-1.5 1.5H18C10.8 19 5 13.2 5 6V4.5Z" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
               <span>
-                {t.hotlineCta} · <span dir="ltr" className="tabular-nums">{dict.contact.details.phone}</span>
+                {t.hotlineCta} · <span dir="ltr" className="tabular-nums">{dict.contact.details.hotline}</span>
               </span>
             </a>
           </div>

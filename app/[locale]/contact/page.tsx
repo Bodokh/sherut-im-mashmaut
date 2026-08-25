@@ -105,7 +105,8 @@ export default async function ContactPage({
                   href={contactLinks.whatsapp}
                   external
                 />
-                <DetailRow label={dict.contact.hotlineCta} value={d.phone} href={contactLinks.phone} ltr />
+                <DetailRow label={d.phoneLabel} value={d.phone} href={contactLinks.phone} ltr />
+                <DetailRow label={dict.contact.hotlineCta} value={d.hotline} href={contactLinks.hotline} ltr />
                 <div className="rounded-2xl border border-line bg-surface p-4 sm:col-span-2 lg:col-span-1">
                   <dt className="text-sm font-semibold text-ink-500">{dict.contact.groupsTitle}</dt>
                   <dd className="mt-3 flex flex-col gap-2">

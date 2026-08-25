@@ -14,7 +14,6 @@ export const media = {
   team: [
     "/images/team/odelia-kadmi.jpg",
     "/images/team/tzofnat-nordman.jpg",
-    "/images/team/lizzy-hameiri.jpg",
   ],
   danielBodokh: "/images/team/daniel-bodokh.webp",
   eranBodokh: "/images/team/eran-bodokh.jpg",

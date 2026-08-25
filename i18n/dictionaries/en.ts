@@ -285,6 +285,7 @@ export const en: Dictionary = {
       email: "support@imashmaut.co.il",
       phoneLabel: "Phone",
       phone: "052-7575-290",
+      hotline: "055-973-9365",
       whatsappLabel: "WhatsApp",
       addressLabel: "Address",
       address: "Israel",
@@ -553,11 +554,6 @@ export const en: Dictionary = {
         name: "Adv. Tzofnat Nordman",
         role: "CEO, Liberty & Human Dignity Forum",
         bio: "Tzofnat Nordman is an independent attorney and CEO of the Liberty & Human Dignity Forum. She specializes in administrative and civil litigation. In High Court petitions, she represents concerns for the health of women participating in trials in the IDF.",
-      },
-      {
-        name: "Lizzy HaMeiri",
-        role: "Activist & publicist",
-        bio: "8200 alumna; studied law at Tel Aviv University. Activist and publicist — Im Tirtzu, the IDF Resilience Forum, and Shovrot Shivyon.",
       },
       {
         name: "Hillel Cohen",

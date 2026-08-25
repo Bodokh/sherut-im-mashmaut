@@ -11,6 +11,7 @@ export const contactLinks = {
   emailAddress: SUPPORT_EMAIL,
   email: `mailto:${SUPPORT_EMAIL}`,
   phone: "tel:+972527575290",
+  hotline: "tel:+972559739365",
   whatsapp: whatsappHref(),
 } as const;
 

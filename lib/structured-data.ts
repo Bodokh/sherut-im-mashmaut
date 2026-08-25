@@ -24,7 +24,6 @@ const TEAM_IMAGE_PATHS: Record<number, string> = {
   1: "/images/team/odelia-kadmi.jpg",
   4: "/images/team/eran-bodokh.jpg",
   6: "/images/team/tzofnat-nordman.jpg",
-  7: "/images/team/lizzy-hameiri.jpg",
 };
 
 function language(locale: Locale): string {
@@ -53,14 +52,23 @@ function organizationNode(dict: Dictionary): NGO {
       "@type": "Country",
       name: "Israel",
     },
-    contactPoint: {
-      "@type": "ContactPoint",
-      contactType: "general inquiries",
-      email: "support@imashmaut.co.il",
-      telephone: "+972527575290",
-      areaServed: "IL",
-      availableLanguage: ["Hebrew", "English"],
-    },
+    contactPoint: [
+      {
+        "@type": "ContactPoint",
+        contactType: "general inquiries",
+        email: "support@imashmaut.co.il",
+        telephone: "+972527575290",
+        areaServed: "IL",
+        availableLanguage: ["Hebrew", "English"],
+      },
+      {
+        "@type": "ContactPoint",
+        contactType: "hotline",
+        telephone: "+972559739365",
+        areaServed: "IL",
+        availableLanguage: ["Hebrew", "English"],
+      },
+    ],
   };
 }
 
@@ -205,7 +213,7 @@ export function teamPageGraph(locale: Locale, dict: Dictionary): Graph {
     isPartOf: { "@id": WEBSITE_ID },
     about: { "@id": ORGANIZATION_ID },
   };
-  const [odelia, tzofnat, lizzy, hillel, roi] = dict.teamPage.members;
+  const [odelia, tzofnat, hillel, roi] = dict.teamPage.members;
   const people = [
     { name: dict.teamPage.daniel.name, role: dict.teamPage.daniel.role, description: dict.teamPage.daniel.bio },
     { name: odelia.name, role: odelia.role, description: odelia.bio },
@@ -218,7 +226,6 @@ export function teamPageGraph(locale: Locale, dict: Dictionary): Graph {
     },
     { name: dict.teamPage.talia.name, role: dict.teamPage.talia.role, description: dict.teamPage.talia.bio },
     { name: tzofnat.name, role: tzofnat.role, description: tzofnat.bio },
-    { name: lizzy.name, role: lizzy.role, description: lizzy.bio },
   ].map(
     ({ name, role, description }, index): Person => {
       const imagePath = TEAM_IMAGE_PATHS[index];
