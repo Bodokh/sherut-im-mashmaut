@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isLocale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
@@ -12,6 +13,8 @@ import { ContactForm } from "@/components/forms/ContactForm";
 import { SocialLinks } from "@/components/site/SocialLinks";
 import { WhatsAppIcon } from "@/components/site/WhatsAppIcon";
 import { communityLinks, contactLinks } from "@/lib/contact";
+import { formatPostalAddress, organization } from "@/lib/organization";
+import { localizedPath } from "@/lib/routes";
 import { buildPageMetadata } from "@/lib/seo";
 import { contactPageGraph } from "@/lib/structured-data";
 
@@ -108,6 +111,18 @@ export default async function ContactPage({
                 <DetailRow label={d.phoneLabel} value={d.phone} href={contactLinks.phone} ltr />
                 <DetailRow label={dict.contact.hotlineCta} value={d.hotline} href={contactLinks.hotline} ltr />
                 <div className="rounded-2xl border border-line bg-surface p-4 sm:col-span-2 lg:col-span-1">
+                  <dt className="text-sm font-semibold text-ink-500">{dict.organization.labels.address}</dt>
+                  <dd className="mt-0.5 font-display text-lg font-bold text-ink-950">
+                    <address className="not-italic">{formatPostalAddress(dict.organization.address)}</address>
+                  </dd>
+                </div>
+                <div className="rounded-2xl border border-line bg-surface p-4 sm:col-span-2 lg:col-span-1">
+                  <dt className="text-sm font-semibold text-ink-500">{dict.organization.labels.registrationNumber}</dt>
+                  <dd className="mt-0.5 font-display text-lg font-bold text-ink-950">
+                    <bdi dir="ltr">{organization.registrationNumber}</bdi>
+                  </dd>
+                </div>
+                <div className="rounded-2xl border border-line bg-surface p-4 sm:col-span-2 lg:col-span-1">
                   <dt className="text-sm font-semibold text-ink-500">{dict.contact.groupsTitle}</dt>
                   <dd className="mt-3 flex flex-col gap-2">
                     {(
@@ -141,6 +156,14 @@ export default async function ContactPage({
                   </dd>
                 </div>
               </dl>
+              <p className="mt-4">
+                <Link
+                  href={localizedPath(locale, "about")}
+                  className="font-semibold text-brand-700 transition-colors hover:text-brand-900"
+                >
+                  {dict.organization.detailsCta}
+                </Link>
+              </p>
             </aside>
           </div>
         </Section>

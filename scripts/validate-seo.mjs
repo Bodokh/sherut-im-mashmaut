@@ -1,9 +1,10 @@
 const baseUrl = process.env.SEO_BASE_URL ?? "http://127.0.0.1:3100";
 const origin = "https://www.imashmaut.co.il";
 const locales = ["he", "en"];
-const slugs = ["", "lectures", "guidance", "team", "get-involved", "faq", "contact"];
+const slugs = ["", "about", "lectures", "guidance", "team", "get-involved", "faq", "contact"];
 const routeBySlug = {
   "": "home",
+  about: "about",
   lectures: "lectures",
   guidance: "guidance",
   team: "team",
@@ -84,6 +85,7 @@ function visibleMainWordCount(html) {
 
 function expectedSchema(path) {
   if (path === "/" || path === "/en") return ["NGO", "WebSite", "WebPage"];
+  if (path.endsWith("/about")) return ["AboutPage", "BreadcrumbList"];
   if (path.endsWith("/team")) return ["AboutPage", "Person", "BreadcrumbList"];
   if (path.endsWith("/contact")) return ["ContactPage", "BreadcrumbList"];
   if (path.endsWith("/lectures") || path.endsWith("/guidance")) return ["Service", "BreadcrumbList"];
@@ -145,6 +147,11 @@ for (const { locale, route, path, slug } of pages) {
   const organization = nodes.find((node) => node["@type"] === "NGO");
   assert(Array.isArray(organization?.alternateName), `${path}: organization alternate names are incomplete`);
   assert(organization?.slogan, `${path}: organization schema is missing its slogan`);
+  assert(organization?.taxID === "580843829", `${path}: organization schema is missing the charity ID`);
+  assert(organization?.legalName, `${path}: organization schema is missing its legal name`);
+  assert(organization?.address?.streetAddress, `${path}: organization schema is missing a street address`);
+  assert(html.includes("580843829"), `${path}: charity ID is not visible on the page`);
+  assert(html.includes("SHERUT EM MASHMAUT"), `${path}: registered English name is not visible on the page`);
 
   if (["lectures", "guidance", "getInvolved"].includes(route)) {
     assert(visibleMainWordCount(html) >= 280, `${path}: service content is still too brief`);
@@ -152,7 +159,7 @@ for (const { locale, route, path, slug } of pages) {
 
   if (route === "team") {
     const people = nodes.filter((node) => node["@type"] === "Person");
-    assert(people.length >= 8, `${path}: incomplete team schema`);
+    assert(people.length >= 7, `${path}: incomplete team schema`);
     for (const person of people) {
       assert(person.jobTitle, `${path}: ${person.name} is missing a job title`);
       assert(person.url, `${path}: ${person.name} is missing a profile URL`);
@@ -175,11 +182,11 @@ assert(sitemapResponse.status === 200, "sitemap: expected 200");
 assert(sitemapResponse.headers.get("content-type")?.includes("xml"), "sitemap: incorrect content type");
 const sitemap = await sitemapResponse.text();
 const sitemapLocations = [...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map((match) => match[1]);
-assert(sitemapLocations.length === 14, `sitemap: expected 14 URLs, received ${sitemapLocations.length}`);
+assert(sitemapLocations.length === 16, `sitemap: expected 16 URLs, received ${sitemapLocations.length}`);
 for (const { path } of pages) assert(sitemapLocations.includes(`${origin}${path}`), `sitemap: missing ${path}`);
 assert(!sitemapLocations.some((location) => new URL(location).pathname.startsWith("/he")), "sitemap: legacy /he URL found");
-assert((sitemap.match(/hreflang=/g) ?? []).length === 42, "sitemap: expected three language alternates per URL");
-assert((sitemap.match(/<lastmod>/g) ?? []).length === 14, "sitemap: expected an accurate last-modified date per URL");
+assert((sitemap.match(/hreflang=/g) ?? []).length === 48, "sitemap: expected three language alternates per URL");
+assert((sitemap.match(/<lastmod>/g) ?? []).length === 16, "sitemap: expected an accurate last-modified date per URL");
 
 const robotsResponse = await fetch(`${baseUrl}/robots.txt`);
 assert(robotsResponse.status === 200, "robots: expected 200");

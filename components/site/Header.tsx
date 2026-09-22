@@ -15,6 +15,7 @@ type HeaderNavKey =
   | "team"
   | "vision"
   | "about"
+  | "organization"
   | "donate";
 
 export type HeaderCopy = {
@@ -39,6 +40,7 @@ export function buildHeaderCopy(dict: Dictionary): HeaderCopy {
     langName: dict.langName,
     nav: {
       about: dict.nav.about,
+      organization: dict.nav.organization,
       team: dict.nav.team,
       vision: dict.nav.vision,
       contact: dict.nav.contact,
@@ -60,9 +62,12 @@ export function buildHeaderCopy(dict: Dictionary): HeaderCopy {
   };
 }
 
-function aboutLinks(locale: Locale, nav: HeaderCopy["nav"]) {
+type AboutLink = { id: string; label: string; href: string; route?: SiteRouteKey };
+
+function aboutLinks(locale: Locale, nav: HeaderCopy["nav"]): AboutLink[] {
   return [
-    { id: "team", label: nav.team, href: localizedPath(locale, "team") },
+    { id: "organization", label: nav.organization, href: localizedPath(locale, "about"), route: "about" },
+    { id: "team", label: nav.team, href: localizedPath(locale, "team"), route: "team" },
     { id: "vision", label: nav.vision, href: `${localizedPath(locale, "home")}#manifesto` },
   ];
 }
@@ -121,7 +126,6 @@ export function Header({
             <Link
               href={`${localizedPath(locale, "home")}#about`}
               aria-haspopup="true"
-              aria-current={currentRoute === "team" ? "page" : undefined}
               className="inline-flex items-center gap-1 rounded-full px-3.5 py-2 text-[0.95rem] font-medium text-ink-700 transition-colors hover:bg-brand-50 hover:text-brand-800"
             >
               {copy.nav.about}
@@ -137,6 +141,7 @@ export function Header({
                   <li key={link.id}>
                     <Link
                       href={link.href}
+                      aria-current={link.route === currentRoute ? "page" : undefined}
                       className="block rounded-xl px-3.5 py-2.5 text-[0.95rem] font-medium text-ink-700 transition-colors hover:bg-brand-50 hover:text-brand-800"
                     >
                       {link.label}
@@ -216,6 +221,7 @@ export function Header({
               <li key={link.id}>
                 <Link
                   href={link.href}
+                  aria-current={link.route === currentRoute ? "page" : undefined}
                   className="block py-2.5 ps-4 text-lg font-semibold text-ink-700 transition-colors hover:text-brand-700"
                 >
                   {link.label}

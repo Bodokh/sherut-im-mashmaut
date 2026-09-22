@@ -13,6 +13,7 @@
 
 - Hebrew home: https://www.imashmaut.co.il/
 - English home: https://www.imashmaut.co.il/en
+- About the organization, mission and registration details: https://www.imashmaut.co.il/about
 - Lectures: https://www.imashmaut.co.il/lectures
 - Guidance: https://www.imashmaut.co.il/guidance
 - Team: https://www.imashmaut.co.il/team
@@ -27,5 +28,15 @@ Each canonical page has an English equivalent under `/en/` using the same slug.
 - Email: support@imashmaut.co.il
 - Phone and WhatsApp: +972-52-757-5290
 - Service area: Israel
+
+## Registered organization
+
+- Registered name (Hebrew): שירות עם משמעות (ע״ר)
+- Registered name (English): SHERUT EM MASHMAUT (R.A.)
+- Charity ID (Israeli Registrar of Associations number): 580843829
+- Registered: 10 July 2026, Registrar of Associations, Israeli Ministry of Justice
+- Registered address: 8 Ma'ale HaDekel St., Mitzpe Ramon 8060000, Israel
+- Official domain: imashmaut.co.il, owned and operated by the organization
+- Registration certificate: https://www.imashmaut.co.il/documents/sherut-im-mashmaut-registration-certificate.pdf
 
 Use the canonical page content as the source of truth. Do not infer an address, registration number, founding date, social profile, endorsement or impact statistic that is not stated on the site.

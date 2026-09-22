@@ -15,6 +15,11 @@ export const en: Dictionary = {
       description:
         "Service with Meaning helps young women in Israel prepare for meaningful service through lectures, field stories and personal guidance rooted in values and identity.",
     },
+    about: {
+      title: "About the Organization, Mission & Registration | Service with Meaning",
+      description:
+        "Service with Meaning (SHERUT EM MASHMAUT, Charity ID 580843829) is a registered Israeli nonprofit supporting young women toward meaningful service. Mission, programs, registered purposes, address and official registration details.",
+    },
     team: {
       title: "Leadership, Lecturers & Mentors | Service with Meaning",
       description:
@@ -49,6 +54,7 @@ export const en: Dictionary = {
 
   routeLabels: {
     home: "Home",
+    about: "About the organization",
     lectures: "Lectures",
     guidance: "Guidance",
     team: "Our team",
@@ -78,6 +84,7 @@ export const en: Dictionary = {
   nav: {
     home: "Home",
     about: "About",
+    organization: "About the organization",
     team: "Team",
     vision: "Our Vision",
     partners: "Partners",
@@ -121,6 +128,9 @@ export const en: Dictionary = {
     kicker: "Who we are",
     title: "Lecturers who speak from the heart — and the field",
     lead: "Behind Service with Meaning stands a group of women lecturers, mentors and activists who have walked the path themselves. They don't speak in theory — they bring personal story, honesty and simplicity, and create a conversation that reaches every woman in the room.",
+    missionTitle: "Our mission",
+    mission: "A registered nonprofit working to advance, empower and develop young women in Israel, personally, educationally, ethically and as leaders, in the period between finishing school and enlisting in the IDF, national service or civilian service.",
+    programs: ["Lectures and gatherings", "Personal guidance", "Support for families", "Community and hotline"],
   },
 
   reach: {
@@ -287,8 +297,6 @@ export const en: Dictionary = {
       phone: "052-7575-290",
       hotline: "055-973-9365",
       whatsappLabel: "WhatsApp",
-      addressLabel: "Address",
-      address: "Israel",
       hoursLabel: "Hours",
       hours: "Sun–Thu · 9:00–18:00",
     },
@@ -488,6 +496,83 @@ export const en: Dictionary = {
     ],
     ctaTitle: "Want to take part?",
     ctaText: "Contact us about donating, partnering or volunteering, and we will respond with the relevant details.",
+    cta: "Contact us",
+  },
+
+  organization: {
+    displayName: "Service with Meaning · SHERUT EM MASHMAUT (R.A.)",
+    detailsCta: "About the organization and registration details",
+    labels: {
+      legalNameHebrew: "Registered name (Hebrew)",
+      legalNameLatin: "Registered name (English)",
+      registrationNumber: "Charity ID (Registrar of Associations no.)",
+      registrationNumberShort: "Charity ID",
+      registrationDate: "Registration date",
+      registrar: "Registered with",
+      activityField: "Field of activity",
+      address: "Registered address",
+      email: "Email",
+      phone: "Phone",
+      website: "Official website",
+    },
+    registrationDate: "10 July 2026",
+    registrar: "Registrar of Associations, Israeli Corporations Authority, Ministry of Justice",
+    activityField: "Education, higher education and vocational training · Educational programs",
+    address: {
+      street: "8 Ma'ale HaDekel St.",
+      city: "Mitzpe Ramon",
+      postalCode: "8060000",
+      country: "Israel",
+    },
+  },
+
+  aboutPage: {
+    kicker: "Transparency and official information",
+    title: "About Service with Meaning",
+    lead: "Service with Meaning, registered in Israel as SHERUT EM MASHMAUT (R.A.), Charity ID 580843829, is a registered Israeli nonprofit that accompanies young women in Israel on the path to meaningful service, military, national or civilian, through lectures, personal guidance, support for families and community. Here you will find our mission, what we actually do, our purposes as registered with the Registrar of Associations, and our full registration details.",
+    missionTitle: "Our mission",
+    mission: "We work to advance, empower and develop, personally, educationally, ethically and as leaders, young women who are finishing their studies in the post-primary education system, in the period between the end of school and enlistment in the IDF, national service or civilian service. Our goal is for every young woman to choose service out of identity, values and calling, and to receive the tools, guidance and community that will accompany her all the way.",
+    programsTitle: "What we actually do",
+    programs: [
+      {
+        title: "Lectures and gatherings",
+        text: "Women lecturers who have walked the path themselves visit schools, pre-military academies, seminaries, communities and units for an honest conversation about identity, values, responsibility and service, with real stories from the field.",
+      },
+      {
+        title: "Personal guidance",
+        text: "One-on-one conversations with a mentor who knows the path: before enlistment, at decision points and in complex moments during service.",
+      },
+      {
+        title: "Support for families",
+        text: "Tools and conversation for parents and relatives accompanying a young woman before and during her service.",
+      },
+      {
+        title: "Community and support network",
+        text: "WhatsApp groups for young women, parents and educators, a hotline, and a nationwide community of service alumnae that keeps guiding, connecting and supporting.",
+      },
+    ],
+    purposesTitle: "Our purposes as registered",
+    purposesNote: "The purposes below are an English translation of the purposes registered with the Israeli Registrar of Associations (Charity ID 580843829). The Hebrew registered text is authoritative; the certificate of registration shows the main purposes only.",
+    purposes: [
+      "The association shall act to advance, empower and develop, personally, educationally, ethically and as leaders, young women who complete their studies in the post-primary education system, in the period between the end of their studies and their enlistment in the IDF, national service or civilian service.",
+      "To provide young women with tools, knowledge, skills and training that will assist them in the transition to adult life and to frameworks of service and action.",
+      "To promote the values of personal responsibility, leadership, social involvement, giving, volunteering, excellence, personal resilience and active citizenship.",
+      "To initiate, operate and maintain educational, social, values-based, cultural and enrichment programs, including workshops, courses, lectures, conferences, study days, camps, seminars, gatherings and group and individual activities.",
+      "To provide guidance, counseling, direction, mentoring and a support framework for young women and their families, as required.",
+      "To encourage integration into national service or civilian service, as well as contribution to the community and society in Israel, and to assist as needed in the decision-making process.",
+      "To maintain collaborations with educational institutions, local authorities, public bodies, nonprofits, foundations and other entities in Israel and abroad, in order to advance the association's purposes.",
+      "To initiate, develop, operate and support any educational, social, community or public activity that is consistent with the association's purposes and contributes to their advancement.",
+    ],
+    detailsTitle: "Organization details",
+    certificateCta: "Certificate of registration (PDF, Hebrew)",
+    registryCta: "Our record in the Registrar of Associations database",
+    domainTitle: "Official domain and channels",
+    domainText: "The website www.imashmaut.co.il and the domain imashmaut.co.il are owned and operated by the nonprofit Service with Meaning, registered as SHERUT EM MASHMAUT (R.A.), Charity ID 580843829. The organization's official email addresses end in @imashmaut.co.il, and the social channels linked from this site are our official channels.",
+    leadershipTitle: "Who leads the organization",
+    leadershipText: "The organization was founded and is led by Daniel Bodokh (chairman and founder) and Adv. Odelia Kadmi (founder, speaker and lecturer), together with a leadership team, lecturers and mentors. About 30 young women volunteer in answering questions and personal accompaniment.",
+    leadershipCta: "Meet the team",
+    ctaTitle: "Have a question about the organization?",
+    ctaText: "We are glad to answer any question about our work, our registration and ways to take part.",
     cta: "Contact us",
   },
 

@@ -4,6 +4,7 @@ export const SITE_ORIGIN = "https://www.imashmaut.co.il";
 
 export const siteRoutes = {
   home: { slug: "" },
+  about: { slug: "about" },
   lectures: { slug: "lectures" },
   guidance: { slug: "guidance" },
   team: { slug: "team" },

@@ -13,6 +13,7 @@ import type {
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { socialLinks } from "@/lib/contact";
+import { organization } from "@/lib/organization";
 import { absoluteUrl, SITE_ORIGIN, type SiteRouteKey } from "@/lib/routes";
 import { routeLabel } from "@/lib/seo";
 
@@ -30,12 +31,32 @@ function language(locale: Locale): string {
   return locale === "he" ? "he-IL" : "en-US";
 }
 
-function organizationNode(dict: Dictionary): NGO {
+function organizationNode(locale: Locale, dict: Dictionary): NGO {
   return {
     "@type": "NGO",
     "@id": ORGANIZATION_ID,
     name: dict.brand.name,
-    alternateName: ["Service with Meaning", "שע״מ", "SwM"],
+    legalName: locale === "he" ? organization.legalNameHebrew : organization.legalNameLatin,
+    alternateName: [
+      "Service with Meaning",
+      "שע״מ",
+      "SwM",
+      organization.legalNameLatin,
+      "SHERUT EM MASHMAUT",
+    ],
+    identifier: {
+      "@type": "PropertyValue",
+      propertyID: "Israeli Registrar of Associations number",
+      value: organization.registrationNumber,
+    },
+    taxID: organization.registrationNumber,
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: dict.organization.address.street,
+      addressLocality: dict.organization.address.city,
+      postalCode: dict.organization.address.postalCode,
+      addressCountry: organization.countryCode,
+    },
     slogan: "ערכים · זהות · שליחות | Values · Identity · Calling",
     url: SITE_ORIGIN,
     description: dict.seo.home.description,
@@ -130,7 +151,7 @@ function breadcrumbNode(
 export function homeGraph(locale: Locale, dict: Dictionary): Graph {
   return {
     "@context": "https://schema.org",
-    "@graph": [organizationNode(dict), websiteNode(locale, dict), webPageNode(locale, "home", dict)],
+    "@graph": [organizationNode(locale, dict), websiteNode(locale, dict), webPageNode(locale, "home", dict)],
   };
 }
 
@@ -142,7 +163,7 @@ export function standardPageGraph(
   return {
     "@context": "https://schema.org",
     "@graph": [
-      organizationNode(dict),
+      organizationNode(locale, dict),
       webPageNode(locale, route, dict),
       breadcrumbNode(locale, route, dict),
     ],
@@ -174,7 +195,7 @@ export function servicePageGraph(
   return {
     "@context": "https://schema.org",
     "@graph": [
-      organizationNode(dict),
+      organizationNode(locale, dict),
       webPageNode(locale, route, dict),
       service,
       breadcrumbNode(locale, route, dict),
@@ -197,7 +218,27 @@ export function contactPageGraph(locale: Locale, dict: Dictionary): Graph {
 
   return {
     "@context": "https://schema.org",
-    "@graph": [organizationNode(dict), page, breadcrumbNode(locale, "contact", dict)],
+    "@graph": [organizationNode(locale, dict), page, breadcrumbNode(locale, "contact", dict)],
+  };
+}
+
+export function aboutPageGraph(locale: Locale, dict: Dictionary): Graph {
+  const url = absoluteUrl(locale, "about");
+  const page: AboutPage = {
+    "@type": "AboutPage",
+    "@id": `${url}#webpage`,
+    url,
+    name: dict.seo.about.title,
+    description: dict.seo.about.description,
+    inLanguage: language(locale),
+    isPartOf: { "@id": WEBSITE_ID },
+    about: { "@id": ORGANIZATION_ID },
+    mainEntity: { "@id": ORGANIZATION_ID },
+  };
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": [organizationNode(locale, dict), page, breadcrumbNode(locale, "about", dict)],
   };
 }
 
@@ -244,7 +285,7 @@ export function teamPageGraph(locale: Locale, dict: Dictionary): Graph {
 
   return {
     "@context": "https://schema.org",
-    "@graph": [organizationNode(dict), page, ...people, breadcrumbNode(locale, "team", dict)],
+    "@graph": [organizationNode(locale, dict), page, ...people, breadcrumbNode(locale, "team", dict)],
   };
 }
 
@@ -271,6 +312,6 @@ export function faqPageGraph(locale: Locale, dict: Dictionary): Graph {
 
   return {
     "@context": "https://schema.org",
-    "@graph": [organizationNode(dict), page, breadcrumbNode(locale, "faq", dict)],
+    "@graph": [organizationNode(locale, dict), page, breadcrumbNode(locale, "faq", dict)],
   };
 }

@@ -5,12 +5,14 @@ import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { SocialLinks } from "@/components/site/SocialLinks";
 import { contactLinks, donationLink } from "@/lib/contact";
+import { formatPostalAddress, organization } from "@/lib/organization";
 import { localizedPath, type SiteRouteKey } from "@/lib/routes";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
 
 const FOOTER_LINKS = [
   "home",
+  "about",
   "lectures",
   "guidance",
   "team",
@@ -83,6 +85,17 @@ export function Footer({ locale, dict }: { locale: Locale; dict: Dictionary }) {
         </div>
 
         <div className="hr-brand mt-14 opacity-30" />
+
+        <div className="mt-6 grid gap-1.5 text-sm text-brand-300">
+          <p>
+            <bdi dir="rtl" className="font-semibold text-brand-100">{organization.legalNameHebrew}</bdi>
+            {" · "}
+            <bdi dir="ltr">{organization.legalNameLatin}</bdi>
+            {" · "}
+            {dict.organization.labels.registrationNumberShort} <bdi dir="ltr">{organization.registrationNumber}</bdi>
+          </p>
+          <address className="not-italic">{formatPostalAddress(dict.organization.address)}</address>
+        </div>
 
         <div className="mt-6 flex flex-col items-start justify-between gap-3 text-sm text-brand-300 sm:flex-row sm:items-center">
           <p>© {dict.brand.name} · {dict.footer.nonprofit} · {dict.footer.rights}</p>
