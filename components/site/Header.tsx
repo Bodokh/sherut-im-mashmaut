@@ -8,7 +8,7 @@ import type { Dictionary } from "@/i18n/dictionaries";
 import { donationLink } from "@/lib/contact";
 import { localizedPath, type SiteRouteKey } from "@/lib/routes";
 
-const PRIMARY_ROUTES = ["lectures", "guidance", "getInvolved", "faq", "contact"] as const;
+const PRIMARY_ROUTES = ["lectures", "guidance", "videos", "getInvolved", "faq", "contact"] as const;
 
 type HeaderNavKey =
   | (typeof PRIMARY_ROUTES)[number]
@@ -47,6 +47,7 @@ export function buildHeaderCopy(dict: Dictionary): HeaderCopy {
       donate: dict.nav.donate,
       lectures: dict.nav.lectures,
       guidance: dict.nav.guidance,
+      videos: dict.nav.videos,
       getInvolved: dict.nav.getInvolved,
       faq: dict.nav.faq,
     },

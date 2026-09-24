@@ -45,6 +45,11 @@ export const en: Dictionary = {
       description:
         "Support Service with Meaning through a donation, partnership or volunteering, and help bring lectures, personal guidance and community to more young women in Israel.",
     },
+    videos: {
+      title: "Videos & Recorded Lectures | Service with Meaning",
+      description:
+        "Watch lectures, conversations and field stories from Service with Meaning: videos on values, identity and meaningful service for young women in Israel.",
+    },
     faq: {
       title: "Meaningful Service FAQ | Service with Meaning",
       description:
@@ -59,6 +64,7 @@ export const en: Dictionary = {
     guidance: "Guidance",
     team: "Our team",
     getInvolved: "Donate & partner",
+    videos: "Videos",
     faq: "Frequently asked questions",
     contact: "Contact",
   },
@@ -98,6 +104,7 @@ export const en: Dictionary = {
     lectures: "Lectures",
     guidance: "Guidance",
     getInvolved: "Donate & Partner",
+    videos: "Videos",
     faq: "FAQ",
   },
 
@@ -677,6 +684,24 @@ export const en: Dictionary = {
     ctaTitle: "Want to bring us to you?",
     ctaText: "A lecture, a talk or a gathering — for your institution, community or unit.",
     cta: "Invite a lecture",
+  },
+
+  videosPage: {
+    kicker: "Videos",
+    title: "Our videos",
+    lead: "Lectures, conversations and real stories from the field, straight from the Service with Meaning YouTube channel.",
+    latest: "Latest video",
+    allVideos: "All videos",
+    videoCount: "{count} videos",
+    play: "Play video",
+    close: "Close player",
+    watchOnYoutube: "Watch on YouTube",
+    subscribe: "Subscribe to the channel",
+    emptyTitle: "Videos are on the way",
+    emptyText: "Lectures and field stories are coming to the channel soon. Subscribe to hear about every new video.",
+    ctaTitle: "Want to hear us in person?",
+    ctaText: "A lecture, conversation or gathering for your institution, community or unit.",
+    cta: "Book a lecture",
   },
 
   comments: {

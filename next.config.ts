@@ -8,6 +8,11 @@ const nextConfig: NextConfig = {
         hostname: "images.unsplash.com",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "i.ytimg.com",
+        pathname: "/vi/**",
+      },
     ],
   },
   async headers() {
@@ -40,6 +45,7 @@ const nextConfig: NextConfig = {
       { source: "/guidance", destination: "/he/guidance" },
       { source: "/team", destination: "/he/team" },
       { source: "/get-involved", destination: "/he/get-involved" },
+      { source: "/videos", destination: "/he/videos" },
       { source: "/faq", destination: "/he/faq" },
       { source: "/contact", destination: "/he/contact" },
     ];

@@ -9,6 +9,7 @@ export const siteRoutes = {
   guidance: { slug: "guidance" },
   team: { slug: "team" },
   getInvolved: { slug: "get-involved" },
+  videos: { slug: "videos" },
   faq: { slug: "faq" },
   contact: { slug: "contact" },
 } as const;

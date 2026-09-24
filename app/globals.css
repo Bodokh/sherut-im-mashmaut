@@ -331,3 +331,11 @@
     transition-duration: 0.001ms !important;
   }
 }
+
+/* Video page player dialog — scale in from the thumbnail that opened it */
+@keyframes video-dialog-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+}
+.video-dialog[open] { animation: video-dialog-in 0.35s var(--ease-out-quint); }
+@keyframes video-backdrop-in { from { opacity: 0; } }
+.video-dialog[open]::backdrop { animation: video-backdrop-in 0.25s ease-out; }

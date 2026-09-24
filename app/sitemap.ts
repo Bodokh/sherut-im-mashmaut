@@ -11,6 +11,7 @@ const lastModifiedByRoute: Record<SiteRouteKey, string> = {
   guidance: "2026-08-11",
   team: "2026-08-11",
   getInvolved: "2026-08-11",
+  videos: "2026-09-24",
   faq: "2026-08-11",
   contact: "2026-09-22",
 };

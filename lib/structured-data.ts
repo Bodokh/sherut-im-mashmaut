@@ -1,12 +1,14 @@
 import type {
   AboutPage,
   BreadcrumbList,
+  CollectionPage,
   ContactPage,
   FAQPage,
   Graph,
   NGO,
   Person,
   Service,
+  VideoObject,
   WebPage,
   WebSite,
 } from "schema-dts";
@@ -16,6 +18,7 @@ import { socialLinks } from "@/lib/contact";
 import { organization } from "@/lib/organization";
 import { absoluteUrl, SITE_ORIGIN, type SiteRouteKey } from "@/lib/routes";
 import { routeLabel } from "@/lib/seo";
+import { youtubeEmbedUrl, youtubeWatchUrl, type YouTubeVideo } from "@/lib/youtube";
 
 const ORGANIZATION_ID = `${SITE_ORIGIN}/#organization`;
 const WEBSITE_ID = `${SITE_ORIGIN}/#website`;
@@ -313,5 +316,56 @@ export function faqPageGraph(locale: Locale, dict: Dictionary): Graph {
   return {
     "@context": "https://schema.org",
     "@graph": [organizationNode(locale, dict), page, breadcrumbNode(locale, "faq", dict)],
+  };
+}
+
+function isoDuration(totalSeconds: number): string {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `PT${hours ? `${hours}H` : ""}${minutes ? `${minutes}M` : ""}${seconds}S`;
+}
+
+function videoNode(video: YouTubeVideo): VideoObject {
+  return {
+    "@type": "VideoObject",
+    "@id": `${youtubeWatchUrl(video.id)}#video`,
+    name: video.title,
+    // Google requires a description; fall back to the title for bare uploads.
+    description: video.description || video.title,
+    thumbnailUrl: video.thumbnail,
+    uploadDate: video.publishedAt,
+    duration: isoDuration(video.durationSeconds),
+    contentUrl: youtubeWatchUrl(video.id),
+    embedUrl: youtubeEmbedUrl(video.id),
+    publisher: { "@id": ORGANIZATION_ID },
+  };
+}
+
+export function videosPageGraph(locale: Locale, dict: Dictionary, videos: YouTubeVideo[]): Graph {
+  const url = absoluteUrl(locale, "videos");
+  const page: CollectionPage = {
+    "@type": "CollectionPage",
+    "@id": `${url}#webpage`,
+    url,
+    name: dict.seo.videos.title,
+    description: dict.seo.videos.description,
+    inLanguage: language(locale),
+    isPartOf: { "@id": WEBSITE_ID },
+    about: { "@id": ORGANIZATION_ID },
+    mainEntity: {
+      "@type": "ItemList",
+      numberOfItems: videos.length,
+      itemListElement: videos.map((video, index) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        item: videoNode(video),
+      })),
+    },
+  };
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": [organizationNode(locale, dict), page, breadcrumbNode(locale, "videos", dict)],
   };
 }
