@@ -88,7 +88,7 @@ export function VideoGrid({
         {active ? (
           <div>
             <div className="mb-3 flex items-center justify-between gap-4">
-              <h2 className="line-clamp-1 text-base font-bold sm:text-lg">{active.title}</h2>
+              <h2 className="line-clamp-1 text-base font-bold text-white sm:text-lg">{active.title}</h2>
               <button
                 type="button"
                 onClick={close}
