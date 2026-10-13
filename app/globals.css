@@ -339,3 +339,10 @@
 .video-dialog[open] { animation: video-dialog-in 0.35s var(--ease-out-quint); }
 @keyframes video-backdrop-in { from { opacity: 0; } }
 .video-dialog[open]::backdrop { animation: video-backdrop-in 0.25s ease-out; }
+
+/* Let the dialog's text-white reach headings (base h1–h4 set ink-950). */
+@layer components {
+  .video-dialog :is(h1, h2, h3, h4) {
+    color: inherit;
+  }
+}
