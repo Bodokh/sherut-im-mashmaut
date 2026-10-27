@@ -4,6 +4,7 @@ import { defaultLocale } from "@/i18n/config";
 import { PATHNAME_HEADER } from "@/lib/pathname-locale";
 
 const staffAuthPaths = new Set(["/staff/login", "/staff/signup", "/staff/logout", "/staff/setup"]);
+const useDevelopmentProxy = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.startsWith("pk_test_") === true;
 
 const staffProxy = clerkMiddleware(async (auth, request) => {
   const pathname = request.nextUrl.pathname.replace(/\/$/, "");
@@ -23,14 +24,14 @@ const staffProxy = clerkMiddleware(async (auth, request) => {
   response.headers.set("X-Robots-Tag", "noindex, nofollow");
   return response;
 }, {
-  frontendApiProxy: { enabled: true, path: "/__clerk" },
+  frontendApiProxy: { enabled: useDevelopmentProxy, path: "/__clerk" },
 });
 
 // Permanently clean up the old explicit prefix for the default Hebrew locale.
 export function proxy(request: NextRequest, event: NextFetchEvent) {
   const { pathname } = request.nextUrl;
 
-  if (pathname === "/__clerk" || pathname.startsWith("/__clerk/")) {
+  if (useDevelopmentProxy && (pathname === "/__clerk" || pathname.startsWith("/__clerk/"))) {
     return staffProxy(request, event);
   }
 

@@ -8,23 +8,25 @@ const require = createRequire(import.meta.url);
 const { NextRequest } = require("next/server");
 const { unstable_doesMiddlewareMatch: doesProxyMatch } = require("next/experimental/testing/server");
 const localeConfig = require("../../../i18n/config.ts");
+const developmentKey = `pk_test_${Buffer.from("clerk.example.test$").toString("base64")}`;
+const productionKey = `pk_live_${Buffer.from("clerk.example.test$").toString("base64")}`;
 
-function loadSource(relativePath, dependencies) {
+function loadSource(relativePath, dependencies, publishableKey) {
   const source = readFileSync(new URL(relativePath, import.meta.url), "utf8");
   const compiled = ts.transpileModule(source, {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
   }).outputText;
   const compiledModule = { exports: {} };
-  new Function("require", "module", "exports", compiled)((specifier) => {
+  new Function("require", "module", "exports", "process", compiled)((specifier) => {
     if (Object.hasOwn(dependencies, specifier)) return dependencies[specifier];
     return require(specifier);
-  }, compiledModule, compiledModule.exports);
+  }, compiledModule, compiledModule.exports, { env: { NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: publishableKey } });
   return compiledModule.exports;
 }
 
 const pathnameConfig = loadSource("../../../lib/pathname-locale.ts", { "@/i18n/config": localeConfig });
 
-function loadProxy() {
+function loadProxy(publishableKey) {
   const calls = [];
   const middlewareResponse = new Response(null, { status: 299 });
   let handler;
@@ -42,12 +44,12 @@ function loadProxy() {
     },
     "@/i18n/config": localeConfig,
     "@/lib/pathname-locale": pathnameConfig,
-  });
+  }, publishableKey);
   return { ...loaded, calls, handler, options, middlewareResponse };
 }
 
 test("Clerk proxy includes public scripts and dispatches only its exact prefix", () => {
-  const loaded = loadProxy();
+  const loaded = loadProxy(developmentKey);
   assert.deepEqual(loaded.options.frontendApiProxy, { enabled: true, path: "/__clerk" });
   for (const pathname of [
     "/__clerk",
@@ -71,8 +73,51 @@ test("Clerk proxy includes public scripts and dispatches only its exact prefix",
   }
 });
 
+test("production keys use Clerk DNS and leave the first-party proxy inactive", () => {
+  const loaded = loadProxy(productionKey);
+  assert.equal(loaded.options.frontendApiProxy.enabled, false);
+  for (const pathname of ["/__clerk", "/__clerk/v1/environment", "/__clerk/npm/@clerk/clerk-js@6/dist/clerk.browser.js"]) {
+    const request = new NextRequest(`https://www.example.test${pathname}`);
+    const response = loaded.proxy(request, {});
+    assert.equal(response.headers.get("x-middleware-next"), "1", pathname);
+    assert.equal(response.headers.get(`x-middleware-request-${pathnameConfig.PATHNAME_HEADER}`), pathname);
+  }
+  assert.equal(loaded.calls.length, 0);
+});
+
+test("provider uses the proxy only for development keys and keeps anonymous static rendering", () => {
+  const ClerkProvider = () => null;
+  for (const [key, expectedProxyUrl] of [[developmentKey, "/__clerk"], [productionKey, undefined], [undefined, undefined]]) {
+    const { StaffAuthProvider } = loadSource("../../../components/staff/auth/auth-provider.tsx", {
+      "@clerk/nextjs": { ClerkProvider },
+      "@clerk/localizations": { heIL: {} },
+    }, key);
+    const element = StaffAuthProvider({ children: "public shell" });
+    assert.equal(element.type, ClerkProvider);
+    assert.equal(element.props.proxyUrl, expectedProxyUrl);
+    assert.equal(Object.hasOwn(element.props, "proxyUrl"), expectedProxyUrl !== undefined);
+    assert.equal(element.props.dynamic, false);
+    assert.equal(element.props.children, "public shell");
+    assert.equal(element.props.signInUrl, "/staff/login");
+    assert.equal(element.props.signUpUrl, "/staff/signup");
+    assert.equal(element.props.afterSignOutUrl, "/staff/login");
+  }
+});
+
+test("production and missing-key paths retain Clerk staff/API delegation and fail closed on unavailable auth", async () => {
+  for (const key of [productionKey, undefined, ""]) {
+    const loaded = loadProxy(key);
+    assert.equal(loaded.options.frontendApiProxy.enabled, false);
+    for (const pathname of ["/staff", "/staff/login/google-callback", "/api/mentoring/workspace"]) {
+      assert.equal(loaded.proxy(new NextRequest(`https://www.example.test${pathname}`), {}), loaded.middlewareResponse, pathname);
+    }
+    const authError = new Error("Clerk authentication unavailable");
+    await assert.rejects(loaded.handler(async () => { throw authError; }, new NextRequest("https://www.example.test/staff/cases")), authError);
+  }
+});
+
 test("existing staff/API dispatch and Hebrew canonical redirects remain intact", () => {
-  const loaded = loadProxy();
+  const loaded = loadProxy(developmentKey);
   for (const pathname of ["/staff", "/staff/login", "/staff/offline", "/api/mentoring", "/api/mentoring/workspace"]) {
     assert.equal(loaded.proxy(new NextRequest(`https://example.test${pathname}`), {}), loaded.middlewareResponse, pathname);
   }
@@ -88,7 +133,7 @@ test("existing staff/API dispatch and Hebrew canonical redirects remain intact",
 });
 
 test("staff callback retains authentication and private API/auth-page cache rules", async () => {
-  const loaded = loadProxy();
+  const loaded = loadProxy(developmentKey);
   let authCalls = 0;
   const auth = async () => { authCalls++; return { isAuthenticated: false }; };
   const protectedResponse = await loaded.handler(auth, new NextRequest("https://example.test/staff/cases"));
@@ -105,7 +150,7 @@ test("staff callback retains authentication and private API/auth-page cache rule
 });
 
 test("public pathname forwarding replaces spoofed headers and retains unrelated request headers", () => {
-  const loaded = loadProxy();
+  const loaded = loadProxy(developmentKey);
   for (const pathname of ["/missing-page?lang=en", "/en/missing-page?source=test", "/en/missing.html?source=test", "/en/folder/missing.pdf"]) {
     assert.equal(doesProxyMatch({ config: loaded.config, nextConfig: {}, url: pathname }), true, pathname);
     const request = new NextRequest(`https://example.test${pathname}`, {
@@ -125,7 +170,7 @@ test("public pathname forwarding replaces spoofed headers and retains unrelated 
 });
 
 test("staff continuations forward the request pathname without weakening auth or cache boundaries", async () => {
-  const loaded = loadProxy();
+  const loaded = loadProxy(developmentKey);
   let authCalls = 0;
   const auth = async () => { authCalls++; return { isAuthenticated: true }; };
   for (const pathname of ["/staff/participants/missing?tab=history", "/staff/login/google-callback?state=test", "/api/mentoring/workspace?view=test"]) {
