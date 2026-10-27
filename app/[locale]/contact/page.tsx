@@ -10,6 +10,7 @@ import { RelatedLinks } from "@/components/site/RelatedLinks";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { Section, Eyebrow } from "@/components/ui/Section";
 import { ContactForm } from "@/components/forms/ContactForm";
+import { PrivacyNotice } from "@/components/forms/PrivacyNotice";
 import { SocialLinks } from "@/components/site/SocialLinks";
 import { WhatsAppIcon } from "@/components/site/WhatsAppIcon";
 import { communityLinks, contactLinks } from "@/lib/contact";
@@ -89,7 +90,7 @@ export default async function ContactPage({
           <div className="mt-12 grid gap-8 lg:grid-cols-12">
             <div id="contact-form" className="scroll-mt-28 lg:col-span-7">
               <h2 className="mb-5 text-2xl font-bold text-ink-950">{t.formTitle}</h2>
-              <ContactForm form={dict.contact.form} />
+              <ContactForm form={dict.contact.form} privacyNotice={<PrivacyNotice locale={locale} id="contact-privacy-notice" />} />
             </div>
 
             <aside className="lg:col-span-5">

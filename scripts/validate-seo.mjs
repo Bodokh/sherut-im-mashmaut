@@ -1,7 +1,7 @@
 const baseUrl = process.env.SEO_BASE_URL ?? "http://127.0.0.1:3100";
 const origin = "https://www.imashmaut.co.il";
 const locales = ["he", "en"];
-const slugs = ["", "about", "lectures", "guidance", "team", "get-involved", "faq", "contact"];
+const slugs = ["", "about", "lectures", "guidance", "team", "get-involved", "videos", "faq", "contact", "terms", "privacy", "accessibility"];
 const routeBySlug = {
   "": "home",
   about: "about",
@@ -9,8 +9,12 @@ const routeBySlug = {
   guidance: "guidance",
   team: "team",
   "get-involved": "getInvolved",
+  videos: "videos",
   faq: "faq",
   contact: "contact",
+  terms: "terms",
+  privacy: "privacy",
+  accessibility: "accessibility",
 };
 const localizedPath = (locale, slug) => {
   const localePrefix = locale === "he" ? "" : `/${locale}`;
@@ -90,6 +94,7 @@ function expectedSchema(path) {
   if (path.endsWith("/contact")) return ["ContactPage", "BreadcrumbList"];
   if (path.endsWith("/lectures") || path.endsWith("/guidance")) return ["Service", "BreadcrumbList"];
   if (path.endsWith("/faq")) return ["FAQPage", "BreadcrumbList"];
+  if (path.endsWith("/videos")) return ["CollectionPage", "BreadcrumbList"];
   return ["WebPage", "BreadcrumbList"];
 }
 
@@ -175,6 +180,21 @@ for (const { locale, route, path, slug } of pages) {
     );
   assert(new Set(internalLinks).size >= 5, `${path}: fewer than five distinct localized internal links`);
   assert(!html.includes('href="#"'), `${path}: contains a placeholder href`);
+
+  for (const legalSlug of ["terms", "privacy", "accessibility"]) {
+    const footer = html.match(/<footer\b[^>]*>([\s\S]*?)<\/footer>/i)?.[1] ?? "";
+    assert(tags(footer, "a").some((tag) => attr(tag, "href") === localizedPath(locale, legalSlug)), `${path}: footer missing ${legalSlug}`);
+  }
+
+  if (["terms", "privacy", "accessibility"].includes(route)) {
+    const main = html.match(/<main\b[^>]*>([\s\S]*?)<\/main>/i)?.[1] ?? "";
+    assert(visibleMainWordCount(html) >= 300, `${path}: legal content is incomplete`);
+    assert(!/TODO|TBD|PLACEHOLDER|lorem ipsum|להשלמה|יעודכן בהמשך/i.test(main), `${path}: unfinished legal copy`);
+    assert(tags(main, "time").some((tag) => attr(tag, "datetime") === "2026-10-27"), `${path}: missing policy update date`);
+    if (route === "privacy") {
+      assert(main.includes('href="mailto:privacy@imashmaut.co.il"'), `${path}: incorrect privacy contact`);
+    }
+  }
 }
 
 const sitemapResponse = await fetch(`${baseUrl}/sitemap.xml`);
@@ -182,11 +202,11 @@ assert(sitemapResponse.status === 200, "sitemap: expected 200");
 assert(sitemapResponse.headers.get("content-type")?.includes("xml"), "sitemap: incorrect content type");
 const sitemap = await sitemapResponse.text();
 const sitemapLocations = [...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map((match) => match[1]);
-assert(sitemapLocations.length === 16, `sitemap: expected 16 URLs, received ${sitemapLocations.length}`);
+assert(sitemapLocations.length === pages.length, `sitemap: expected ${pages.length} URLs, received ${sitemapLocations.length}`);
 for (const { path } of pages) assert(sitemapLocations.includes(`${origin}${path}`), `sitemap: missing ${path}`);
 assert(!sitemapLocations.some((location) => new URL(location).pathname.startsWith("/he")), "sitemap: legacy /he URL found");
-assert((sitemap.match(/hreflang=/g) ?? []).length === 48, "sitemap: expected three language alternates per URL");
-assert((sitemap.match(/<lastmod>/g) ?? []).length === 16, "sitemap: expected an accurate last-modified date per URL");
+assert((sitemap.match(/hreflang=/g) ?? []).length === pages.length * 3, "sitemap: expected three language alternates per URL");
+assert((sitemap.match(/<lastmod>/g) ?? []).length === pages.length, "sitemap: expected an accurate last-modified date per URL");
 
 const robotsResponse = await fetch(`${baseUrl}/robots.txt`);
 assert(robotsResponse.status === 200, "robots: expected 200");

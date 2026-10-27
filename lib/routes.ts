@@ -12,9 +12,15 @@ export const siteRoutes = {
   videos: { slug: "videos" },
   faq: { slug: "faq" },
   contact: { slug: "contact" },
+  terms: { slug: "terms" },
+  privacy: { slug: "privacy" },
+  accessibility: { slug: "accessibility" },
 } as const;
 
 export type SiteRouteKey = keyof typeof siteRoutes;
+
+export const legalRouteKeys = ["terms", "privacy", "accessibility"] as const satisfies readonly SiteRouteKey[];
+export type LegalRouteKey = (typeof legalRouteKeys)[number];
 
 export const siteRouteKeys = Object.keys(siteRoutes) as SiteRouteKey[];
 

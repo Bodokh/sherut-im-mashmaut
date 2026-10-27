@@ -14,6 +14,9 @@ const lastModifiedByRoute: Record<SiteRouteKey, string> = {
   videos: "2026-09-24",
   faq: "2026-08-11",
   contact: "2026-09-22",
+  terms: "2026-10-27",
+  privacy: "2026-10-27",
+  accessibility: "2026-10-27",
 };
 
 export default function sitemap(): MetadataRoute.Sitemap {

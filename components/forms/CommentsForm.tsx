@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import type { Dictionary } from "@/i18n/dictionaries";
 
@@ -11,7 +11,7 @@ const fieldClass =
 
 type SubmitState = "idle" | "sending" | "success" | "error";
 
-export function CommentsForm({ copy }: { copy: CommentsDict }) {
+export function CommentsForm({ copy, privacyNotice }: { copy: CommentsDict; privacyNotice: ReactNode }) {
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -36,7 +36,7 @@ export function CommentsForm({ copy }: { copy: CommentsDict }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-3xl border border-line bg-surface p-6 sm:p-8">
+    <form onSubmit={handleSubmit} aria-describedby={submitState === "success" ? undefined : "comment-privacy-notice"} className="rounded-3xl border border-line bg-surface p-6 sm:p-8">
       {submitState === "success" ? (
         <div className="flex min-h-64 flex-col items-center justify-center text-center" role="status">
           <span className="grid h-14 w-14 place-items-center rounded-full bg-brand-100 text-brand-800" aria-hidden="true">
@@ -104,6 +104,8 @@ export function CommentsForm({ copy }: { copy: CommentsDict }) {
               className={cn(fieldClass, "resize-y border-line focus:border-brand-500")}
             />
           </div>
+
+          {privacyNotice}
 
           <button
             type="submit"

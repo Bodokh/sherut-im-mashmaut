@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { SocialLinks } from "@/components/site/SocialLinks";
 import { contactLinks, donationLink } from "@/lib/contact";
 import { formatPostalAddress, organization } from "@/lib/organization";
-import { localizedPath, type SiteRouteKey } from "@/lib/routes";
+import { legalRouteKeys, localizedPath, type SiteRouteKey } from "@/lib/routes";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
 
@@ -86,6 +86,18 @@ export function Footer({ locale, dict }: { locale: Locale; dict: Dictionary }) {
         </div>
 
         <div className="hr-brand mt-14 opacity-30" />
+
+        <nav aria-label={dict.footer.legalTitle} className="mt-6">
+          <ul className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-brand-100">
+            {legalRouteKeys.map((route) => (
+              <li key={route}>
+                <Link href={localizedPath(locale, route)} className="inline-flex min-h-11 items-center rounded-sm underline decoration-brand-500 underline-offset-4 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
+                  {dict.routeLabels[route]}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
 
         <div className="mt-6 grid gap-1.5 text-sm text-brand-300">
           <p>

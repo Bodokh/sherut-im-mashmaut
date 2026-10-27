@@ -50,6 +50,18 @@ export const en: Dictionary = {
       description:
         "Watch lectures, conversations and field stories from Service with Meaning: videos on values, identity and meaningful service for young women in Israel.",
     },
+    terms: {
+      title: "Terms of Use | Service with Meaning",
+      description: "Terms for using the Service with Meaning website, including permitted use, content rights, enquiries, donations, external services and responsibility.",
+    },
+    privacy: {
+      title: "Privacy Policy | Service with Meaning",
+      description: "How Service with Meaning handles information from website enquiries and its mentoring workspace, including service providers, retention and your privacy rights.",
+    },
+    accessibility: {
+      title: "Accessibility Statement | Service with Meaning",
+      description: "Accessibility features on the Service with Meaning website, keyboard and accessibility menu guidance, limitations and ways to request assistance or report a barrier.",
+    },
     faq: {
       title: "Meaningful Service FAQ | Service with Meaning",
       description:
@@ -67,6 +79,9 @@ export const en: Dictionary = {
     videos: "Videos",
     faq: "Frequently asked questions",
     contact: "Contact",
+    terms: "Terms of use",
+    privacy: "Privacy policy",
+    accessibility: "Accessibility statement",
   },
 
   brand: {
@@ -739,6 +754,7 @@ export const en: Dictionary = {
   },
 
   footer: {
+    legalTitle: "Legal information and accessibility",
     blurb: "An Israeli nonprofit accompanying young women toward meaningful service — through values, identity and calling.",
     navTitle: "Navigate",
     contactTitle: "Get in touch",

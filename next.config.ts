@@ -69,6 +69,9 @@ const nextConfig: NextConfig = {
       { source: "/videos", destination: "/he/videos" },
       { source: "/faq", destination: "/he/faq" },
       { source: "/contact", destination: "/he/contact" },
+      { source: "/terms", destination: "/he/terms" },
+      { source: "/privacy", destination: "/he/privacy" },
+      { source: "/accessibility", destination: "/he/accessibility" },
     ];
   },
 };

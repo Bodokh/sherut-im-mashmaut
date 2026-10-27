@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import type { Dictionary } from "@/i18n/dictionaries";
 
@@ -11,7 +11,7 @@ const fieldClass =
 
 type SubmitState = "idle" | "sending" | "success" | "error";
 
-export function ContactForm({ form }: { form: FormDict }) {
+export function ContactForm({ form, privacyNotice }: { form: FormDict; privacyNotice: ReactNode }) {
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -46,6 +46,7 @@ export function ContactForm({ form }: { form: FormDict }) {
   return (
     <form
       onSubmit={handleSubmit}
+      aria-describedby={submitState === "success" ? undefined : "contact-privacy-notice"}
       className="rounded-3xl border border-line bg-surface p-6 sm:p-8"
     >
       {submitState === "success" ? (
@@ -134,6 +135,8 @@ export function ContactForm({ form }: { form: FormDict }) {
               className={cn(fieldClass, "resize-y border-line focus:border-brand-500")}
             />
           </div>
+
+          {privacyNotice}
 
           <button
             type="submit"

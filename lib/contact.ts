@@ -1,4 +1,5 @@
 const SUPPORT_EMAIL = "support@imashmaut.co.il";
+const PRIVACY_EMAIL = "privacy@imashmaut.co.il";
 const WHATSAPP_NUMBER = "972527575290";
 
 function whatsappHref(text?: string) {
@@ -10,6 +11,8 @@ function whatsappHref(text?: string) {
 export const contactLinks = {
   emailAddress: SUPPORT_EMAIL,
   email: `mailto:${SUPPORT_EMAIL}`,
+  privacyEmailAddress: PRIVACY_EMAIL,
+  privacyEmail: `mailto:${PRIVACY_EMAIL}`,
   phone: "tel:+972527575290",
   hotline: "tel:+972559739365",
   whatsapp: whatsappHref(),

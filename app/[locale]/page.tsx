@@ -42,7 +42,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
         <Support dict={dict} />
         <Donate locale={locale} dict={dict} />
         <Contact locale={locale} dict={dict} />
-        <Comments dict={dict} />
+        <Comments dict={dict} locale={locale} />
       </main>
       <Footer locale={locale} dict={dict} />
     </>
