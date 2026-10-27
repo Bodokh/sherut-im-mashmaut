@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowUpLeft, HandHeart, ShieldCheck } from "lucide-react";
+import { LoginFrame } from "./login-frame";
 import {
   Card,
   CardContent,
@@ -15,12 +16,15 @@ export function AuthFrame({
   description,
   children,
   footer,
+  variant = "standard",
 }: {
   title: string;
   description: string;
   children: ReactNode;
   footer?: ReactNode;
+  variant?: "standard" | "login";
 }) {
+  if (variant === "login") return <LoginFrame title={title} description={description} footer={footer}>{children}</LoginFrame>;
   return (
     <main className="min-h-svh bg-background">
       <div className="mx-auto grid min-h-svh max-w-7xl grid-rows-[auto_1fr] lg:grid-cols-2 lg:grid-rows-none">

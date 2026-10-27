@@ -166,12 +166,12 @@ export function SignInForm({ googleResult }: { googleResult?: string } = {}) {
   const description = verifying || stage === "google-verification" ? "נשלים את האימות כדי להמשיך למרחב הליווי." : recovering ? "אימות החשבון מאפשר לבחור סיסמה חדשה." : "נכנסים עם Google או עם כתובת הדוא״ל והסיסמה של חשבון הצוות.";
 
   return (
-    <AuthFrame title={title} description={description} footer={<p className="text-sm text-muted-foreground">עדיין אין לך חשבון? <Link href="/staff/signup" className="font-medium text-primary underline-offset-4 hover:underline">יצירת חשבון לצוות</Link></p>}>
+    <AuthFrame variant="login" title={title} description={description} footer={<p className="text-sm text-muted-foreground">עדיין אין לך חשבון? <Link href="/staff/signup" className="font-medium text-primary underline-offset-4 hover:underline">יצירת חשבון לצוות</Link></p>}>
       {isSignedIn ? <SignedInActions /> : (
         <form onSubmit={submit} noValidate aria-busy={pending}>
           <FieldGroup>
             {stage === "password" && <>
-              <Button type="button" variant="outline" size="lg" className="w-full" disabled={pending} onClick={signInWithGoogle}>
+              <Button data-auth-google type="button" variant="outline" size="lg" className="w-full" disabled={pending} onClick={signInWithGoogle}>
                 <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5">
                   <path fill="#4285F4" d="M21.6 12.23c0-.71-.06-1.39-.18-2.05H12v3.88h5.38a4.6 4.6 0 0 1-2 3.02v2.51h3.24c1.89-1.74 2.98-4.3 2.98-7.36Z" />
                   <path fill="#34A853" d="M12 22c2.7 0 4.96-.9 6.62-2.41l-3.24-2.51c-.9.6-2.05.96-3.38.96-2.6 0-4.81-1.76-5.6-4.12H3.05v2.59A10 10 0 0 0 12 22Z" />
@@ -188,9 +188,10 @@ export function SignInForm({ googleResult }: { googleResult?: string } = {}) {
               <Input id="staff-email" name="email" type="email" dir="ltr" autoComplete="username" placeholder="name@example.com" value={stage === "google-account" ? signIn.identifier ?? "" : identifier} readOnly={stage === "google-account"} onChange={(event) => { setIdentifier(event.target.value); clearField("identifier"); }} onBlur={() => validateField("identifier")} disabled={pending} aria-invalid={!!fieldErrors.identifier} aria-describedby={fieldErrors.identifier ? "staff-email-error" : undefined} required maxLength={254} />
               {fieldErrors.identifier && <FieldError id="staff-email-error">{fieldErrors.identifier}</FieldError>}
             </Field>}
-            {(stage === "password" || stage === "google-account" || stage === "new-password") && <Field data-invalid={!!fieldErrors.password || undefined}>
+            {(stage === "password" || stage === "google-account" || stage === "new-password") && <Field data-auth-password-field data-invalid={!!fieldErrors.password || undefined}>
               <FieldLabel htmlFor="staff-password">{stage === "new-password" ? "סיסמה חדשה" : "סיסמה"}</FieldLabel>
               <Input id="staff-password" name="password" type="password" dir="ltr" autoComplete={stage === "new-password" ? "new-password" : "current-password"} value={password} onChange={(event) => { setPassword(event.target.value); clearField("password"); }} onBlur={() => validateField("password")} disabled={pending} aria-invalid={!!fieldErrors.password} aria-describedby={[stage === "new-password" ? "staff-password-description" : null, fieldErrors.password ? "staff-password-error" : null].filter(Boolean).join(" ") || undefined} minLength={stage === "new-password" ? 15 : undefined} maxLength={512} required />
+              {stage === "password" && <Button data-auth-forgot type="button" variant="link" disabled={pending} onClick={() => restart(true)}>שכחת את הסיסמה?</Button>}
               {stage === "new-password" && <FieldDescription id="staff-password-description">לפחות 15 תווים. מומלץ לבחור משפט סודי וייחודי.</FieldDescription>}
               {fieldErrors.password && <FieldError id="staff-password-error">{fieldErrors.password}</FieldError>}
             </Field>}
@@ -202,7 +203,7 @@ export function SignInForm({ googleResult }: { googleResult?: string } = {}) {
             </Field> : <CodeField value={code} onChange={(value) => { setCode(value); clearField("code"); }} onBlur={() => validateField("code")} disabled={pending} error={fieldErrors.code} description={stage === "verification" && factor === "totp" ? "יש להזין את שש הספרות מאפליקציית האימות." : "יש להזין את שש הספרות שנשלחו לכתובת הדוא״ל של החשבון."} />)}
             <AuthError message={message} />
             <SubmitButton pending={pending}>{stage === "google-verification" ? "המשך אימות החשבון" : verifying ? "אימות וכניסה" : stage === "recovery-email" ? "שליחת קוד לשחזור" : stage === "new-password" ? "שמירת הסיסמה וכניסה" : "כניסה למרחב הליווי"}</SubmitButton>
-            {stage === "password" ? <Button type="button" variant="link" disabled={pending} onClick={() => restart(true)}>שכחת את הסיסמה?</Button> : <div className="flex flex-wrap items-center justify-between gap-2">
+            {stage !== "password" && <div className="flex flex-wrap items-center justify-between gap-2">
               <Button type="button" variant="ghost" disabled={pending} onClick={() => restart()}>חזרה לכניסה</Button>
               {verifying && (stage === "recovery-code" || factor === "email_code") && <Button type="button" variant="link" disabled={pending || cooldown.seconds > 0} onClick={resend}>{cooldown.seconds > 0 ? `שליחה חוזרת בעוד ${cooldown.seconds} שנ׳` : "שליחת קוד חדש"}</Button>}
               {stage === "verification" && factor === "totp" && signIn.supportedSecondFactors.some((item) => item.strategy === "backup_code") && <Button type="button" variant="link" disabled={pending} onClick={() => { setFactor("backup_code"); setCode(""); setFieldErrors({}); setMessage(null); }}>שימוש בקוד גיבוי</Button>}

@@ -1,0 +1,196 @@
+.page {
+  --login-ink: #142746;
+  --login-muted: #5f7088;
+  --login-blue: #2458e7;
+  min-height: 100svh;
+  background: #fafbfe;
+  color: var(--login-ink);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(400px, 0.94fr) minmax(0, 1.06fr);
+  direction: ltr;
+  min-height: 100svh;
+  max-width: 1800px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.formPanel {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: 24px clamp(32px, 5.2vw, 88px) 22px;
+}
+
+.navigation {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 6px;
+  color: #5f7088;
+  font-size: 12px;
+  font-weight: 500;
+  transition: color 160ms ease;
+}
+
+.backLink svg { width: 15px; height: 15px; }
+.backLink:hover { color: var(--login-blue); }
+.backLink:focus-visible, .mobileBrand:focus-visible { outline: 2px solid var(--login-blue); outline-offset: 5px; }
+
+.mobileBrand { display: none; }
+
+.formArea {
+  width: 100%;
+  max-width: 388px;
+  margin: auto;
+  padding: 42px 0 50px;
+  animation: arrive 650ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.introduction { margin-bottom: 30px; }
+
+.welcomeMark {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  margin-bottom: 25px;
+  border: 1px solid #dce7ff;
+  border-radius: 18px;
+  background: #edf3ff;
+  color: var(--login-blue);
+  box-shadow: 0 5px 12px #2458e707, inset 0 1px 0 #fff;
+}
+
+.welcomeMark svg { width: 26px; height: 26px; stroke-width: 1.6; }
+
+.introduction h1 {
+  margin: 0 0 13px;
+  color: var(--login-ink);
+  font-size: clamp(30px, 2.8vw, 40px);
+  font-weight: 750;
+  letter-spacing: -1.3px;
+  line-height: 1.3;
+}
+
+.introduction p {
+  max-width: 350px;
+  color: var(--login-muted);
+  font-size: 13px;
+  line-height: 1.95;
+}
+
+.formBody :global([data-slot="field-group"]) { gap: 22px; }
+.formBody :global([data-slot="field-label"]) { color: #243852; font-size: 12px; font-weight: 550; }
+.formBody :global([data-slot="input"]) {
+  height: 51px;
+  border-color: #dce3ee;
+  border-radius: 12px;
+  background: #fff;
+  padding-right: 16px;
+  padding-left: 16px;
+  color: var(--login-ink);
+  font-size: 14px;
+  box-shadow: 0 2px 3px #14274602;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+.formBody :global([data-slot="input"]::placeholder) { color: #66758b; font-size: 13px; }
+.formBody :global([data-slot="input"]:focus-visible) {
+  border-color: #668bff;
+  box-shadow: 0 0 0 4px #2458e710;
+}
+.formBody :global([data-slot="input"][aria-invalid="true"]) { border-color: var(--destructive); }
+.formBody :global([data-slot="field-description"]) { color: var(--login-muted); font-size: 11px; line-height: 1.8; }
+.formBody :global([data-slot="field-separator"]) { margin-block: 1px 2px; color: #5f7088; font-size: 11px; }
+.formBody :global([data-slot="field-error"]) { font-size: 11px; }
+
+.formBody :global([data-auth-google]) {
+  height: 51px;
+  gap: 11px;
+  border: 1px solid #dce3ee;
+  border-radius: 12px;
+  background: #fff;
+  color: #273951;
+  font-size: 13px;
+  font-weight: 550;
+  box-shadow: 0 2px 3px #14274602;
+  transition: border-color 180ms ease, background-color 180ms ease, transform 160ms ease;
+}
+.formBody :global([data-auth-google]) + :global([data-slot="field-description"]) { margin-top: -13px; }
+.formBody :global([data-auth-google]:hover) { border-color: #b5c8ec; background: #f5f8ff; }
+.formBody :global(button[type="submit"]) {
+  height: 53px;
+  border-radius: 12px;
+  background: var(--login-blue);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 550;
+  box-shadow: 0 6px 18px #2458e722, inset 0 1px 0 #ffffff16;
+  transition: background-color 180ms ease, box-shadow 180ms ease, transform 160ms ease;
+}
+.formBody :global(button[type="submit"]:hover) { background: #194bd7; box-shadow: 0 8px 22px #2458e732; }
+.formBody :global(button[type="submit"]:active), .formBody :global([data-auth-google]:active) { transform: scale(0.985); }
+
+.formBody :global([data-auth-password-field]) { position: relative; }
+.formBody :global([data-auth-forgot]) {
+  position: absolute;
+  inset-inline-end: 0;
+  top: -4px;
+  width: auto;
+  min-width: 44px;
+  height: 28px;
+  padding: 0;
+  color: #4c6caa;
+  font-size: 11px;
+  font-weight: 450;
+}
+
+.accountFooter {
+  margin-top: 30px;
+  border-top: 1px solid #e6ebf3;
+  padding-top: 23px;
+  text-align: center;
+}
+.accountFooter p { color: #5f7088; font-size: 12px; }
+.accountFooter a { margin-inline-start: 4px; color: var(--login-blue); font-weight: 600; }
+.accountFooter a:focus-visible { border-radius: 3px; outline: 2px solid var(--login-blue); outline-offset: 4px; }
+
+.privacy { display: flex; align-items: center; justify-content: center; gap: 7px; color: #5f7088; font-size: 11px; }
+.privacy svg { width: 12px; height: 12px; stroke-width: 1.65; }
+.scenePanel { min-width: 0; overflow: hidden; border-radius: 28px; }
+
+@keyframes arrive { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (max-width: 1000px) {
+  .layout { grid-template-columns: minmax(360px, 1fr) minmax(0, 1fr); padding: 12px; }
+  .formPanel { padding: 20px 30px; }
+}
+
+@media (max-width: 800px) {
+  .layout { display: block; padding: 0; }
+  .scenePanel { display: none; }
+  .formPanel { min-height: 100svh; padding: 25px 24px 22px; }
+  .navigation { justify-content: space-between; }
+  .backLink { font-size: 11px; }
+  .mobileBrand { display: inline-flex; align-items: center; gap: 8px; color: #24487a; font-size: 12px; font-weight: 600; }
+  .mobileBrand svg { width: 23px; height: 23px; stroke-width: 1.65; }
+  .formArea { max-width: 388px; padding-block: 45px 50px; }
+  .introduction h1 { font-size: 34px; }
+  .welcomeMark { margin-bottom: 22px; }
+  .formBody :global([data-slot="input"]) { font-size: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .formArea { animation: none; }
+  .formBody :global(button:active) { transform: none; }
+  .formBody :global([data-slot="input"]), .formBody :global(button) { transition: none; }
+}
