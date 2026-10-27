@@ -15,7 +15,7 @@ import { WhatsAppIcon } from "@/components/site/WhatsAppIcon";
 import { communityLinks, contactLinks } from "@/lib/contact";
 import { formatPostalAddress, organization } from "@/lib/organization";
 import { localizedPath } from "@/lib/routes";
-import { buildPageMetadata } from "@/lib/seo";
+import { resolvePageMetadata } from "@/lib/seo";
 import { contactPageGraph } from "@/lib/structured-data";
 
 export async function generateMetadata({
@@ -24,8 +24,7 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  const safeLocale = isLocale(locale) ? locale : "he";
-  return buildPageMetadata(safeLocale, "contact", getDictionary(safeLocale));
+  return resolvePageMetadata(locale, "contact");
 }
 
 function DetailRow({

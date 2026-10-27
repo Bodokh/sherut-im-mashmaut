@@ -725,6 +725,19 @@ export const en: Dictionary = {
     topic: "Website comment",
   },
 
+  notFound: {
+    documentTitle: "Page not found",
+    title: "This page isn't here",
+    lead: "That address doesn't lead to a page on this site. You can go back home, or continue somewhere that does.",
+    home: "Back to the home page",
+    contact: "Contact",
+    continue: "Continue from here",
+    staffTitle: "This page isn't in the workspace",
+    staffLead: "That address doesn't lead to a page in the mentoring workspace. You can return to the workspace, or visit the public site.",
+    staffHome: "Back to the workspace",
+    staffSite: "Public site",
+  },
+
   footer: {
     blurb: "An Israeli nonprofit accompanying young women toward meaningful service — through values, identity and calling.",
     navTitle: "Navigate",

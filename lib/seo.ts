@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import type { Locale } from "@/i18n/config";
-import type { Dictionary } from "@/i18n/dictionaries";
+import { defaultLocale, isLocale, type Locale } from "@/i18n/config";
+import { getDictionary, type Dictionary } from "@/i18n/dictionaries";
 import { absoluteUrl, SITE_ORIGIN, type SiteRouteKey } from "@/lib/routes";
 
 export function buildPageMetadata(
@@ -64,4 +64,18 @@ export function buildPageMetadata(
 
 export function routeLabel(dict: Dictionary, route: SiteRouteKey): string {
   return dict.routeLabels[route];
+}
+
+export function buildNotFoundMetadata(locale: Locale): Metadata {
+  const dict = getDictionary(locale);
+  return {
+    title: `${dict.notFound.documentTitle} | ${dict.brand.name}`,
+    description: dict.notFound.lead,
+    robots: { index: false, follow: false },
+  };
+}
+
+export function resolvePageMetadata(locale: string, route: SiteRouteKey): Metadata {
+  if (!isLocale(locale)) return buildNotFoundMetadata(defaultLocale);
+  return buildPageMetadata(locale, route, getDictionary(locale));
 }

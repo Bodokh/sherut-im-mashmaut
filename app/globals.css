@@ -302,6 +302,18 @@
   to   { opacity: 1; transform: none; }
 }
 
+/* 404 emblem ring — draws once, then stays. Reduced motion keeps the full ring. */
+@media (prefers-reduced-motion: no-preference) {
+  .not-found-ring {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: not-found-ring 1.15s var(--ease-out-expo) 160ms forwards;
+  }
+}
+@keyframes not-found-ring {
+  to { stroke-dashoffset: 0; }
+}
+
 /* =========================================================================
    Values marquee + ambient float
    ========================================================================= */

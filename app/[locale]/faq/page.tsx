@@ -9,14 +9,13 @@ import { Button } from "@/components/ui/Button";
 import { Eyebrow, Section } from "@/components/ui/Section";
 import { isLocale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
-import { buildPageMetadata } from "@/lib/seo";
+import { resolvePageMetadata } from "@/lib/seo";
 import { localizedPath } from "@/lib/routes";
 import { faqPageGraph } from "@/lib/structured-data";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
-  const safeLocale = isLocale(locale) ? locale : "he";
-  return buildPageMetadata(safeLocale, "faq", getDictionary(safeLocale));
+  return resolvePageMetadata(locale, "faq");
 }
 
 export default async function FaqPage({ params }: { params: Promise<{ locale: string }> }) {

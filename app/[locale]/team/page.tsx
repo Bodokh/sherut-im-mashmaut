@@ -12,7 +12,7 @@ import { Section, Eyebrow } from "@/components/ui/Section";
 import { Button } from "@/components/ui/Button";
 import { media } from "@/lib/media";
 import { localizedPath } from "@/lib/routes";
-import { buildPageMetadata } from "@/lib/seo";
+import { resolvePageMetadata } from "@/lib/seo";
 import { teamPageGraph } from "@/lib/structured-data";
 
 const BIO_LINK_CLASS =
@@ -24,8 +24,7 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  const safeLocale = isLocale(locale) ? locale : "he";
-  return buildPageMetadata(safeLocale, "team", getDictionary(safeLocale));
+  return resolvePageMetadata(locale, "team");
 }
 
 export default async function TeamPage({

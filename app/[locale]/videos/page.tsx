@@ -13,7 +13,7 @@ import { isLocale, type Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
 import { socialLinks } from "@/lib/contact";
 import { localizedPath } from "@/lib/routes";
-import { buildPageMetadata } from "@/lib/seo";
+import { resolvePageMetadata } from "@/lib/seo";
 import { videosPageGraph } from "@/lib/structured-data";
 import {
   getChannelVideos,
@@ -60,8 +60,7 @@ function leadParagraph(description: string): string {
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
-  const safeLocale = isLocale(locale) ? locale : "he";
-  return buildPageMetadata(safeLocale, "videos", getDictionary(safeLocale));
+  return resolvePageMetadata(locale, "videos");
 }
 
 export default async function VideosPage({ params }: { params: Promise<{ locale: string }> }) {

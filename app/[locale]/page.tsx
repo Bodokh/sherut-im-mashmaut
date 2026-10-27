@@ -13,7 +13,7 @@ import { Donate } from "@/components/sections/Donate";
 import { Contact } from "@/components/sections/Contact";
 import { Comments } from "@/components/sections/Comments";
 import { JsonLd } from "@/components/seo/JsonLd";
-import { buildPageMetadata } from "@/lib/seo";
+import { resolvePageMetadata } from "@/lib/seo";
 import { homeGraph } from "@/lib/structured-data";
 
 export async function generateMetadata({
@@ -22,8 +22,7 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  const safeLocale = isLocale(locale) ? locale : "he";
-  return buildPageMetadata(safeLocale, "home", getDictionary(safeLocale));
+  return resolvePageMetadata(locale, "home");
 }
 
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {

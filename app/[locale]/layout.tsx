@@ -1,8 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import { notFound } from "next/navigation";
 import Script from "next/script";
 import "../globals.css";
-import { locales, isLocale, dir } from "@/i18n/config";
+import { locales, isLocale, defaultLocale, dir } from "@/i18n/config";
 import { SITE_ORIGIN } from "@/lib/routes";
 import {
   USERWAY_ACCOUNT_ID,
@@ -40,8 +39,10 @@ export default async function LocaleLayout({
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
 }) {
-  const { locale } = await params;
-  if (!isLocale(locale)) notFound();
+  const { locale: requested } = await params;
+  // Keep a real document shell for unknown locales. The page calls notFound()
+  // so the localized 404 still returns a 404 status inside this <html>.
+  const locale = isLocale(requested) ? requested : defaultLocale;
 
   return (
     <html

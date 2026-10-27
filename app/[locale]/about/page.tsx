@@ -11,13 +11,12 @@ import { Eyebrow, Section } from "@/components/ui/Section";
 import { isLocale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
 import { localizedPath } from "@/lib/routes";
-import { buildPageMetadata } from "@/lib/seo";
+import { resolvePageMetadata } from "@/lib/seo";
 import { aboutPageGraph } from "@/lib/structured-data";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
-  const safeLocale = isLocale(locale) ? locale : "he";
-  return buildPageMetadata(safeLocale, "about", getDictionary(safeLocale));
+  return resolvePageMetadata(locale, "about");
 }
 
 export default async function AboutPage({ params }: { params: Promise<{ locale: string }> }) {

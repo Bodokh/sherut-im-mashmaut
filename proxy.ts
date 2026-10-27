@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { defaultLocale } from "@/i18n/config";
+import { PATHNAME_HEADER } from "@/lib/pathname-locale";
 
 // Permanently clean up the old explicit prefix for the default Hebrew locale.
 export function proxy(request: NextRequest) {
@@ -12,7 +13,15 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(url, 308);
   }
 
-  return NextResponse.next();
+  return forwardWithPathname(request);
+}
+
+function forwardWithPathname(request: NextRequest) {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set(PATHNAME_HEADER, request.nextUrl.pathname);
+  return NextResponse.next({
+    request: { headers: requestHeaders },
+  });
 }
 
 export const config = {
