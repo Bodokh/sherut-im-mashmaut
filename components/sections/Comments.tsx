@@ -16,7 +16,7 @@ export function Comments({ dict, locale }: { dict: Dictionary; locale: Locale })
           <p className="mt-5 text-lg leading-relaxed text-ink-700">{t.lead}</p>
         </div>
         <div className="mt-10">
-          <CommentsForm copy={t} privacyNotice={<PrivacyNotice locale={locale} id="comment-privacy-notice" />} />
+          <CommentsForm copy={t} locale={locale} privacyNotice={<PrivacyNotice locale={locale} id="comment-privacy-notice" />} />
         </div>
       </div>
     </Section>

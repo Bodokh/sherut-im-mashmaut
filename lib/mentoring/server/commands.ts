@@ -194,11 +194,29 @@ async function setStaffActive(client: PoolClient, actor: StaffProfile, command: 
   return { ...success(command), staffId: target.id };
 }
 
+// Before phone normalization, these commands hashed a trimmed string (including
+// empty or otherwise invalid numbers). Reconstruct that representation only for
+// matching an existing receipt. The surrogate still validates every other field.
+function legacyPhoneCommand(value: unknown): MentoringCommand | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const input = value as Record<string, unknown>;
+  if (!["create_participant", "update_participant", "create_staff", "update_staff"].includes(String(input.type))) return null;
+  if (!input.fields || typeof input.fields !== "object" || Array.isArray(input.fields)) return null;
+  const fields = input.fields as Record<string, unknown>;
+  if (!Object.hasOwn(fields, "phone") || (typeof fields.phone !== "string" && fields.phone !== null)) return null;
+  const phone = typeof fields.phone === "string" ? fields.phone.trim() : null;
+  if (phone !== null && phone.length > 40) return null;
+  const surrogate = parseCommand({ ...input, fields: { ...fields, phone: null } });
+  if (!surrogate.ok || !("fields" in surrogate.command)) return null;
+  return { ...surrogate.command, fields: { ...surrogate.command.fields, phone } } as MentoringCommand;
+}
+
 /** Every accepted or preserved operation has one durable receipt in the same transaction. */
-export async function executeCommand(authUserId: string, verifiedEmail: string | null, value: MentoringCommand): Promise<CommandResult> {
+export async function executeCommand(authUserId: string, verifiedEmail: string | null, value: unknown): Promise<CommandResult> {
   const parsed = parseCommand(value);
-  if (!parsed.ok) return parsed;
-  const command = parsed.command;
+  const legacy = legacyPhoneCommand(value);
+  if (!parsed.ok && !legacy) return parsed;
+  const command = parsed.ok ? parsed.command : legacy!;
   try {
     return await withTransaction(async (client) => {
       const actor = await requireIdentity(client, authUserId, verifiedEmail);
@@ -237,10 +255,10 @@ export async function executeCommand(authUserId: string, verifiedEmail: string |
           }
         }
       };
-      const hash = commandHash(command);
+      const hash = parsed.ok ? commandHash(parsed.command) : null;
       const receipt = await client.query("SELECT payload_hash,response FROM mentoring.operations WHERE organization_id = $1 AND actor_id = $2 AND operation_id = $3 FOR UPDATE", [actor.organizationId, actor.id, command.operationId]);
       if (receipt.rows[0]) {
-        if (receipt.rows[0].payload_hash !== hash) {
+        if (receipt.rows[0].payload_hash !== hash && (!legacy || receipt.rows[0].payload_hash !== commandHash(legacy))) {
           await assertCurrentScope();
           return failure("conflict", "מזהה הפעולה כבר שימש לתוכן אחר. יש לשלוח פעולה חדשה.");
         }
@@ -255,6 +273,9 @@ export async function executeCommand(authUserId: string, verifiedEmail: string |
         await assertCurrentScope();
         return result.ok ? { ...result, replayed: true } : result;
       }
+      // Legacy parsing is never sufficient to authorize or persist a new write.
+      if (!parsed.ok) return parsed;
+      const writeHash = hash ?? commandHash(parsed.command);
       const finish = async (result: CommandResult): Promise<CommandResult> => {
         if (result.ok && view && ["update_participant", "assign_participant", "record_contact"].includes(command.type)) await rebuildParticipantReminders(client, actor.organizationId, view.participant.id, actor.id, command.operationId, now);
         if (result.ok && ["create_staff", "set_staff_active", "update_staff", "set_sms_muted"].includes(command.type)) {
@@ -263,7 +284,7 @@ export async function executeCommand(authUserId: string, verifiedEmail: string |
         }
         // Expiry while another database lock is awaited rolls back every write.
         await assertCurrentScope();
-        return saveReceipt(client, actor, command, hash, result);
+        return saveReceipt(client, actor, command, writeHash, result);
       };
       if (view?.participant.deletedAt && command.type !== "restore_participant") return finish(failure("not_found", "הכרטיס נמצא בסל המחזור. יש לשחזר אותו לפני שינוי נוסף."));
       if (view && ["record_contact", "assign_participant", "reschedule_appointment"].includes(command.type) && view.participant.lifecycle !== "active") return finish(failure("validation", "אפשר לתעד קשר חדש, לשייך או לקבוע פגישה רק בכרטיס ליווי פעיל."));

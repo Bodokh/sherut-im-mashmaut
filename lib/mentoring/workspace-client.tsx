@@ -38,16 +38,42 @@ const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 function failure(code: ApiFailure["error"]["code"], message: string): ApiFailure { return { ok: false, error: { code, message } }; }
 function errorFor(error: unknown): WorkspaceError {
   if (error instanceof RequestFailure) return error.failure.error;
-  if (error instanceof Error) return { message: error.message, ...("code" in error && typeof error.code === "string" ? { code: error.code } : {}) };
-  return { message: "לא ניתן להשלים את העדכון. המידע שכבר נשמר במכשיר נשמר עד לחידוש החיבור." };
+  if (error instanceof OfflineStorageError) return { message: error.message, code: error.code };
+  if (error instanceof Error && error.name === "QuotaExceededError") return { code: "storage_unavailable", message: "אין די מקום לשמירה במכשיר. העדכון לא נשמר. יש להשאיר את הטופס פתוח, לפנות מקום ולנסות שוב." };
+  return { code: "unavailable", message: "לא התקבל אישור לשמירה. יש לבדוק את החיבור ולנסות שוב. לפני סגירת הטופס יש לבדוק את מצב שמירת הטיוטה." };
 }
 
 class RequestFailure extends Error {
   constructor(readonly failure: ApiFailure, readonly status: number) { super(failure.error.message); this.name = "RequestFailure"; }
 }
 
-function isFailure(value: unknown): value is ApiFailure {
-  return Boolean(value && typeof value === "object" && "ok" in value && value.ok === false && "error" in value && value.error && typeof value.error === "object" && "code" in value.error && "message" in value.error && typeof value.error.message === "string");
+const apiFailureMessages: Record<ApiFailure["error"]["code"], string> = {
+  not_authenticated: "יש להיכנס מחדש לחשבון הצוות כדי להמשיך.",
+  not_staff: "גישת הצוות אינה זמינה לחשבון הזה. יש לפנות להנהלה לבדיקת ההרשאות.",
+  not_configured: "המערכת אינה מוכנה לפעולה כרגע. יש לנסות שוב או לפנות למנהל המערכת.",
+  forbidden: "אין הרשאה להשלים את הפעולה. יש לבדוק את ההרשאות או לפנות להנהלה.",
+  not_found: "הרשומה אינה זמינה. יש לרענן את הנתונים ולבחור אותה מחדש.",
+  validation: "יש לבדוק את פרטי הפעולה והשדות הנדרשים ולנסות שוב.",
+  conflict: "המידע השתנה מאז פתיחת הטופס. יש לבדוק את הנתונים העדכניים לפני ניסיון נוסף.",
+  ceo_protected: "הפרטים מוגנים על ידי ההנהלה. יש לבדוק את העדכון מול ההנהלה.",
+  unavailable: "המערכת אינה זמינה כרגע. יש לבדוק את החיבור ולנסות שוב.",
+};
+const validationLabels: Record<string, string> = {
+  displayName: "השם", email: "כתובת הדוא״ל", phone: "מספר הטלפון", role: "התפקיד", coordinatorId: "הרכז/ת", mentorId: "החונך/ת",
+  serviceType: "סוג השירות", servicePlace: "מקום השירות", serviceRole: "התפקיד בשירות", profileNotes: "המידע הנוסף", notes: "תוכן הדיווח", reason: "הסיבה", method: "אופן הקשר", outcome: "תוצאת הקשר", occurredAt: "מועד הקשר", nextAppointmentAt: "מועד הפגישה", scheduledAt: "המועד", actions: "ההרשאות", expiresAt: "תוקף ההרשאה", summary: "הסיכום",
+};
+
+/** Only recognized, well-formed failures are definitive; never surface server text. */
+function parseFailure(value: unknown): ApiFailure | null {
+  if (!value || typeof value !== "object" || !("ok" in value) || value.ok !== false || !("error" in value) || !value.error || typeof value.error !== "object") return null;
+  const error = value.error as Record<string, unknown>;
+  if (typeof error.code !== "string" || !Object.hasOwn(apiFailureMessages, error.code) || typeof error.message !== "string" || !error.message.trim()) return null;
+  if (error.field !== undefined && (typeof error.field !== "string" || !/^[A-Za-z][A-Za-z0-9_.]{0,127}$/.test(error.field))) return null;
+  if (error.conflictId !== undefined && (typeof error.conflictId !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(error.conflictId))) return null;
+  const code = error.code as ApiFailure["error"]["code"];
+  const field = error.field as string | undefined;
+  const label = field && validationLabels[field.split(".").at(-1) ?? ""];
+  return { ok: false, error: { code, message: code === "validation" && label ? `יש לבדוק את ${label} ולתקן את הערך לפני ניסיון נוסף.` : apiFailureMessages[code], ...(field ? { field } : {}), ...(typeof error.conflictId === "string" ? { conflictId: error.conflictId } : {}) } };
 }
 
 function isSnapshot(value: unknown): value is WorkspaceSnapshot {
@@ -175,8 +201,9 @@ class WorkspaceController {
     // receives an empty, redirected, or truncated response body.
     const payload: unknown = await response.json().catch(() => null);
     if (!this.isCurrent(epoch)) return null;
-    if (!response.ok || isFailure(payload)) {
-      const result = isFailure(payload) ? payload : failure("unavailable", "המערכת אינה זמינה לעדכון כרגע. אפשר להמשיך בטיוטה המקומית אם תוקף הגישה עדיין תקין.");
+    const responseFailure = parseFailure(payload);
+    if (!response.ok || responseFailure) {
+      const result = responseFailure ?? failure("unavailable", "המערכת אינה זמינה לעדכון כרגע. אפשר להמשיך בטיוטה המקומית אם תוקף הגישה עדיין תקין.");
       if (response.status === 401 || response.status === 403 || result.error.code === "not_authenticated" || result.error.code === "not_staff") await this.invalidate(result);
       throw new RequestFailure(result, response.status);
     }
@@ -228,14 +255,15 @@ class WorkspaceController {
         }
         const payload: unknown = await response.json().catch(() => null);
         if (!this.isCurrent(epoch)) return;
-        if (response.status === 401 || response.status === 403 || (isFailure(payload) && (payload.error.code === "not_authenticated" || payload.error.code === "not_staff"))) { await this.invalidate(isFailure(payload) ? payload : failure("not_authenticated", "תוקף הכניסה או ההרשאות השתנה. העבודה נשמרה נעולה עד לאימות מחדש.")); return; }
+        const responseFailure = parseFailure(payload);
+        if (response.status === 401 || response.status === 403 || (responseFailure && (responseFailure.error.code === "not_authenticated" || responseFailure.error.code === "not_staff"))) { await this.invalidate(responseFailure ?? failure("not_authenticated", "תוקף הכניסה או ההרשאות השתנה. העבודה נשמרה נעולה עד לאימות מחדש.")); return; }
         if (response.status >= 500 || response.status === 429 || response.status === 408) {
           this.reachable = false;
-          this.update({ error: isFailure(payload) ? payload.error : { message: "המערכת אינה זמינה כרגע. הפעולה נשמרה במכשיר וממתינה לחידוש החיבור." } });
+          this.update({ error: responseFailure ? responseFailure.error : { message: "המערכת אינה זמינה כרגע. הפעולה נשמרה במכשיר וממתינה לחידוש החיבור." } });
           break;
         }
-        const result: CommandResult | null = isFailure(payload) ? payload : response.ok && payload && typeof payload === "object" && "ok" in payload && payload.ok === true && "operationId" in payload && payload.operationId === operation.command.operationId && "acceptance" in payload && payload.acceptance === "accepted"
-          ? payload as CommandResult : null;
+        const result: CommandResult | null = responseFailure ?? (response.ok && payload && typeof payload === "object" && "ok" in payload && payload.ok === true && "operationId" in payload && payload.operationId === operation.command.operationId && "acceptance" in payload && payload.acceptance === "accepted"
+          ? payload as CommandResult : null);
         if (!result || (!result.ok && ["unavailable", "not_configured"].includes(result.error.code))) {
           // A lost/truncated body may follow a committed transaction. Keep the
           // immutable intent pending so the same operation ID can be replayed.

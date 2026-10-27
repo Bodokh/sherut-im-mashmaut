@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assignmentScope, canEditParticipant, changedParticipantFields, createdParticipantFields, fieldIsProtected, participantFormFields } from "./participant-form-state.ts";
+import { assignmentScope, canEditParticipant, changedParticipantFields, createdParticipantFields, fieldIsProtected, participantFormFields, participantInputError } from "./participant-form-state.ts";
 import { reconcileStoredDraft } from "./draft-state.ts";
+import { parseCommand } from "../../lib/mentoring/validation.ts";
 
 const actor = { id: "coordinator", role: "coordinator", organizationId: "org", active: true };
 const participant = { id: "participant", organizationId: "org", version: 4, displayName: "רות", phone: "0501234567", serviceType: "national", servicePlace: "חיפה", serviceRole: null, profileNotes: "ליווי אישי", createdBy: actor.id };
@@ -27,12 +28,12 @@ test("a CEO name-only create protects the supplied name while an authorized ment
   assert.equal(canEditParticipant(mentor, { ...view, participant: created, allowedActions: ["view", "edit"] }), true);
   assert.equal(fieldIsProtected(mentor, participant.id, scoped, "displayName"), true);
   assert.equal(fieldIsProtected(mentor, participant.id, scoped, "phone"), false);
-  assert.deepEqual(changedParticipantFields({ ...emptyCreateValues, displayName: "שם חלופי", phone: "0501112222" }, created, mentor, scoped), { phone: "0501112222" });
+  assert.deepEqual(changedParticipantFields({ ...emptyCreateValues, displayName: "שם חלופי", phone: "0501112222" }, created, mentor, scoped), { phone: "+972501112222" });
 });
 
 test("create preserves every supplied input after normalization", () => {
   assert.deepEqual(createdParticipantFields({ displayName: " רות ", phone: " 0501112222 ", serviceType: "military", servicePlace: " חיפה ", serviceRole: " תפקיד בשירות ", profileNotes: " פרטים לליווי ", baseVersion: null }), {
-    displayName: "רות", phone: "0501112222", serviceType: "military", servicePlace: "חיפה", serviceRole: "תפקיד בשירות", profileNotes: "פרטים לליווי",
+    displayName: "רות", phone: "+972501112222", serviceType: "military", servicePlace: "חיפה", serviceRole: "תפקיד בשירות", profileNotes: "פרטים לליווי",
   });
 });
 
@@ -166,4 +167,57 @@ test("closing and reopening an incomplete assignment restores choices without su
   const restored = await reconcileStoredDraft(incomplete, { baseVersion: 5 }, async () => assert.fail("autosaved choices are not a submitted assignment"));
   assert.deepEqual(restored.value, incomplete);
   assert.equal(restored.recovered, null);
+});
+
+
+test("equivalent local and international phone values do not create edits", () => {
+  assert.deepEqual(changedParticipantFields({ ...values, servicePlace: "חיפה", phone: "+972501234567" }, participant, actor, []), {});
+});
+test("invalid phone stays in the payload and is rejected; a blank explicitly clears", () => {
+  const invalid = { ...emptyCreateValues, phone: "123" };
+  assert.equal(participantInputError(invalid)?.field, "phone");
+  assert.equal(createdParticipantFields(invalid).phone, "123");
+  assert.equal(participantInputError({ ...invalid, phone: " " }), null);
+  assert.equal(participantInputError({ ...emptyCreateValues, serviceType: "outdated" })?.field, "serviceType");
+  assert.equal(participantInputError(invalid, (field) => field === "phone"), null);
+});
+
+test("restored oversized draft values are checked even when inputs have maxLength", () => {
+  assert.equal(participantInputError({ ...emptyCreateValues, profileNotes: "א".repeat(8001) })?.field, "profileNotes");
+  assert.equal(participantInputError({ ...emptyCreateValues, displayName: "א".repeat(161) })?.field, "displayName");
+});
+
+
+test("an unchanged invalid legacy phone does not block an unrelated profile edit", () => {
+  const legacy = { ...participant, phone: "legacy-invalid" };
+  const edited = { ...values, phone: legacy.phone };
+  const changes = changedParticipantFields(edited, legacy, actor, []);
+  assert.deepEqual(changes, { servicePlace: "ירושלים" });
+  assert.equal(participantInputError(edited, (field) => field === "phone" && !("phone" in changes)), null);
+  const corrected = { ...edited, phone: "123" };
+  const correctedChanges = changedParticipantFields(corrected, legacy, actor, []);
+  assert.equal(participantInputError(corrected, (field) => field === "phone" && !("phone" in correctedChanges))?.field, "phone");
+});
+
+test("restored profile drafts enforce every text limit at the actual boundary", () => {
+  for (const [field, maximum] of [["displayName", 160], ["servicePlace", 240], ["serviceRole", 240], ["profileNotes", 8000]]) {
+    assert.equal(participantInputError({ ...emptyCreateValues, [field]: "א".repeat(maximum) }), null, field);
+    assert.equal(participantInputError({ ...emptyCreateValues, [field]: "א".repeat(maximum + 1) })?.field, field);
+    assert.equal(participantInputError({ ...emptyCreateValues, [field]: "א".repeat(maximum + 1) }, (locked) => locked === field), null);
+  }
+});
+
+test("a restored unknown service value is rejected even when phone and other fields are valid", () => {
+  for (const serviceType of ["", "legacy", "invalid"]) {
+    assert.equal(participantInputError({ ...emptyCreateValues, serviceType })?.field, "serviceType");
+  }
+  for (const serviceType of ["unknown", "national", "military"]) {
+    assert.equal(participantInputError({ ...emptyCreateValues, serviceType }), null);
+  }
+});
+
+
+test("the all-blank participant create payload satisfies the shared command policy", () => {
+  const result = parseCommand({ type: "create_participant", operationId: "0bb726ac-2921-4794-a8b1-9c52cb3f8437", fields: createdParticipantFields(emptyCreateValues) });
+  assert.equal(result.ok, true);
 });

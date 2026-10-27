@@ -11,6 +11,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/staff/ui/empty";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/staff/ui/field";
 import { Input } from "@/components/staff/ui/input";
+import { PhoneInput } from "@/components/staff/ui/phone-input";
+import { parseCommand } from "@/lib/mentoring/validation";
+import { normalizePhoneNumber } from "@/lib/phone";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/staff/ui/select";
 import { Spinner } from "@/components/staff/ui/spinner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/staff/ui/table";
@@ -26,6 +29,9 @@ import { changedStaffFields, isPendingStaffPreapproval, staffEditValues } from "
 const roleLabels: Record<StaffRole, string> = { mentor: "חונך/ת", coordinator: "רכז/ת", ceo: "מנכ״ל" };
 function ActionError({ message }: { message: string | null }) {
   return message ? <Alert variant="destructive"><Info aria-hidden="true" /><AlertTitle>הפעולה לא הושלמה</AlertTitle><AlertDescription>{message}</AlertDescription></Alert> : null;
+}
+function FieldFailure({ failure, field, formId }: { failure: ApiFailure["error"] | null; field: string; formId: string }) {
+  return failure?.field?.split(".").at(-1) === field ? <p id={`${formId}-${field}-error`} role="alert" className="text-sm text-destructive">{failure.message}</p> : null;
 }
 function OfflineNotice() {
   const { isOnline } = useWorkspace();
@@ -72,40 +78,46 @@ function StaffPreapprovalForm({ onClose, onBusyChange }: { onClose: () => void; 
   const { actor, staff } = snapshot;
   const isCeo = actor.role === "ceo";
   const effectiveRole = isCeo ? values.role : "mentor";
-  const coordinators = staff.filter((member) => (member.active || isPendingStaffPreapproval(member)) && member.role === "coordinator");
+  const coordinators = staff.filter((member) => (member.active || isPendingStaffPreapproval(member)) && member.role === "coordinator" && member.organizationId === actor.organizationId);
   const items = [{ value: "none", label: "ללא שיוך לרכז/ת" }, ...coordinators.map((member) => ({ value: member.id, label: member.displayName + (isPendingStaffPreapproval(member) ? " · בקשת חברות ממתינה לאישור" : "") }))];
   const invalidField = failure?.field?.split(".").at(-1);
-  function update<K extends keyof typeof values>(field: K, value: typeof values[K]) { draft.update({ ...values, [field]: value }); }
+  function update<K extends keyof typeof values>(field: K, value: typeof values[K]) { draft.update({ ...values, [field]: value }); if (invalidField === field) setFailure(null); }
+  function fail(error: ApiFailure["error"]) { setFailure(error); const field = error.field?.split(".").at(-1); const suffix: Record<string, string> = { displayName: "name", email: "email", phone: "phone", role: "role-mentor", coordinatorId: "coordinator" }; if (field && suffix[field]) document.getElementById(`${formId}-${suffix[field]}`)?.focus(); }
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!snapshot || snapshot.actor.role === "mentor" || !draft.hydrated || submitting.current) return;
-    if (!values.displayName.trim()) { setFailure({ code: "validation", field: "displayName", message: "יש להזין את שם חבר/ת הצוות." }); return; }
-    if (isCeo && effectiveRole === "mentor" && values.coordinatorId !== "none" && !coordinators.some((member) => member.id === values.coordinatorId)) { setFailure({ code: "validation", field: "coordinatorId", message: "השיוך שנבחר אינו זמין עוד. יש לבחור רכז/ת עם גישה פעילה או להסיר את השיוך." }); return; }
-    const payload = { type: "create_staff" as const, fields: { displayName: values.displayName.trim(), email: values.email.trim().toLowerCase(), phone: values.phone.trim() || null, role: effectiveRole, coordinatorId: effectiveRole === "coordinator" ? null : isCeo ? values.coordinatorId === "none" ? null : values.coordinatorId : actor.id } };
+    if (!values.displayName.trim()) { fail({ code: "validation", field: "displayName", message: "יש להזין את שם חבר/ת הצוות." }); return; }
+    if (values.displayName.trim().length > 200) { fail({ code: "validation", field: "displayName", message: "שם מלא יכול להכיל עד 200 תווים. יש לקצר את השם." }); return; }
+    if (values.phone.trim() && !normalizePhoneNumber(values.phone)) { fail({ code: "validation", field: "phone", message: "יש להזין מספר טלפון תקין עם קידומת מדינה, או למחוק את המספר." }); return; }
+    if (isCeo && values.role !== "mentor" && values.role !== "coordinator") { fail({ code: "validation", field: "role", message: "יש לבחור תפקיד: חונך/ת או רכז/ת." }); return; }
+    if (isCeo && effectiveRole === "mentor" && values.coordinatorId !== "none" && !coordinators.some((member) => member.id === values.coordinatorId)) { fail({ code: "validation", field: "coordinatorId", message: "השיוך שנבחר אינו זמין עוד. יש לבחור רכז/ת עם גישה פעילה או להסיר את השיוך." }); return; }
+    const payload = { type: "create_staff" as const, fields: { displayName: values.displayName.trim(), email: values.email.trim().toLowerCase(), phone: normalizePhoneNumber(values.phone) ?? (values.phone.trim() || null), role: effectiveRole, coordinatorId: effectiveRole === "coordinator" ? null : isCeo ? values.coordinatorId === "none" ? null : values.coordinatorId : actor.id } };
+    const validation = parseCommand({ ...payload, operationId: crypto.randomUUID() });
+    if (!validation.ok) { fail(validation.error); return; }
     submitting.current = true; setBusy(true); onBusyChange(true); setFailure(null);
-    let submitted = false;
+    let prepared = false;
     try {
       const operationId = await draft.prepare(payload);
-      submitted = true;
+      prepared = true;
       const result = await submit({ ...payload, operationId });
-      if (!result.ok) { setFailure(result.error); draft.recheck(); return; }
+      if (!result.ok) { fail(result.error); draft.recheck(); return; }
       try { await draft.clear(); } catch { toast.warning("הבקשה נשמרה. הטיוטה תיבדק לפי אותה פעולת שמירה בפתיחה הבאה."); }
       onClose();
       if (result.acceptance === "queued") toast.message("בקשת החברות נשמרה במכשיר וממתינה לאישור. טרם ניתנה גישה.");
       else toast.success("החברות בצוות אושרה מראש. לא נשלחה הזמנה.");
-    } catch { setFailure({ code: "unavailable", message: "לא התקבל אישור מהמערכת. הטיוטה וזהות הבקשה נשמרו לניסיון נוסף." }); if (submitted) draft.recheck(); }
+    } catch { setFailure({ code: "unavailable", message: prepared ? "לא התקבל אישור מהמערכת. זהות הבקשה נשמרה ותיבדק לניסיון נוסף." : "לא ניתן להכין את הבקשה לשמירה. הפרטים נשארו בטופס; יש להשאיר אותו פתוח, לבדוק את מצב הטיוטה ולנסות שוב." }); if (prepared) draft.recheck(); }
     finally { submitting.current = false; setBusy(false); onBusyChange(false); }
   }
   if (draft.recovered) return <RecoveredStaffSave result={draft.recovered} clear={draft.clear} onClose={onClose}><dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-3 text-sm"><dt>שם</dt><dd>{values.displayName}</dd><dt>כתובת דוא״ל</dt><dd dir="ltr" className="break-all">{values.email}</dd><dt>תפקיד מבוקש</dt><dd>{roleLabels[effectiveRole]}</dd></dl></RecoveredStaffSave>;
-  return <form onSubmit={save} className="flex flex-col gap-5">
+  return <form onSubmit={save} noValidate className="flex flex-col gap-5">
     <Alert><ShieldCheck aria-hidden="true" /><AlertTitle>החברות בצוות והחשבון האישי הם שני שלבים</AlertTitle><AlertDescription>הפעולה מאשרת חברות בצוות בלבד. היא אינה יוצרת חשבון התחברות ואינה שולחת הזמנה או דוא״ל. יצירת החשבון מחייבת הרשמה ואימות באמצעות אותה כתובת דוא״ל.</AlertDescription></Alert>
     <OfflineNotice /><ActionError message={failure?.message ?? null} />
     <fieldset disabled={busy || !draft.hydrated} className="min-w-0 border-0 p-0"><FieldGroup>
-      <Field data-invalid={invalidField === "displayName" || undefined}><FieldLabel htmlFor={`${formId}-name`}>שם מלא</FieldLabel><Input id={`${formId}-name`} value={values.displayName} onChange={(event) => update("displayName", event.target.value)} maxLength={200} autoComplete="name" required aria-invalid={invalidField === "displayName" || undefined} /></Field>
-      <Field data-invalid={invalidField === "email" || undefined}><FieldLabel htmlFor={`${formId}-email`}>כתובת דוא״ל להתחברות</FieldLabel><Input id={`${formId}-email`} type="email" inputMode="email" dir="ltr" value={values.email} onChange={(event) => update("email", event.target.value)} autoComplete="email" required aria-invalid={invalidField === "email" || undefined} aria-describedby={`${formId}-email-description`} /><FieldDescription id={`${formId}-email-description`}>יש להשתמש באותה כתובת בהרשמה ובהתחברות לחשבון.</FieldDescription></Field>
-      <Field data-invalid={invalidField === "phone" || undefined}><FieldLabel htmlFor={`${formId}-phone`}>טלפון צוות · רשות</FieldLabel><Input id={`${formId}-phone`} type="tel" inputMode="tel" dir="ltr" maxLength={40} value={values.phone} onChange={(event) => update("phone", event.target.value)} autoComplete="tel" aria-invalid={invalidField === "phone" || undefined} /><FieldDescription>המספר מיועד לקשר ולתזכורות לצוות, בהתאם להגדרות השירות.</FieldDescription></Field>
-      <Field><FieldLabel id={`${formId}-role-label`}>תפקיד במערכת</FieldLabel>{isCeo ? <ToggleGroup variant="outline" value={[values.role]} multiple={false} disabled={busy || !draft.hydrated} aria-labelledby={`${formId}-role-label`} onValueChange={(next) => { if (next[0] === "mentor" || next[0] === "coordinator") update("role", next[0]); }}><ToggleGroupItem value="mentor">חונך/ת</ToggleGroupItem><ToggleGroupItem value="coordinator">רכז/ת</ToggleGroupItem></ToggleGroup> : <p className="text-sm">חונך/ת · שיוך לצוות שלך</p>}</Field>
-      {effectiveRole === "mentor" && <Field data-invalid={invalidField === "coordinatorId" || undefined}><FieldLabel htmlFor={isCeo ? `${formId}-coordinator` : undefined}>רכז/ת אחראי/ת</FieldLabel>{isCeo ? <Select items={items} value={values.coordinatorId} onValueChange={(value) => update("coordinatorId", value ?? "none")} disabled={busy || !draft.hydrated}><SelectTrigger id={`${formId}-coordinator`} className="w-full" aria-invalid={invalidField === "coordinatorId" || undefined}><SelectValue /></SelectTrigger><SelectContent><SelectGroup><SelectLabel>שיוך לצוות</SelectLabel>{items.map((item) => <SelectItem key={item.value} value={item.value} className="min-h-11">{item.label}</SelectItem>)}</SelectGroup></SelectContent></Select> : <p className="text-sm">{actor.displayName}</p>}</Field>}
+      <Field data-invalid={invalidField === "displayName" || undefined}><FieldLabel htmlFor={`${formId}-name`}>שם מלא</FieldLabel><Input id={`${formId}-name`} value={values.displayName} onChange={(event) => update("displayName", event.target.value)} maxLength={200} autoComplete="name" required aria-invalid={invalidField === "displayName" || undefined} aria-describedby={invalidField === "displayName" ? `${formId}-displayName-error` : undefined} /><FieldFailure failure={failure} field="displayName" formId={formId} /></Field>
+      <Field data-invalid={invalidField === "email" || undefined}><FieldLabel htmlFor={`${formId}-email`}>כתובת דוא״ל להתחברות</FieldLabel><Input id={`${formId}-email`} type="email" inputMode="email" dir="ltr" value={values.email} onChange={(event) => update("email", event.target.value)} autoComplete="email" required aria-invalid={invalidField === "email" || undefined} aria-describedby={`${formId}-email-description${invalidField === "email" ? ` ${formId}-email-error` : ""}`} /><FieldDescription id={`${formId}-email-description`}>יש להשתמש באותה כתובת בהרשמה ובהתחברות לחשבון.</FieldDescription><FieldFailure failure={failure} field="email" formId={formId} /></Field>
+      <Field data-invalid={invalidField === "phone" || undefined}><FieldLabel htmlFor={`${formId}-phone`}>טלפון צוות · רשות</FieldLabel><PhoneInput id={`${formId}-phone`} value={values.phone} onChange={(value) => update("phone", value)} aria-invalid={invalidField === "phone" || undefined} aria-describedby={invalidField === "phone" ? `${formId}-phone-error` : undefined} /><FieldDescription>המספר מיועד לקשר ולתזכורות לצוות, בהתאם להגדרות השירות.</FieldDescription><FieldFailure failure={failure} field="phone" formId={formId} /></Field>
+      <Field><FieldLabel id={`${formId}-role-label`}>תפקיד במערכת</FieldLabel>{isCeo ? <ToggleGroup variant="outline" value={[values.role]} multiple={false} disabled={busy || !draft.hydrated} aria-labelledby={`${formId}-role-label`} onValueChange={(next) => { if (next[0] === "mentor" || next[0] === "coordinator") update("role", next[0]); }}><ToggleGroupItem id={`${formId}-role-mentor`} aria-invalid={invalidField === "role" || undefined} aria-describedby={invalidField === "role" ? `${formId}-role-error` : undefined} value="mentor">חונך/ת</ToggleGroupItem><ToggleGroupItem value="coordinator">רכז/ת</ToggleGroupItem></ToggleGroup> : <p className="text-sm">חונך/ת · שיוך לצוות שלך</p>}<FieldFailure failure={failure} field="role" formId={formId} /></Field>
+      {effectiveRole === "mentor" && <Field data-invalid={invalidField === "coordinatorId" || undefined}><FieldLabel htmlFor={isCeo ? `${formId}-coordinator` : undefined}>רכז/ת אחראי/ת</FieldLabel>{isCeo ? <Select items={items} value={values.coordinatorId} onValueChange={(value) => update("coordinatorId", value ?? "none")} disabled={busy || !draft.hydrated}><SelectTrigger id={`${formId}-coordinator`} className="w-full" aria-invalid={invalidField === "coordinatorId" || undefined} aria-describedby={invalidField === "coordinatorId" ? `${formId}-coordinatorId-error` : undefined}><SelectValue /></SelectTrigger><SelectContent><SelectGroup><SelectLabel>שיוך לצוות</SelectLabel>{items.map((item) => <SelectItem key={item.value} value={item.value} className="min-h-11">{item.label}</SelectItem>)}</SelectGroup></SelectContent></Select> : <p className="text-sm">{actor.displayName}</p>}<FieldFailure failure={failure} field="coordinatorId" formId={formId} /></Field>}
     </FieldGroup></fieldset>
     <DraftStatus status={draft.status} onRetry={draft.retry} />
     <DialogFooter><Button type="button" variant="outline" disabled={busy} onClick={onClose}>סגירה ושמירת הטיוטה</Button><Button type="submit" disabled={busy || !draft.hydrated}>{busy ? <Spinner data-icon="inline-start" /> : <UserRoundPlus data-icon="inline-start" />}אישור חברות בצוות</Button></DialogFooter>
@@ -121,42 +133,49 @@ function StaffEditForm({ member, onClose, onBusyChange }: { member: StaffProfile
   if (!snapshot || snapshot.actor.role !== "ceo") return null;
   const values = draft.value;
   const stale = draft.hydrated && values.baseVersion !== member.version;
-  const coordinators = snapshot.staff.filter((person) => person.id !== member.id && (person.active || isPendingStaffPreapproval(person)) && person.role === "coordinator");
+  const coordinators = snapshot.staff.filter((person) => person.id !== member.id && (person.active || isPendingStaffPreapproval(person)) && person.role === "coordinator" && person.organizationId === snapshot.actor.organizationId);
   const items = [{ value: "none", label: "ללא שיוך לרכז/ת" }, ...coordinators.map((person) => ({ value: person.id, label: person.displayName + (isPendingStaffPreapproval(person) ? " · בקשת חברות ממתינה לאישור" : "") }))];
   const invalidField = failure?.field?.split(".").at(-1);
-  function update<K extends keyof typeof values>(field: K, value: typeof values[K]) { draft.update({ ...values, [field]: value }); }
+  function update<K extends keyof typeof values>(field: K, value: typeof values[K]) { draft.update({ ...values, [field]: value }); if (invalidField === field) setFailure(null); }
+  function fail(error: ApiFailure["error"]) { setFailure(error); const field = error.field?.split(".").at(-1); const suffix: Record<string, string> = { displayName: "name", email: "email", phone: "phone", role: "role-mentor", coordinatorId: "coordinator" }; if (field && suffix[field]) document.getElementById(`${formId}-${suffix[field]}`)?.focus(); }
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!snapshot || snapshot.actor.role !== "ceo" || !draft.hydrated || stale || submitting.current) return;
-    if (!values.displayName.trim()) { setFailure({ code: "validation", field: "displayName", message: "יש להזין את שם חבר/ת הצוות." }); return; }
+    if (!values.displayName.trim()) { fail({ code: "validation", field: "displayName", message: "יש להזין את שם חבר/ת הצוות." }); return; }
+    if (values.displayName.trim().length > 200) { fail({ code: "validation", field: "displayName", message: "שם מלא יכול להכיל עד 200 תווים. יש לקצר את השם." }); return; }
+
+    if (member.role !== "ceo" && values.role !== "mentor" && values.role !== "coordinator") { fail({ code: "validation", field: "role", message: "יש לבחור תפקיד: חונך/ת או רכז/ת." }); return; }
     const fields = changedStaffFields(member, values);
+    if ("phone" in fields && values.phone.trim() && !normalizePhoneNumber(values.phone)) { fail({ code: "validation", field: "phone", message: "יש להזין מספר טלפון תקין עם קידומת מדינה, או למחוק את המספר." }); return; }
     if (!Object.keys(fields).length) { setFailure({ code: "validation", message: "לא בוצע שינוי בפרטים." }); return; }
-    if (fields.coordinatorId && !coordinators.some((person) => person.id === fields.coordinatorId)) { setFailure({ code: "validation", field: "coordinatorId", message: "יש לבחור רכז/ת עם גישה פעילה מהארגון או להסיר את השיוך." }); return; }
+    if (fields.coordinatorId && !coordinators.some((person) => person.id === fields.coordinatorId)) { fail({ code: "validation", field: "coordinatorId", message: "יש לבחור רכז/ת עם גישה פעילה מהארגון או להסיר את השיוך." }); return; }
     const payload = { type: "update_staff" as const, staffId: member.id, expectedVersion: values.baseVersion, fields };
+    const validation = parseCommand({ ...payload, operationId: crypto.randomUUID() });
+    if (!validation.ok) { fail(validation.error); return; }
     submitting.current = true; setBusy(true); onBusyChange(true); setFailure(null);
-    let submitted = false;
+    let prepared = false;
     try {
       const operationId = await draft.prepare(payload);
-      submitted = true;
+      prepared = true;
       const result = await submit({ ...payload, operationId });
-      if (!result.ok) { setFailure(result.error); draft.recheck(); return; }
+      if (!result.ok) { fail(result.error); draft.recheck(); return; }
       try { await draft.clear(); } catch { toast.warning("הבקשה נשמרה. הטיוטה תיבדק לפי אותה פעולת שמירה בפתיחה הבאה."); }
       onClose();
       if (result.acceptance === "queued") toast.message("עדכון הצוות נשמר במכשיר וממתין לאישור. תפקיד ושיוך חדשים טרם נכנסו לתוקף.");
       else toast.success("פרטי חבר/ת הצוות עודכנו");
-    } catch { setFailure({ code: "unavailable", message: "לא התקבל אישור מהמערכת. הטיוטה וזהות הבקשה נשמרו לניסיון נוסף." }); if (submitted) draft.recheck(); }
+    } catch { setFailure({ code: "unavailable", message: prepared ? "לא התקבל אישור מהמערכת. זהות הבקשה נשמרה ותיבדק לניסיון נוסף." : "לא ניתן להכין את הבקשה לשמירה. הפרטים נשארו בטופס; יש להשאיר אותו פתוח, לבדוק את מצב הטיוטה ולנסות שוב." }); if (prepared) draft.recheck(); }
     finally { submitting.current = false; setBusy(false); onBusyChange(false); }
   }
   if (draft.recovered) return <RecoveredStaffSave result={draft.recovered} clear={draft.clear} onClose={onClose}><dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-3 text-sm"><dt>שם בטיוטה</dt><dd>{values.displayName}</dd><dt>טלפון בטיוטה</dt><dd dir="ltr">{values.phone || "ללא טלפון"}</dd><dt>תפקיד בטיוטה</dt><dd>{roleLabels[values.role]}</dd><dt>רכז/ת בטיוטה</dt><dd>{snapshot.staff.find((person) => person.id === values.coordinatorId)?.displayName ?? "ללא רכז/ת"}</dd></dl></RecoveredStaffSave>;
-  return <form onSubmit={save} className="flex flex-col gap-5">
+  return <form onSubmit={save} noValidate className="flex flex-col gap-5">
     <ActionError message={failure?.message ?? null} /><OfflineNotice />
     <VersionNotice stale={stale} onReview={() => { update("baseVersion", member.version); setFailure(null); }}><p>המידע העדכני: {member.displayName} · {member.phone ?? "ללא טלפון"} · {roleLabels[member.role]} · {snapshot.staff.find((person) => person.id === member.coordinatorId)?.displayName ?? "ללא רכז/ת"}</p><p>הטיוטה: {values.displayName || "ללא שם"} · {values.phone || "ללא טלפון"} · {roleLabels[values.role]} · {snapshot.staff.find((person) => person.id === values.coordinatorId)?.displayName ?? "ללא רכז/ת"}</p></VersionNotice>
     <fieldset disabled={busy || !draft.hydrated || stale} className="min-w-0 border-0 p-0"><FieldGroup>
-      <Field data-invalid={invalidField === "displayName" || undefined}><FieldLabel htmlFor={`${formId}-name`}>שם מלא</FieldLabel><Input id={`${formId}-name`} value={values.displayName} onChange={(event) => update("displayName", event.target.value)} maxLength={200} required aria-invalid={invalidField === "displayName" || undefined} /></Field>
-      <Field data-invalid={invalidField === "phone" || undefined}><FieldLabel htmlFor={`${formId}-phone`}>טלפון צוות · רשות</FieldLabel><Input id={`${formId}-phone`} type="tel" dir="ltr" value={values.phone} onChange={(event) => update("phone", event.target.value)} maxLength={40} aria-invalid={invalidField === "phone" || undefined} /></Field>
+      <Field data-invalid={invalidField === "displayName" || undefined}><FieldLabel htmlFor={`${formId}-name`}>שם מלא</FieldLabel><Input id={`${formId}-name`} value={values.displayName} onChange={(event) => update("displayName", event.target.value)} maxLength={200} required aria-invalid={invalidField === "displayName" || undefined} aria-describedby={invalidField === "displayName" ? `${formId}-displayName-error` : undefined} /><FieldFailure failure={failure} field="displayName" formId={formId} /></Field>
+      <Field data-invalid={invalidField === "phone" || undefined}><FieldLabel htmlFor={`${formId}-phone`}>טלפון צוות · רשות</FieldLabel><PhoneInput id={`${formId}-phone`} value={values.phone} onChange={(value) => update("phone", value)} aria-invalid={invalidField === "phone" || undefined} aria-describedby={invalidField === "phone" ? `${formId}-phone-error` : undefined} /><FieldFailure failure={failure} field="phone" formId={formId} /></Field>
       <Field><FieldLabel>כתובת דוא״ל להתחברות</FieldLabel><p dir="ltr" className="break-all text-sm">{member.email ?? "לא הוגדרה כתובת דוא״ל"}</p><FieldDescription>הדוא״ל ופרטי חשבון ההתחברות מנוהלים בנפרד ואינם ניתנים לעריכה בטופס זה.</FieldDescription></Field>
-      <Field data-invalid={invalidField === "role" || undefined}><FieldLabel id={`${formId}-role-label`}>תפקיד במערכת</FieldLabel>{member.role === "ceo" ? <p className="text-sm">מנכ״ל · התפקיד נשמר</p> : <ToggleGroup variant="outline" value={[values.role]} multiple={false} disabled={busy || !draft.hydrated || stale} aria-labelledby={`${formId}-role-label`} onValueChange={(next) => { if (next[0] === "mentor" || next[0] === "coordinator") update("role", next[0]); }}><ToggleGroupItem value="mentor">חונך/ת</ToggleGroupItem><ToggleGroupItem value="coordinator">רכז/ת</ToggleGroupItem></ToggleGroup>}<FieldDescription>לפני שינוי תפקיד או צוות, יש להעביר שיוכים והרשאות קיימים שאינם מתאימים לתפקיד החדש.</FieldDescription></Field>
-      {member.role !== "ceo" && values.role === "mentor" && <Field data-invalid={invalidField === "coordinatorId" || undefined}><FieldLabel htmlFor={`${formId}-coordinator`}>רכז/ת אחראי/ת</FieldLabel><Select items={items} value={values.coordinatorId} disabled={busy || !draft.hydrated || stale} onValueChange={(value) => update("coordinatorId", value ?? "none")}><SelectTrigger id={`${formId}-coordinator`} className="w-full" aria-invalid={invalidField === "coordinatorId" || undefined}><SelectValue /></SelectTrigger><SelectContent><SelectGroup><SelectLabel>שיוך לצוות</SelectLabel>{items.map((item) => <SelectItem key={item.value} value={item.value} className="min-h-11">{item.label}</SelectItem>)}</SelectGroup></SelectContent></Select></Field>}
+      <Field data-invalid={invalidField === "role" || undefined}><FieldLabel id={`${formId}-role-label`}>תפקיד במערכת</FieldLabel>{member.role === "ceo" ? <p className="text-sm">מנכ״ל · התפקיד נשמר</p> : <ToggleGroup variant="outline" value={[values.role]} multiple={false} disabled={busy || !draft.hydrated || stale} aria-labelledby={`${formId}-role-label`} onValueChange={(next) => { if (next[0] === "mentor" || next[0] === "coordinator") update("role", next[0]); }}><ToggleGroupItem id={`${formId}-role-mentor`} aria-invalid={invalidField === "role" || undefined} aria-describedby={invalidField === "role" ? `${formId}-role-error` : undefined} value="mentor">חונך/ת</ToggleGroupItem><ToggleGroupItem value="coordinator">רכז/ת</ToggleGroupItem></ToggleGroup>}<FieldDescription>לפני שינוי תפקיד או צוות, יש להעביר שיוכים והרשאות קיימים שאינם מתאימים לתפקיד החדש.</FieldDescription><FieldFailure failure={failure} field="role" formId={formId} /></Field>
+      {member.role !== "ceo" && values.role === "mentor" && <Field data-invalid={invalidField === "coordinatorId" || undefined}><FieldLabel htmlFor={`${formId}-coordinator`}>רכז/ת אחראי/ת</FieldLabel><Select items={items} value={values.coordinatorId} disabled={busy || !draft.hydrated || stale} onValueChange={(value) => update("coordinatorId", value ?? "none")}><SelectTrigger id={`${formId}-coordinator`} className="w-full" aria-invalid={invalidField === "coordinatorId" || undefined} aria-describedby={invalidField === "coordinatorId" ? `${formId}-coordinatorId-error` : undefined}><SelectValue /></SelectTrigger><SelectContent><SelectGroup><SelectLabel>שיוך לצוות</SelectLabel>{items.map((item) => <SelectItem key={item.value} value={item.value} className="min-h-11">{item.label}</SelectItem>)}</SelectGroup></SelectContent></Select><FieldFailure failure={failure} field="coordinatorId" formId={formId} /></Field>}
     </FieldGroup></fieldset>
     <DraftStatus status={draft.status} onRetry={draft.retry} />
     <DialogFooter><Button type="button" variant="outline" onClick={onClose} disabled={busy}>סגירה ושמירת הטיוטה</Button><Button type="submit" disabled={busy || !draft.hydrated || stale}>{busy && <Spinner data-icon="inline-start" />}שמירת פרטי צוות</Button></DialogFooter>
@@ -176,18 +195,20 @@ function StaffAccessForm({ member, onClose, onBusyChange }: { member: StaffProfi
     if (!snapshot || snapshot.actor.role !== "ceo" || snapshot.actor.id === member.id || !draft.hydrated || stale || submitting.current) return;
     if (member.active === values.active) { setError("מצב הגישה המבוקש כבר מוצג. יש לבדוק את רשימת הצוות המעודכנת."); return; }
     const payload = { type: "set_staff_active" as const, staffId: member.id, expectedVersion: values.baseVersion, active: values.active };
+    const validation = parseCommand({ ...payload, operationId: crypto.randomUUID() });
+    if (!validation.ok) { setError(validation.error.message); return; }
     submitting.current = true; setBusy(true); onBusyChange(true); setError(null);
-    let submitted = false;
+    let prepared = false;
     try {
       const operationId = await draft.prepare(payload);
-      submitted = true;
+      prepared = true;
       const result = await submit({ ...payload, operationId });
       if (!result.ok) { setError(result.error.message); draft.recheck(); return; }
       try { await draft.clear(); } catch { toast.warning("הבקשה נשמרה. הטיוטה תיבדק לפי אותה פעולת שמירה בפתיחה הבאה."); }
       onClose();
       if (result.acceptance === "queued") toast.message("בקשת שינוי הגישה נשמרה במכשיר וממתינה לאישור. הגישה עדיין לפי המצב האחרון שאושר.");
       else toast.success(values.active ? "הגישה לצוות הופעלה" : "ההרשאה לצוות בוטלה");
-    } catch { setError("לא התקבל אישור מהמערכת. זהות הבקשה נשמרה לניסיון נוסף."); if (submitted) draft.recheck(); }
+    } catch { setError(prepared ? "לא התקבל אישור מהמערכת. זהות הבקשה נשמרה ותיבדק לניסיון נוסף." : "לא ניתן להכין את הבקשה לשמירה. יש להשאיר את הטופס פתוח, לבדוק את מצב הטיוטה ולנסות שוב."); if (prepared) draft.recheck(); }
     finally { submitting.current = false; setBusy(false); onBusyChange(false); }
   }
   if (draft.recovered) return <RecoveredStaffSave result={draft.recovered} clear={draft.clear} onClose={onClose}><p className="text-sm">הבקשה שנשמרה: {values.active ? "הפעלת גישה" : "ביטול גישה"} עבור {member.displayName}.</p></RecoveredStaffSave>;

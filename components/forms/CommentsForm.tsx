@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { contactSubmissionMessage, validateContactSubmission, type ContactErrors, type ContactField } from "@/lib/contact-validation";
 import type { Dictionary } from "@/i18n/dictionaries";
+import type { Locale } from "@/i18n/config";
 
 type CommentsDict = Dictionary["comments"];
 
@@ -11,32 +13,75 @@ const fieldClass =
 
 type SubmitState = "idle" | "sending" | "success" | "error";
 
-export function CommentsForm({ copy, privacyNotice }: { copy: CommentsDict; privacyNotice: ReactNode }) {
+export function CommentsForm({ copy, privacyNotice, locale = "he" }: { copy: CommentsDict; privacyNotice: ReactNode; locale?: Locale }) {
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
+  const [fieldErrors, setFieldErrors] = useState<ContactErrors>({});
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const submitting = useRef(false);
+
+  function validateField(field: ContactField, form: HTMLFormElement | null) {
+    if (!form) return;
+    const { errors } = validateContactSubmission(Object.fromEntries(new FormData(form)), locale);
+    setFieldErrors((current) => ({ ...current, [field]: errors[field] }));
+  }
+
+  function clearField(field: ContactField) {
+    setFieldErrors((current) => ({ ...current, [field]: undefined }));
+    setErrorMessage(null);
+    setSubmitState("idle");
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submitting.current) return;
     const formElement = event.currentTarget;
+    const payload = Object.fromEntries(new FormData(formElement));
+    const validation = validateContactSubmission(payload, locale);
+    setFieldErrors(validation.errors);
+    setErrorMessage(null);
+    if (Object.values(validation.errors).some(Boolean)) {
+      setSubmitState("error");
+      setErrorMessage(copy.validationSummary);
+      const firstField = Object.keys(validation.errors)[0];
+      const input = formElement.elements.namedItem(firstField);
+      if (input instanceof HTMLElement) input.focus();
+      return;
+    }
+    submitting.current = true;
     setSubmitState("sending");
 
     try {
       const response = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(Object.fromEntries(new FormData(formElement))),
+        body: JSON.stringify({ ...payload, ...validation.values, locale }),
       });
 
-      if (!response.ok) throw new Error("Comment submission failed");
+      const result: unknown = await response.json().catch(() => null);
+      if (!response.ok || !result || typeof result !== "object" || !("success" in result) || result.success !== true) {
+        const errorCode = response.status === 429 ? "rate_limit" : response.status === 413 ? "submission_too_large" : result && typeof result === "object" && "error" in result && typeof result.error === "string" ? result.error : "email_send_failed";
+        if (errorCode === "invalid_submission") {
+          // Revalidate locally so the UI only displays our translated field messages.
+          setFieldErrors(validateContactSubmission(payload, locale).errors);
+        }
+        setErrorMessage(contactSubmissionMessage(errorCode, locale));
+        setSubmitState("error");
+        return;
+      }
 
       formElement.reset();
+      setFieldErrors({});
       setSubmitState("success");
     } catch {
+      setErrorMessage(contactSubmissionMessage("network", locale));
       setSubmitState("error");
+    } finally {
+      submitting.current = false;
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} aria-describedby={submitState === "success" ? undefined : "comment-privacy-notice"} className="rounded-3xl border border-line bg-surface p-6 sm:p-8">
+    <form onSubmit={handleSubmit} noValidate aria-busy={submitState === "sending"} aria-describedby={submitState === "success" ? undefined : "comment-privacy-notice"} className="rounded-3xl border border-line bg-surface p-6 sm:p-8">
       {submitState === "success" ? (
         <div className="flex min-h-64 flex-col items-center justify-center text-center" role="status">
           <span className="grid h-14 w-14 place-items-center rounded-full bg-brand-100 text-brand-800" aria-hidden="true">
@@ -48,7 +93,7 @@ export function CommentsForm({ copy, privacyNotice }: { copy: CommentsDict; priv
           <p className="mt-2 text-ink-700">{copy.success}</p>
           <button
             type="button"
-            onClick={() => setSubmitState("idle")}
+            onClick={() => { setSubmitState("idle"); setErrorMessage(null); }}
             className="mt-6 rounded-full border border-brand-700 px-6 py-3 font-semibold text-brand-800 transition-colors hover:bg-brand-50"
           >
             {copy.again}
@@ -71,9 +116,18 @@ export function CommentsForm({ copy, privacyNotice }: { copy: CommentsDict; priv
                 id="comment-name"
                 name="name"
                 required
+                minLength={2}
+                maxLength={100}
+                autoComplete="name"
+                disabled={submitState === "sending"}
+                aria-invalid={!!fieldErrors.name}
+                aria-describedby={fieldErrors.name ? "comment-name-error" : undefined}
+                onBlur={(event) => validateField("name", event.currentTarget.form)}
+                onChange={() => clearField("name")}
                 placeholder={copy.namePlaceholder}
-                className={cn(fieldClass, "border-line focus:border-brand-500")}
+                className={cn(fieldClass, fieldErrors.name ? "border-danger focus:border-danger" : "border-line focus:border-brand-500")}
               />
+              {fieldErrors.name && <p id="comment-name-error" className="mt-1.5 text-sm font-semibold text-danger" role="alert">{fieldErrors.name}</p>}
             </div>
             <div>
               <label htmlFor="comment-email" className="mb-1.5 block text-sm font-semibold text-ink-800">
@@ -85,9 +139,17 @@ export function CommentsForm({ copy, privacyNotice }: { copy: CommentsDict; priv
                 type="email"
                 dir="ltr"
                 required
+                maxLength={254}
+                autoComplete="email"
+                disabled={submitState === "sending"}
+                aria-invalid={!!fieldErrors.email}
+                aria-describedby={fieldErrors.email ? "comment-email-error" : undefined}
+                onBlur={(event) => validateField("email", event.currentTarget.form)}
+                onChange={() => clearField("email")}
                 placeholder={copy.emailPlaceholder}
-                className={cn(fieldClass, "border-line text-start focus:border-brand-500")}
+                className={cn(fieldClass, "text-start", fieldErrors.email ? "border-danger focus:border-danger" : "border-line focus:border-brand-500")}
               />
+              {fieldErrors.email && <p id="comment-email-error" className="mt-1.5 text-sm font-semibold text-danger" role="alert">{fieldErrors.email}</p>}
             </div>
           </div>
 
@@ -100,9 +162,17 @@ export function CommentsForm({ copy, privacyNotice }: { copy: CommentsDict; priv
               name="message"
               rows={4}
               required
+              minLength={5}
+              maxLength={5_000}
+              disabled={submitState === "sending"}
+              aria-invalid={!!fieldErrors.message}
+              aria-describedby={fieldErrors.message ? "comment-message-error" : undefined}
+              onBlur={(event) => validateField("message", event.currentTarget.form)}
+              onChange={() => clearField("message")}
               placeholder={copy.messagePlaceholder}
-              className={cn(fieldClass, "resize-y border-line focus:border-brand-500")}
+              className={cn(fieldClass, "resize-y", fieldErrors.message ? "border-danger focus:border-danger" : "border-line focus:border-brand-500")}
             />
+            {fieldErrors.message && <p id="comment-message-error" className="mt-1.5 text-sm font-semibold text-danger" role="alert">{fieldErrors.message}</p>}
           </div>
 
           {privacyNotice}
@@ -114,9 +184,9 @@ export function CommentsForm({ copy, privacyNotice }: { copy: CommentsDict; priv
           >
             {submitState === "sending" ? copy.sending : copy.submit}
           </button>
-          {submitState === "error" ? (
+          {submitState === "error" && errorMessage ? (
             <p className="mt-4 text-sm font-semibold text-danger" role="alert">
-              {copy.errorSubmit}
+              {errorMessage}
             </p>
           ) : null}
         </>

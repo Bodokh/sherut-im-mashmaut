@@ -1,0 +1,490 @@
+{
+  "contacts": {
+    "source": "/tmp/sherut-mentoring-qa-private/lane-b8f3cd54-031a-4261-8482-645de7cdfe08/report.json",
+    "results": [
+      {
+        "name": "Contact create: native controls, limits and guarded invalid dates",
+        "status": "passed"
+      },
+      {
+        "name": "Contact create: failed local draft preparation preserves input and retry saves once",
+        "status": "passed"
+      },
+      {
+        "name": "Contact revision and invalidation: reasons, dates and native text limits",
+        "status": "passed"
+      },
+      {
+        "name": "Contact revision: failed local draft preparation preserves reason and retry saves once",
+        "status": "passed"
+      },
+      {
+        "name": "Reschedule and color: invalid dates, reasons and option boundaries",
+        "status": "passed"
+      }
+    ],
+    "cleanup": {
+      "status": "passed",
+      "removedParticipants": 1,
+      "removedStaff": 0,
+      "removedContacts": 1,
+      "removedMonthlyReviews": 0,
+      "remaining": {
+        "reminder_attempts": 0,
+        "reminder_jobs": 0,
+        "outbox": 0,
+        "conflicts": 0,
+        "review_events": 0,
+        "contact_revisions": 0,
+        "appointment_history": 0,
+        "manual_color_history": 0,
+        "grants": 0,
+        "appointments": 0,
+        "assignments": 0,
+        "contacts": 0,
+        "participants": 0,
+        "memberships": 0,
+        "resource_ids": 0,
+        "monthly_reviews": 0,
+        "monthly_review_history": 0,
+        "reviews": 0,
+        "ceo_protections": 0,
+        "operations": 0,
+        "audit": 0,
+        "settings_history": 0
+      },
+      "approvedQaIdentityPreserved": true,
+      "sharedMembershipAndSettingsUntouched": true
+    },
+    "unexpectedErrors": []
+  },
+  "authority": {
+    "source": "/tmp/sherut-mentoring-qa-private/lane-a9e0f033-7607-49c0-97e2-c4769950a8cd/report.json",
+    "results": [
+      {
+        "name": "Lifecycle and delete reasons are required and limited",
+        "status": "passed"
+      },
+      {
+        "name": "Protection rejects empty field selection",
+        "status": "passed"
+      },
+      {
+        "name": "Grant rejects expired dates and restricts mentor actions",
+        "status": "passed"
+      },
+      {
+        "name": "Restore requires a reason for the run-owned recycled participant",
+        "status": "passed"
+      }
+    ],
+    "cleanup": {
+      "status": "passed",
+      "removedParticipants": 1,
+      "removedStaff": 0,
+      "removedContacts": 0,
+      "removedMonthlyReviews": 0,
+      "remaining": {
+        "reminder_attempts": 0,
+        "reminder_jobs": 0,
+        "outbox": 0,
+        "conflicts": 0,
+        "review_events": 0,
+        "contact_revisions": 0,
+        "appointment_history": 0,
+        "manual_color_history": 0,
+        "grants": 0,
+        "appointments": 0,
+        "assignments": 0,
+        "contacts": 0,
+        "participants": 0,
+        "memberships": 0,
+        "resource_ids": 0,
+        "monthly_reviews": 0,
+        "monthly_review_history": 0,
+        "reviews": 0,
+        "ceo_protections": 0,
+        "operations": 0,
+        "audit": 0,
+        "settings_history": 0
+      },
+      "approvedQaIdentityPreserved": true,
+      "sharedMembershipAndSettingsUntouched": true
+    },
+    "unexpectedErrors": []
+  },
+  "management": {
+    "source": "/tmp/sherut-mentoring-qa-private/management-readonly-report.json",
+    "results": [
+      {
+        "name": "Settings reject blank, below-minimum, above-maximum and fractional values",
+        "status": "passed"
+      },
+      {
+        "name": "Monthly review retains summary and blocks save with an invalid month",
+        "status": "passed"
+      },
+      {
+        "name": "Management pages load without invoking SMS, review or conflict actions",
+        "status": "passed"
+      }
+    ],
+    "unexpectedErrors": []
+  },
+  "offline": {
+    "source": "/tmp/sherut-mentoring-qa-private/lane-6e65d174-35b8-4371-9060-2eebefbfee77/report.json",
+    "results": [
+      {
+        "name": "Simulated 501 after a real commit preserves and retries the same command",
+        "status": "passed"
+      },
+      {
+        "name": "Simulated 429 after a real commit preserves and retries the same command",
+        "status": "passed"
+      },
+      {
+        "name": "Simulated unknown-400 after a real commit preserves and retries the same command",
+        "status": "passed"
+      },
+      {
+        "name": "Simulated network after a real commit preserves and retries the same command",
+        "status": "passed"
+      },
+      {
+        "name": "Prepared draft survives failed cleanup and reload without a second write",
+        "status": "passed"
+      }
+    ],
+    "cleanup": {
+      "status": "passed",
+      "removedParticipants": 1,
+      "removedStaff": 0,
+      "removedContacts": 0,
+      "removedMonthlyReviews": 0,
+      "remaining": {
+        "reminder_attempts": 0,
+        "reminder_jobs": 0,
+        "outbox": 0,
+        "conflicts": 0,
+        "review_events": 0,
+        "contact_revisions": 0,
+        "appointment_history": 0,
+        "manual_color_history": 0,
+        "grants": 0,
+        "appointments": 0,
+        "assignments": 0,
+        "contacts": 0,
+        "participants": 0,
+        "memberships": 0,
+        "resource_ids": 0,
+        "monthly_reviews": 0,
+        "monthly_review_history": 0,
+        "reviews": 0,
+        "ceo_protections": 0,
+        "operations": 0,
+        "audit": 0,
+        "settings_history": 0
+      },
+      "approvedQaIdentityPreserved": true,
+      "sharedMembershipAndSettingsUntouched": true
+    },
+    "unexpectedErrors": []
+  },
+  "profilesInitial": {
+    "source": "/tmp/sherut-mentoring-qa-private/lane-abe4c529-03cb-4137-83bb-47fa15896e61/report.json",
+    "results": [
+      {
+        "name": "Participant inputs: length boundaries, service options and invalid phone",
+        "status": "passed"
+      },
+      {
+        "name": "Staff create rejects required name, email and phone without sending commands",
+        "status": "passed"
+      },
+      {
+        "name": "Staff edit validates input and access cancellation protects self",
+        "status": "passed"
+      },
+      {
+        "name": "Participant phone saves local and international numbers and clears",
+        "status": "passed"
+      },
+      {
+        "name": "Assignment requires a mentor and limits choices by role",
+        "status": "failed",
+        "message": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('dialog').getByRole('button', { name: /^סגירה/ }).first()\u001b[22m\n"
+      },
+      {
+        "name": "Participant edit survives draft quota failure and retries once",
+        "status": "passed"
+      },
+      {
+        "name": "Staff edit survives draft quota failure and retries once",
+        "status": "passed"
+      },
+      {
+        "name": "Assignment survives draft quota failure and retries once",
+        "status": "failed",
+        "message": "locator.waitFor: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('dialog').getByText(/לא ניתן להכין את הבקשה לשמירה/).first() to be visible\u001b[22m\n"
+      }
+    ],
+    "cleanup": {
+      "status": "passed",
+      "removedParticipants": 2,
+      "removedStaff": 3,
+      "removedContacts": 0,
+      "removedMonthlyReviews": 0,
+      "remaining": {
+        "reminder_attempts": 0,
+        "reminder_jobs": 0,
+        "outbox": 0,
+        "conflicts": 0,
+        "review_events": 0,
+        "contact_revisions": 0,
+        "appointment_history": 0,
+        "manual_color_history": 0,
+        "grants": 0,
+        "appointments": 0,
+        "assignments": 0,
+        "contacts": 0,
+        "participants": 0,
+        "memberships": 0,
+        "resource_ids": 0,
+        "monthly_reviews": 0,
+        "monthly_review_history": 0,
+        "reviews": 0,
+        "ceo_protections": 0,
+        "operations": 0,
+        "audit": 0,
+        "settings_history": 0
+      },
+      "approvedQaIdentityPreserved": true,
+      "sharedMembershipAndSettingsUntouched": true
+    },
+    "unexpectedErrors": []
+  },
+  "assignments": {
+    "results": [
+      {
+        "name": "Assignment requires a mentor and limits choices by role",
+        "status": "passed"
+      },
+      {
+        "name": "Assignment survives draft quota failure and retries once",
+        "status": "passed"
+      }
+    ],
+    "cleanup": {
+      "status": "passed",
+      "removedParticipants": 2,
+      "removedStaff": 0,
+      "removedContacts": 0,
+      "removedMonthlyReviews": 0,
+      "remaining": {
+        "reminder_attempts": 0,
+        "reminder_jobs": 0,
+        "outbox": 0,
+        "conflicts": 0,
+        "review_events": 0,
+        "contact_revisions": 0,
+        "appointment_history": 0,
+        "manual_color_history": 0,
+        "grants": 0,
+        "appointments": 0,
+        "assignments": 0,
+        "contacts": 0,
+        "participants": 0,
+        "memberships": 0,
+        "resource_ids": 0,
+        "monthly_reviews": 0,
+        "monthly_review_history": 0,
+        "reviews": 0,
+        "ceo_protections": 0,
+        "operations": 0,
+        "audit": 0,
+        "settings_history": 0
+      },
+      "approvedQaIdentityPreserved": true,
+      "sharedMembershipAndSettingsUntouched": true
+    },
+    "unexpectedErrors": []
+  },
+  "effectiveResults": {
+    "Contact create: native controls, limits and guarded invalid dates": {
+      "name": "Contact create: native controls, limits and guarded invalid dates",
+      "status": "passed"
+    },
+    "Contact create: failed local draft preparation preserves input and retry saves once": {
+      "name": "Contact create: failed local draft preparation preserves input and retry saves once",
+      "status": "passed"
+    },
+    "Contact revision and invalidation: reasons, dates and native text limits": {
+      "name": "Contact revision and invalidation: reasons, dates and native text limits",
+      "status": "passed"
+    },
+    "Contact revision: failed local draft preparation preserves reason and retry saves once": {
+      "name": "Contact revision: failed local draft preparation preserves reason and retry saves once",
+      "status": "passed"
+    },
+    "Reschedule and color: invalid dates, reasons and option boundaries": {
+      "name": "Reschedule and color: invalid dates, reasons and option boundaries",
+      "status": "passed"
+    },
+    "Lifecycle and delete reasons are required and limited": {
+      "name": "Lifecycle and delete reasons are required and limited",
+      "status": "passed"
+    },
+    "Protection rejects empty field selection": {
+      "name": "Protection rejects empty field selection",
+      "status": "passed"
+    },
+    "Grant rejects expired dates and restricts mentor actions": {
+      "name": "Grant rejects expired dates and restricts mentor actions",
+      "status": "passed"
+    },
+    "Restore requires a reason for the run-owned recycled participant": {
+      "name": "Restore requires a reason for the run-owned recycled participant",
+      "status": "passed"
+    },
+    "Settings reject blank, below-minimum, above-maximum and fractional values": {
+      "name": "Settings reject blank, below-minimum, above-maximum and fractional values",
+      "status": "passed"
+    },
+    "Monthly review retains summary and blocks save with an invalid month": {
+      "name": "Monthly review retains summary and blocks save with an invalid month",
+      "status": "passed"
+    },
+    "Management pages load without invoking SMS, review or conflict actions": {
+      "name": "Management pages load without invoking SMS, review or conflict actions",
+      "status": "passed"
+    },
+    "Simulated 501 after a real commit preserves and retries the same command": {
+      "name": "Simulated 501 after a real commit preserves and retries the same command",
+      "status": "passed"
+    },
+    "Simulated 429 after a real commit preserves and retries the same command": {
+      "name": "Simulated 429 after a real commit preserves and retries the same command",
+      "status": "passed"
+    },
+    "Simulated unknown-400 after a real commit preserves and retries the same command": {
+      "name": "Simulated unknown-400 after a real commit preserves and retries the same command",
+      "status": "passed"
+    },
+    "Simulated network after a real commit preserves and retries the same command": {
+      "name": "Simulated network after a real commit preserves and retries the same command",
+      "status": "passed"
+    },
+    "Prepared draft survives failed cleanup and reload without a second write": {
+      "name": "Prepared draft survives failed cleanup and reload without a second write",
+      "status": "passed"
+    },
+    "Participant inputs: length boundaries, service options and invalid phone": {
+      "name": "Participant inputs: length boundaries, service options and invalid phone",
+      "status": "passed"
+    },
+    "Staff create rejects required name, email and phone without sending commands": {
+      "name": "Staff create rejects required name, email and phone without sending commands",
+      "status": "passed"
+    },
+    "Staff edit validates input and access cancellation protects self": {
+      "name": "Staff edit validates input and access cancellation protects self",
+      "status": "passed"
+    },
+    "Participant phone saves local and international numbers and clears": {
+      "name": "Participant phone saves local and international numbers and clears",
+      "status": "passed"
+    },
+    "Assignment requires a mentor and limits choices by role": {
+      "name": "Assignment requires a mentor and limits choices by role",
+      "status": "passed"
+    },
+    "Participant edit survives draft quota failure and retries once": {
+      "name": "Participant edit survives draft quota failure and retries once",
+      "status": "passed"
+    },
+    "Staff edit survives draft quota failure and retries once": {
+      "name": "Staff edit survives draft quota failure and retries once",
+      "status": "passed"
+    },
+    "Assignment survives draft quota failure and retries once": {
+      "name": "Assignment survives draft quota failure and retries once",
+      "status": "passed"
+    }
+  },
+  "summary": {
+    "passed": 25,
+    "failed": 0
+  },
+  "note": "Earlier assignment runner timing and message selectors were corrected; the final assignment run supersedes those two historical failures.",
+  "settingsAcceptance": {
+    "initialVersion": 1,
+    "results": [
+      {
+        "phase": "minimum",
+        "version": 2,
+        "persisted": {
+          "offlineLeaseHours": 1,
+          "reminderAudience": "responsible_team",
+          "appointmentReminderMinutesBefore": 0,
+          "overdueRemindersEnabled": false,
+          "overdueRepeatHours": 1
+        }
+      },
+      {
+        "phase": "maximum",
+        "version": 3,
+        "persisted": {
+          "offlineLeaseHours": 24,
+          "reminderAudience": "all_staff",
+          "appointmentReminderMinutesBefore": 1440,
+          "overdueRemindersEnabled": true,
+          "overdueRepeatHours": 168
+        }
+      },
+      {
+        "phase": "optional-repeat-blank",
+        "version": 4,
+        "persisted": {
+          "offlineLeaseHours": 24,
+          "reminderAudience": "all_staff",
+          "appointmentReminderMinutesBefore": 1440,
+          "overdueRemindersEnabled": true,
+          "overdueRepeatHours": null
+        }
+      },
+      {
+        "phase": "restore",
+        "version": 5,
+        "persisted": {
+          "offlineLeaseHours": 24,
+          "reminderAudience": "responsible_team",
+          "appointmentReminderMinutesBefore": 0,
+          "overdueRemindersEnabled": true,
+          "overdueRepeatHours": null
+        }
+      }
+    ],
+    "restoration": "verified",
+    "errors": []
+  },
+  "cleanupVerification": {
+    "participants": 0,
+    "reminderJobs": 0,
+    "unboundStaff": 0,
+    "sharedPool": "ownership-checked cleanup passed",
+    "originalPolicyValuesRestored": true,
+    "policyVersionBefore": 1,
+    "policyVersionAfter": 5,
+    "auditHistoryRetained": true,
+    "localTestServerStopped": true,
+    "temporaryLocalAuthStateRemoved": true
+  },
+  "notTested": [
+    "Production deployment and live SMS delivery",
+    "Every browser engine, physical devices and full screen-reader acceptance",
+    "Actual blank participant browser creation (shared schema unit coverage only)",
+    "Recovered profile summary browser flow",
+    "All role-specific journeys and every possible input combination",
+    "Earlier interrupted full-system run has no retained complete report"
+  ]
+}

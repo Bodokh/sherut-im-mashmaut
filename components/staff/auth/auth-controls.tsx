@@ -6,24 +6,11 @@ import { AlertCircle, ArrowLeft, ShieldCheck } from "lucide-react";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
 import { Button } from "@/components/staff/ui/button";
 import { Alert, AlertDescription } from "@/components/staff/ui/alert";
-import { Field, FieldDescription, FieldLabel } from "@/components/staff/ui/field";
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/staff/ui/field";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/staff/ui/input-otp";
 import { Spinner } from "@/components/staff/ui/spinner";
 
-export function authErrorMessage(error: unknown): string {
-  const details = typeof error === "object" && error !== null && "errors" in error && Array.isArray(error.errors) ? error.errors : [];
-  const nested = details.find((item: unknown) => typeof item === "object" && item !== null && "code" in item);
-  // API response errors wrap the actual provider failure in errors[].code.
-  const code = nested && typeof nested === "object" && "code" in nested ? String(nested.code) : typeof error === "object" && error !== null && "code" in error ? String(error.code) : "";
-  if (code.includes("too_many") || code.includes("rate_limit")) return "בוצעו יותר מדי ניסיונות. יש להמתין מעט ולנסות שוב.";
-  if (code.includes("verification_expired")) return "תוקף הקוד פג. אפשר לבקש קוד חדש.";
-  if (code.includes("code_incorrect") || code.includes("verification_failed")) return "הקוד אינו תקין. יש לבדוק אותו ולנסות שוב.";
-  if (code.includes("password_pwned")) return "הסיסמה הופיעה במאגר סיסמאות שדלפו. יש לבחור סיסמה חדשה וייחודית.";
-  if (code.includes("password_length") || code.includes("password_too_short")) return "יש לבחור סיסמה באורך 15 תווים לפחות.";
-  if (code.includes("identifier_exists")) return "לא ניתן ליצור חשבון עם הפרטים האלו. אם כבר קיים חשבון, אפשר לעבור למסך הכניסה.";
-  if (code.includes("captcha")) return "יש להשלים את בדיקת האבטחה ולנסות שוב.";
-  return "לא ניתן להשלים את הפעולה. יש לבדוק את הפרטים ואת החיבור לאינטרנט ולנסות שוב.";
-}
+export { authErrorMessage } from "./auth-validation";
 
 export function AuthError({ message }: { message: string | null }) {
   if (!message) return null;
@@ -39,18 +26,19 @@ export function SubmitButton({ pending, children, disabled = false }: { pending:
   );
 }
 
-export function CodeField({ value, onChange, disabled, invalid, description }: { value: string; onChange: (code: string) => void; disabled: boolean; invalid: boolean; description: string }) {
+export function CodeField({ value, onChange, onBlur, disabled, invalid, error, description }: { value: string; onChange: (code: string) => void; onBlur?: () => void; disabled: boolean; invalid?: boolean; error?: string; description: string }) {
   return (
-    <Field data-invalid={invalid || undefined}>
+    <Field data-invalid={!!error || invalid || undefined}>
       <FieldLabel htmlFor="verification-code">קוד אימות</FieldLabel>
       <div dir="ltr">
-        <InputOTP id="verification-code" name="code" autoComplete="one-time-code" inputMode="numeric" maxLength={6} pattern={REGEXP_ONLY_DIGITS} value={value} onChange={onChange} disabled={disabled} aria-invalid={invalid} aria-describedby="verification-description" required>
+        <InputOTP id="verification-code" name="code" autoComplete="one-time-code" inputMode="numeric" maxLength={6} pattern={REGEXP_ONLY_DIGITS} value={value} onChange={onChange} onBlur={onBlur} disabled={disabled} aria-invalid={!!error || invalid} aria-describedby={`verification-description${error ? " verification-error" : ""}`} required>
           <InputOTPGroup>
             {Array.from({ length: 6 }, (_, index) => <InputOTPSlot key={index} index={index} />)}
           </InputOTPGroup>
         </InputOTP>
       </div>
       <FieldDescription id="verification-description">{description}</FieldDescription>
+      {error && <FieldError id="verification-error">{error}</FieldError>}
     </Field>
   );
 }

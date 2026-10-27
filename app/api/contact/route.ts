@@ -1,8 +1,8 @@
 import { Resend } from "resend";
+import { validateContactSubmission } from "../../../lib/contact-validation";
 
 const DEFAULT_SUPPORT_EMAIL = "support@imashmaut.co.il";
 const FROM_EMAIL = "שירות עם משמעות <notifications@imashmaut.co.il>";
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function readField(payload: Record<string, unknown>, field: string) {
   const value = payload[field];
@@ -55,25 +55,11 @@ export async function POST(request: Request) {
   // Bots commonly fill hidden fields. Return success so they do not retry.
   if (website) return Response.json({ success: true });
 
-  const name = readField(payload, "name");
-  const email = readField(payload, "email");
-  const phone = readField(payload, "phone");
-  const topic = readField(payload, "topic");
-  const message = readField(payload, "message");
-
-  const isValid =
-    name.length >= 2 &&
-    name.length <= 100 &&
-    EMAIL_PATTERN.test(email) &&
-    email.length <= 254 &&
-    phone.length <= 50 &&
-    topic.length <= 100 &&
-    message.length >= 5 &&
-    message.length <= 5_000;
-
-  if (!isValid) {
-    return Response.json({ error: "invalid_submission" }, { status: 400 });
+  const { values, errors } = validateContactSubmission(payload, payload.locale === "en" ? "en" : "he");
+  if (Object.keys(errors).length) {
+    return Response.json({ error: "invalid_submission", fieldErrors: errors }, { status: 400 });
   }
+  const { name, email, phone, topic, message } = values;
 
   const apiKey = process.env.RESEND_API_KEY;
   const recipient = process.env.CONTACT_FORM_TO_EMAIL?.trim() || DEFAULT_SUPPORT_EMAIL;
@@ -123,7 +109,10 @@ export async function POST(request: Request) {
       return Response.json({ error: "email_send_failed" }, { status: 502 });
     }
 
-    const confirmation = await resend.emails.send({
+    // The team email is already accepted. A failed courtesy confirmation must
+    // not turn this into a failed submission and encourage a duplicate retry.
+    try {
+      const confirmation = await resend.emails.send({
       from: FROM_EMAIL,
       to: [email],
       subject: "קיבלנו את פנייתך | שירות עם משמעות",
@@ -144,8 +133,11 @@ export async function POST(request: Request) {
       `,
     });
 
-    if (confirmation.error) {
-      console.error("Resend rejected confirmation email", confirmation.error);
+      if (confirmation.error) {
+        console.error("Resend rejected confirmation email", confirmation.error);
+      }
+    } catch {
+      console.error("Contact confirmation email failed after the submission was accepted");
     }
 
     return Response.json({ success: true });

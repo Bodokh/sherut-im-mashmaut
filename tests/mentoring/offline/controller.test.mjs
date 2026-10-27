@@ -323,7 +323,8 @@ test('failed durable storage never reports an offline intent as queued or accept
     assert.equal(result.error.code, 'unavailable');
     assert.equal(posts, 0);
     assert.equal(await offline.mentoringOfflineStore.unsyncedCount(), 0);
-    assert.match(controller.getSnapshot().error.message, /quota exhausted/);
+    assert.match(controller.getSnapshot().error.message, /אין די מקום.*העדכון לא נשמר/);
+    assert.doesNotMatch(controller.getSnapshot().error.message, /quota exhausted|QuotaExceededError/);
   } finally {
     offline.mentoringOfflineStore.enqueue = originalEnqueue;
     navigator.onLine = true;
@@ -966,4 +967,62 @@ test('draft hydration scope stays stable for authorized gains and changes only w
     navigator.onLine = true;
     await offline.mentoringOfflineStore.clear();
   }
+});
+
+
+test('malformed or unknown command failures remain pending and retry the same immutable operation', async () => {
+  const failures = [
+    { ok: false, error: { code: 'proxy_failure', message: 'database secret' } },
+    { ok: false, error: { message: 'missing code' } },
+    { ok: false, error: { code: 'validation' } },
+    { ok: false, error: { code: 'validation', message: 42 } },
+    { ok: false, error: { code: 'validation', message: 'bad field', field: { path: 'phone' } } },
+    { ok: false, error: { code: 'conflict', message: 'bad id', conflictId: 10 } },
+  ];
+  for (const badFailure of failures) {
+    Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { onLine: true } });
+    await offline.mentoringOfflineStore.clear();
+    const intended = command(); const posts = [];
+    globalThis.fetch = async (_url, options) => {
+      if (!options?.method) return Response.json(snapshot());
+      const sent = JSON.parse(options.body); posts.push(sent);
+      return posts.length === 1 ? Response.json(badFailure, { status: 400 }) : accepted(sent.operationId);
+    };
+    const controller = new Controller();
+    try {
+      await controller.updateAuth(true, 'A');
+      const first = await controller.submit(intended);
+      assert.equal(first.ok && first.acceptance, 'queued');
+      const session = await offline.mentoringOfflineStore.readSession('A');
+      const operations = await offline.mentoringOfflineStore.operations(session.scope);
+      assert.equal(operations.length, 1);
+      assert.equal(operations[0].status, 'pending');
+      assert.deepEqual(operations[0].command, intended);
+      assert.deepEqual(controller.getSnapshot().localFailures, []);
+      assert.doesNotMatch(JSON.stringify(controller.getSnapshot().error), /database secret|missing code|bad field|bad id/);
+      await controller.refresh();
+      assert.deepEqual(posts, [intended, intended]);
+      assert.equal((await offline.mentoringOfflineStore.operations(session.scope)).length, 0);
+      assert.equal((await offline.mentoringOfflineStore.readReceipt(session.scope, intended)).acceptance, 'accepted');
+    } finally { controller.dispose(); await offline.mentoringOfflineStore.clear(); }
+  }
+});
+
+test('known server failures are field-aware and never expose technical server messages', async () => {
+  Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { onLine: true } });
+  await offline.mentoringOfflineStore.clear();
+  const intended = command();
+  globalThis.fetch = async (_url, options) => !options?.method ? Response.json(snapshot()) : Response.json({ ok: false, error: { code: 'validation', field: 'fields.phone', message: 'שגיאה SQL: SELECT secret FROM private_table' } }, { status: 400 });
+  const controller = new Controller();
+  try {
+    await controller.updateAuth(true, 'A');
+    const result = await controller.submit(intended);
+    assert.equal(result.ok, false);
+    assert.equal(result.error.code, 'validation');
+    assert.equal(result.error.field, 'fields.phone');
+    assert.match(result.error.message, /טלפון/);
+    assert.doesNotMatch(result.error.message, /SQL|SELECT|secret|private_table/);
+    const failure = controller.getSnapshot().localFailures[0].failure;
+    assert.deepEqual(failure, result);
+  } finally { controller.dispose(); await offline.mentoringOfflineStore.clear(); }
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import {
   ArchiveRestoreIcon,
@@ -36,6 +36,7 @@ import {
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
   FieldLegend,
@@ -61,7 +62,7 @@ import type {
 } from "@/lib/mentoring/contracts";
 import type { GrantView } from "@/lib/mentoring/features/authority/contracts";
 import { useWorkspace } from "@/lib/mentoring/workspace-client";
-import { AccessDenied, InlineError, SectionEmpty } from "./common";
+import { AccessDenied, InlineError, SectionEmpty, readableError } from "./common";
 import { DraftRecovery } from "./draft-recovery";
 import { DraftStatus, useFormDraft } from "./form-draft";
 import { formatDateTime, fromDateTimeInput, toDateTimeInput } from "./format";
@@ -78,6 +79,7 @@ import {
   type AuthorityDraft,
   type AuthorityMode,
 } from "./authority-ui-state";
+import { authorityInputIssues, focusFormIssue, operationalCommandIssue, operationalFieldName } from "./operational-form-state";
 
 const titles: Record<AuthorityMode, string> = {
   lifecycle: "שינוי מצב הליווי",
@@ -361,6 +363,8 @@ function AuthorityForm({
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [issues, setIssues] = useState<Record<string, string>>({});
+  const submitting = useRef(false);
   const values = draft.value;
   if (!snapshot || !snapshot.actor.active || snapshot.actor.role !== "ceo")
     return <AccessDenied />;
@@ -390,32 +394,28 @@ function AuthorityForm({
       : contactProtectionFields;
   function update(patch: Partial<AuthorityDraft>) {
     draft.update({ ...values, ...patch });
+    setIssues((previous) => Object.fromEntries(Object.entries(previous).filter(([field]) => !Object.hasOwn(patch, field))));
   }
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (disabled || stale) return;
+    if (submitting.current || disabled || stale) return;
     if ((mode === "restore" && !authorityPending.canRestore) || (mode === "delete" && !authorityPending.canDelete)) { setError("יש להמתין לאישור השינוי הקודם בכרטיס לפני פעולה זו."); return; }
-    let expirationIso: string | null = null;
-    if (mode === "grant" && values.grantAction === "set") {
-      if (!staff?.active) {
-        setError("יש לבחור חבר/ת צוות עם גישה פעילה מהארגון.");
-        return;
-      }
-      if (staff.role === "mentor" && values.actions.includes("approve")) {
-        setError("הרשאת אישור זמינה לרכז/ת בלבד.");
-        return;
-      }
-      if (values.expiresAtLocal) {
-        expirationIso = fromDateTimeInput(values.expiresAtLocal);
-        if (
-          !expirationIso ||
-          Date.parse(expirationIso) <= Date.parse(snapshot!.serverTime)
-        ) {
-          setError("יש להזין מועד תפוגה תקין בעתיד, לפי שעון ישראל.");
-          return;
-        }
-      }
+    const found = authorityInputIssues(mode, values, {
+      participantId: view.participant.id,
+      resourceIds: [view.participant.id, ...view.contacts.filter((contact) => !contact.localPending).map((contact) => contact.id)],
+      staff,
+      grantActive: currentGrant?.active,
+      protectionActive: currentProtection?.active,
+      now: new Date(),
+    });
+    setIssues(found);
+    setError(null);
+    if (Object.keys(found).length) {
+      focusFormIssue(event.currentTarget, found);
+      return;
     }
+    const expirationIso = mode === "grant" && values.grantAction === "set" && values.expiresAtLocal ? fromDateTimeInput(values.expiresAtLocal) : null;
+    submitting.current = true;
     setBusy(true);
     onBusyChange(true);
     setError(null);
@@ -427,11 +427,19 @@ function AuthorityForm({
         values,
         expirationIso,
       );
+      const invalidCommand = operationalCommandIssue(payload);
+      if (invalidCommand) {
+        setIssues({ [invalidCommand.field]: invalidCommand.message });
+        setError(invalidCommand.message);
+        focusFormIssue(event.currentTarget, { [invalidCommand.field]: invalidCommand.message });
+        return;
+      }
       const operationId = await draft.prepare(payload);
       submissionStarted = true;
       const result = await submit({ ...payload, operationId });
       if (!result.ok) {
         setError(result.error.message);
+        if (result.error.field) setIssues({ [operationalFieldName(result.error.field)]: result.error.message });
         draft.recheck();
         return;
       }
@@ -449,15 +457,12 @@ function AuthorityForm({
       );
       onClose();
     } catch (failure) {
-      setError(
-        failure instanceof Error
-          ? failure.message
-          : "לא ניתן לשמור כרגע. הטיוטה נשארה במכשיר.",
-      );
+      setError(readableError(failure));
       // The server may have accepted the action before its response was lost.
       // Reconcile the persisted intent before allowing edits or a new identity.
       if (submissionStarted) draft.recheck();
     } finally {
+      submitting.current = false;
       setBusy(false);
       onBusyChange(false);
     }
@@ -475,7 +480,7 @@ function AuthorityForm({
       </RecoveredDraft>
     );
   return (
-    <form onSubmit={save} className="flex flex-col gap-5">
+    <form onSubmit={save} noValidate className="flex flex-col gap-5">
       <InlineError message={error} />
       {stale && (
         <DraftRecovery
@@ -547,6 +552,9 @@ function AuthorityForm({
               <FieldLabel id="authority-lifecycle-label">מצב הליווי</FieldLabel>
               <ToggleGroup
                 aria-labelledby="authority-lifecycle-label"
+                data-validation-field="lifecycle"
+                aria-invalid={Boolean(issues.lifecycle)}
+                aria-describedby={issues.lifecycle ? "authority-lifecycle-error" : undefined}
                 variant="outline"
                 value={[values.lifecycle]}
                 onValueChange={(selection) => {
@@ -566,6 +574,7 @@ function AuthorityForm({
                   </ToggleGroupItem>
                 ))}
               </ToggleGroup>
+              {issues.lifecycle && <FieldError id="authority-lifecycle-error">{issues.lifecycle}</FieldError>}
               <FieldDescription>
                 השהיה או סגירה עוצרות תזכורות שטרם נשלחו. תיעוד הקשר נשמר.
               </FieldDescription>
@@ -598,7 +607,10 @@ function AuthorityForm({
                     });
                   }}
                 >
-                  <SelectTrigger id="authority-staff" className="w-full">
+                  <SelectTrigger id="authority-staff" className="w-full"
+                    data-validation-field="staffId"
+                    aria-invalid={Boolean(issues.staffId)}
+                    aria-describedby={issues.staffId ? "authority-staffId-error" : undefined}>
                     <SelectValue placeholder="בחירת חבר/ת צוות" />
                   </SelectTrigger>
                   <SelectContent>
@@ -617,11 +629,15 @@ function AuthorityForm({
                     </SelectGroup>
                   </SelectContent>
                 </Select>
+                  {issues.staffId && <FieldError id="authority-staffId-error">{issues.staffId}</FieldError>}
               </Field>
               <Field>
                 <FieldLabel id="authority-grant-mode-label">פעולה</FieldLabel>
                 <ToggleGroup
                   aria-labelledby="authority-grant-mode-label"
+                  data-validation-field="grantAction"
+                  aria-invalid={Boolean(issues.grantAction)}
+                  aria-describedby={issues.grantAction ? "authority-grantAction-error" : undefined}
                   variant="outline"
                   value={[values.grantAction]}
                   onValueChange={(selection) => {
@@ -638,6 +654,7 @@ function AuthorityForm({
                     ביטול הרשאה
                   </ToggleGroupItem>
                 </ToggleGroup>
+                {issues.grantAction && <FieldError id="authority-grantAction-error">{issues.grantAction}</FieldError>}
               </Field>
               {values.grantAction === "set" && (
                 <>
@@ -651,6 +668,9 @@ function AuthorityForm({
                         update({ actions: normalizeGrantActions(selection) })
                       }
                       aria-label="בחירת הרשאות"
+                      data-validation-field="actions"
+                      aria-invalid={Boolean(issues.actions)}
+                      aria-describedby={issues.actions ? "authority-actions-error" : undefined}
                       className="flex-wrap"
                     >
                       {Object.entries(grantActionNames).map(
@@ -668,6 +688,7 @@ function AuthorityForm({
                         ),
                       )}
                     </ToggleGroup>
+                    {issues.actions && <FieldError id="authority-actions-error">{issues.actions}</FieldError>}
                     <FieldDescription>
                       עריכה ואישור כוללים גם צפייה. ההרשאה אינה מחליפה שיוך
                       לחונך/ת.
@@ -679,6 +700,9 @@ function AuthorityForm({
                     </FieldLabel>
                     <Input
                       id="authority-expiration"
+                      data-validation-field="expiresAtLocal"
+                      aria-invalid={Boolean(issues.expiresAtLocal)}
+                      aria-describedby={issues.expiresAtLocal ? "authority-expiresAtLocal-error" : undefined}
                       dir="ltr"
                       type="datetime-local"
                       value={values.expiresAtLocal}
@@ -686,6 +710,7 @@ function AuthorityForm({
                         update({ expiresAtLocal: event.target.value })
                       }
                     />
+                    {issues.expiresAtLocal && <FieldError id="authority-expiresAtLocal-error">{issues.expiresAtLocal}</FieldError>}
                     <FieldDescription>
                       אפשר להשאיר ריק להרשאה ללא מועד תפוגה.
                     </FieldDescription>
@@ -730,7 +755,10 @@ function AuthorityForm({
                     });
                   }}
                 >
-                  <SelectTrigger id="authority-resource" className="w-full">
+                  <SelectTrigger id="authority-resource" className="w-full"
+                    data-validation-field="resourceId"
+                    aria-invalid={Boolean(issues.resourceId)}
+                    aria-describedby={issues.resourceId ? "authority-resourceId-error" : undefined}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -748,6 +776,7 @@ function AuthorityForm({
                     </SelectGroup>
                   </SelectContent>
                 </Select>
+                  {issues.resourceId && <FieldError id="authority-resourceId-error">{issues.resourceId}</FieldError>}
               </Field>
               <Field>
                 <FieldLabel id="authority-protection-mode-label">
@@ -755,6 +784,9 @@ function AuthorityForm({
                 </FieldLabel>
                 <ToggleGroup
                   aria-labelledby="authority-protection-mode-label"
+                  data-validation-field="protectionMode"
+                  aria-invalid={Boolean(issues.protectionMode)}
+                  aria-describedby={issues.protectionMode ? "authority-protectionMode-error" : undefined}
                   variant="outline"
                   value={[values.protectionMode]}
                   onValueChange={(selection) => {
@@ -777,6 +809,7 @@ function AuthorityForm({
                     הסרת הגנה
                   </ToggleGroupItem>
                 </ToggleGroup>
+                {issues.protectionMode && <FieldError id="authority-protectionMode-error">{issues.protectionMode}</FieldError>}
               </Field>
               {values.protectionMode === "fields" && (
                 <FieldSet>
@@ -787,6 +820,9 @@ function AuthorityForm({
                     value={values.fieldPaths}
                     onValueChange={(fieldPaths) => update({ fieldPaths })}
                     aria-label="בחירת שדות מוגנים"
+                    data-validation-field="fieldPaths"
+                    aria-invalid={Boolean(issues.fieldPaths)}
+                    aria-describedby={issues.fieldPaths ? "authority-fieldPaths-error" : undefined}
                     className="flex-wrap"
                   >
                     {Object.entries(protectionFields).map(([value, label]) => (
@@ -795,6 +831,7 @@ function AuthorityForm({
                       </ToggleGroupItem>
                     ))}
                   </ToggleGroup>
+                  {issues.fieldPaths && <FieldError id="authority-fieldPaths-error">{issues.fieldPaths}</FieldError>}
                 </FieldSet>
               )}
               {values.protectionMode === "unlock" && (
@@ -825,6 +862,9 @@ function AuthorityForm({
             <FieldLabel htmlFor="authority-reason">סיבה לפעולה</FieldLabel>
             <Textarea
               id="authority-reason"
+              data-validation-field="reason"
+              aria-invalid={Boolean(issues.reason)}
+              aria-describedby={issues.reason ? "authority-reason-error" : undefined}
               value={values.reason}
               onChange={(event) => update({ reason: event.target.value })}
               maxLength={2000}
@@ -832,6 +872,7 @@ function AuthorityForm({
               required
               placeholder="הסבר לצוות שיופיע בהיסטוריית הכרטיס"
             />
+            {issues.reason && <FieldError id="authority-reason-error">{issues.reason}</FieldError>}
             <FieldDescription>
               הסיבה נשמרת יחד עם זהות מבצע/ת הפעולה והמועד.
             </FieldDescription>

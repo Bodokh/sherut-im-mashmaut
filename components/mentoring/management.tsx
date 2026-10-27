@@ -61,6 +61,7 @@ import type { Review, StaffRole } from "@/lib/mentoring/domain";
 import { useWorkspace } from "@/lib/mentoring/workspace-client";
 import { DraftStatus, useFormDraft } from "./form-draft";
 import { OrganizationSettingsForm } from "./monthly-oversight";
+import { operationalCommandIssue } from "./operational-form-state";
 import { RecoveryControls } from "./recovery-controls";
 import { RecycleBinView } from "./authority-controls";
 import { canReviewParticipant, contactReviewState } from "./management-command-state";
@@ -240,6 +241,11 @@ function useManagementCommand(screen: "reviews" | "settings" | "conflicts") {
 
   async function run(key: string, payload: ManagementPayload, successMessage: string) {
     if (submitting.current || !draft.hydrated) return;
+    const invalidCommand = operationalCommandIssue(payload);
+    if (invalidCommand) {
+      setError(invalidCommand.message);
+      return;
+    }
     submitting.current = true;
     setPendingKey(key);
     setError(null);

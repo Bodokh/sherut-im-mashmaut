@@ -1,5 +1,6 @@
 import type { ParticipantFields, ParticipantProfile, ParticipantView, StaffProfile } from "../../lib/mentoring/contracts";
 import type { CeoProtection } from "../../lib/mentoring/domain";
+import { normalizePhoneNumber } from "../../lib/phone";
 
 export const participantFieldNames = ["displayName", "phone", "serviceType", "servicePlace", "serviceRole", "profileNotes"] as const;
 export type ParticipantFieldName = (typeof participantFieldNames)[number];
@@ -14,10 +15,18 @@ export interface ParticipantFormValues {
   baseVersion: number | null;
 }
 
+export function participantInputError(values: ParticipantFormValues, locked: (field: ParticipantFieldName) => boolean = () => false): { field: ParticipantFieldName; message: string } | null {
+  const limits: readonly [ParticipantFieldName, number, string][] = [["displayName", 160, "שם החניכה"], ["servicePlace", 240, "מקום השירות"], ["serviceRole", 240, "התפקיד בשירות"], ["profileNotes", 8000, "מידע נוסף לליווי"]];
+  for (const [field, limit, label] of limits) if (!locked(field) && values[field].trim().length > limit) return { field, message: `${label} יכול להכיל עד ${limit.toLocaleString("en-US")} תווים. יש לקצר את הטקסט.` };
+  if (!locked("serviceType") && !["unknown", "national", "military"].includes(values.serviceType)) return { field: "serviceType", message: "יש לבחור סוג שירות מהרשימה." };
+  if (!locked("phone") && values.phone.trim() && !normalizePhoneNumber(values.phone)) return { field: "phone", message: "יש להזין מספר טלפון תקין עם קידומת מדינה, או למחוק את המספר." };
+  return null;
+}
+
 export function participantFormFields(values: ParticipantFormValues): ParticipantFields {
   return {
     displayName: values.displayName.trim(),
-    phone: values.phone.trim() || null,
+    phone: normalizePhoneNumber(values.phone) ?? (values.phone.trim() || null),
     serviceType: values.serviceType === "national" || values.serviceType === "military" ? values.serviceType : null,
     servicePlace: values.servicePlace.trim() || null,
     serviceRole: values.serviceRole.trim() || null,
@@ -41,7 +50,7 @@ export function fieldIsProtected(actor: Pick<StaffProfile, "role" | "organizatio
 /** Only changed, currently editable keys enter the command's protection check. */
 export function changedParticipantFields(values: ParticipantFormValues, current: ParticipantProfile, actor: Pick<StaffProfile, "role" | "organizationId">, protections: readonly CeoProtection[]): ParticipantFields {
   const fields = participantFormFields(values);
-  return Object.fromEntries(participantFieldNames.filter((field) => fields[field] !== current[field] && !fieldIsProtected(actor, current.id, protections, field)).map((field) => [field, fields[field]]));
+  return Object.fromEntries(participantFieldNames.filter((field) => fields[field] !== (field === "phone" ? normalizePhoneNumber(current.phone) ?? current.phone : current[field]) && !fieldIsProtected(actor, current.id, protections, field)).map((field) => [field, fields[field]]));
 }
 
 type AuthorityView = ParticipantView & {

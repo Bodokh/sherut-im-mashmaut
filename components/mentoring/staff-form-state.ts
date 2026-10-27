@@ -1,5 +1,6 @@
 import type { StaffProfile } from "@/lib/mentoring/contracts";
 import type { AuthorityCommand } from "@/lib/mentoring/features/authority/contracts";
+import { normalizePhoneNumber } from "../../lib/phone";
 
 export interface StaffEditValues {
   displayName: string;
@@ -16,7 +17,7 @@ export function isPendingStaffPreapproval(member: StaffProfile): boolean {
 export function staffEditValues(member: StaffProfile): StaffEditValues {
   return {
     displayName: member.displayName,
-    phone: member.phone ?? "",
+    phone: normalizePhoneNumber(member.phone) ?? member.phone ?? "",
     role: member.role,
     coordinatorId: member.coordinatorId ?? "none",
     baseVersion: member.version,
@@ -35,9 +36,9 @@ export function changedStaffFields(
     coordinatorId?: string | null;
   } = {};
   const displayName = values.displayName.trim();
-  const phone = values.phone.trim() || null;
+  const phone = normalizePhoneNumber(values.phone) ?? (values.phone.trim() || null);
   if (displayName !== member.displayName) fields.displayName = displayName;
-  if (phone !== member.phone) fields.phone = phone;
+  if (phone !== (normalizePhoneNumber(member.phone) ?? member.phone)) fields.phone = phone;
   if (member.role !== "ceo") {
     if (values.role !== "ceo" && values.role !== member.role)
       fields.role = values.role;

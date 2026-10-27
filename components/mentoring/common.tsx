@@ -34,6 +34,7 @@ import {
   type StaffRole,
 } from "@/lib/mentoring/domain";
 import { initials } from "./format";
+import { readableWorkspaceError } from "@/lib/mentoring/ui-errors";
 
 export const roleNames: Record<StaffRole, string> = {
   mentor: "חונך/ת",
@@ -185,7 +186,7 @@ export function SectionEmpty({
 export function InlineError({ message }: { message: string | null }) {
   if (!message) return null;
   return (
-    <Alert variant="destructive">
+    <Alert variant="destructive" role="alert">
       <AlertCircleIcon />
       <AlertTitle>לא ניתן להשלים את הפעולה</AlertTitle>
       <AlertDescription>{message}</AlertDescription>
@@ -255,13 +256,5 @@ export function useNow() {
 }
 
 export function readableError(error: unknown): string {
-  if (typeof error === "string") return error;
-  if (
-    error &&
-    typeof error === "object" &&
-    "message" in error &&
-    typeof error.message === "string"
-  )
-    return error.message;
-  return "לא ניתן לטעון את המידע כרגע. המידע שהזנת נשמר בהתאם למצב השמירה המוצג.";
+  return readableWorkspaceError(error);
 }

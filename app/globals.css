@@ -403,6 +403,26 @@
   --radius-4xl:  var(--staff-radius-4xl, 2rem);
 }
 
+/* Public phone controls share the site's warm palette, including their portal. */
+.phone-input-public {
+  --foreground: var(--color-ink-900);
+  --card: var(--color-paper);
+  --popover: var(--color-surface);
+  --popover-foreground: var(--color-ink-900);
+  --muted: var(--color-brand-50);
+  --muted-foreground: var(--color-ink-600);
+  --accent: var(--color-brand-50);
+  --accent-foreground: var(--color-brand-800);
+  --border: var(--color-line);
+  --input: var(--color-line);
+  --ring: var(--color-brand-500);
+  --destructive: var(--color-danger);
+  font-family: var(--font-sans);
+}
+.phone-input-public[data-slot="phone-input"] :is([data-slot="input"], [data-slot="combobox-trigger"]) {
+  min-height: 3.125rem;
+}
+
 /* Staff workspace: a self-contained blue system, including portalled controls. */
 .staff-app {
   --font-sans: var(--font-staff), Arial, sans-serif;

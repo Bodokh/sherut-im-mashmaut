@@ -1,0 +1,716 @@
+
+> sherut-im-mashmaut@0.1.0 check:mentoring
+> node scripts/mentoring/check.mjs
+
+[check:mentoring] Mentoring unit tests
+(node:31062) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/components/mentoring/draft-state.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ lifecycle protection has its Hebrew choice label and stays a scoped protection intent (1.835375ms)
+✔ appointment protection uses the Hebrew choice and scope label (0.173167ms)
+✔ a queued delete is shown as pending and cannot offer an inverse restore (0.120125ms)
+✔ pending restore or other participant changes cannot immediately queue an opposite delete (0.06525ms)
+✔ stale grant review exposes concurrent revocation and proposed permission expiry (0.14475ms)
+✔ stale protection review exposes whole-record narrowing and explicit unlock (0.098792ms)
+✔ grant changes carry both concurrency versions and view permission (0.094792ms)
+✔ revocation sends no actions or expiry and never removes local read scope itself (0.08475ms)
+✔ whole protection and explicit unlock have distinct active flags (0.086791ms)
+✔ field protection rejects wrong-resource and empty field lists (0.224917ms)
+✔ logical delete and restore preserve a reason and original participant version (0.098958ms)
+✔ an uncertain grant submission reconciles the persisted action identity before replacing it (0.447542ms)
+(node:31063) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/components/mentoring/contact-correction-state.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ edit access respects servercomputed action rights and accepted scope (43.273042ms)
+✔ pending assignment and grants never create new editing rights (0.166ms)
+✔ accepted assignment retains edit scope while a pending assignment moves away (0.07875ms)
+✔ servercomputed edit rights still require same organization and an active actor (0.0685ms)
+✔ deleted participant disables correction affordances even for management (0.08475ms)
+✔ mentors correct only their own active report while invalidation is management-only (0.125417ms)
+✔ field protection locks only matching actions, whole protection locks all, CEO can act (0.186167ms)
+✔ narrative and historical corrections discard hidden schedule input (0.997458ms)
+✔ qualifying correction requires explicit next time and validates it (0.145ms)
+✔ no-answer correction preserves appointment and warns when the anchor changed (0.132958ms)
+✔ paused historical time and outcome corrections never request a replacement appointment (0.099209ms)
+✔ paused narrative and no-answer corrections remain historically allowed (0.098792ms)
+✔ closed historical time and outcome corrections never request a replacement appointment (0.0665ms)
+✔ closed narrative and no-answer corrections remain historically allowed (0.047584ms)
+✔ new scheduling is available only on active, nondeleted cards (0.074125ms)
+✔ completed-contact appointment writes respect appointment field and whole-record protection (0.775292ms)
+✔ scoped profile, assignment and lifecycle locks leave an unrelated contact append and appointment cycle available (0.092ms)
+✔ accepted baseline requires reliable contact evidence rather than a local acknowledgement (2.558416ms)
+✔ actual pending and acknowledged new-contact projections have no accepted baseline (14.85775ms)
+✔ separate immutable corrections and invalidation preserve accepted evidence while using projected tokens (0.458875ms)
+✔ accepted correction evidence does not bypass author, current edit, or report protection guards (0.100125ms)
+✔ ceo pending invalidation keeps its presentation state without allowing another mutation (0.223125ms)
+✔ coordinator pending invalidation keeps its presentation state without allowing another mutation (0.071875ms)
+✔ pending invalidation presentation requires management and reliable accepted evidence (0.084958ms)
+(node:31064) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/components/mentoring/draft-state.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ an ordinary autosaved draft never submits an action on reopening (3.642875ms)
+✔ reload after a accepted save replays its original identity before any rebase (0.147542ms)
+✔ reload after a queued save replays its original identity before any rebase (0.066375ms)
+✔ a known rejection preserves entered text for explicitly reviewed correction (0.126125ms)
+✔ an uncertain previous save blocks editing rather than generating a new identity (0.304959ms)
+✔ malformed prepared intent is retained for recovery without submitting (0.169542ms)
+✔ new draft fields receive defaults while existing content and unknown future fields survive (0.103125ms)
+✔ malformed draft shape null blocks editing and preserves its prepared intent (0.085ms)
+✔ malformed draft shape [] blocks editing and preserves its prepared intent (0.086458ms)
+✔ malformed draft shape {"notes":null} blocks editing and preserves its prepared intent (0.116125ms)
+✔ malformed draft shape {"notes":4} blocks editing and preserves its prepared intent (0.072917ms)
+✔ malformed draft shape {"notes":"נשמר","actions":"view"} blocks editing and preserves its prepared intent (0.078375ms)
+✔ malformed draft shape {"notes":"נשמר","baseVersion":null} blocks editing and preserves its prepared intent (0.065042ms)
+✔ nullable dynamic versions and nullable management drafts remain recoverable (0.132208ms)
+✔ appointmentVersion restores null and finite versions in both directions, rejecting malformed values (0.142125ms)
+✔ contactRevision restores null and finite versions in both directions, rejecting malformed values (0.088584ms)
+✔ baseTargetVersion restores null and finite versions in both directions, rejecting malformed values (0.081458ms)
+✔ only monthly and participant profile base versions are nullable (0.17825ms)
+✔ prepared nullable versions replay unchanged before rebase when accepted (0.158583ms)
+✔ prepared nullable versions replay unchanged before rebase when queued (0.067625ms)
+(node:31065) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/components/mentoring/draft-state.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ accepted creation does not rehydrate or resurrect its prepared draft when workspace callbacks change (10.589416ms)
+✔ a prepared accepted save survives a real remount and reconciles its exact immutable identity (0.739083ms)
+✔ a prepared queued save survives a real remount and reconciles its exact immutable identity (0.34975ms)
+✔ an uncertain saved operation keeps editing locked and retries the same prepared identity (0.743541ms)
+✔ a changed authorization scope cancels a previous identity's in-flight draft hydration (0.329458ms)
+✔ a new authorization scope immediately hides an already recovered private value even when its own load fails (0.350333ms)
+(node:31066) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/components/mentoring/format.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ organization input uses Jerusalem time regardless of the device timezone (39.099417ms)
+✔ spring clock-change gaps cannot silently become a different meeting time (1.728833ms)
+✔ ambiguous autumn wall times select the earlier instant consistently (0.492833ms)
+✔ malformed and impossible calendar dates are rejected (0.401042ms)
+(node:31067) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/components/mentoring/draft-state.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ prepared review_contact:approved reopens with its original immutable action (2.207083ms)
+✔ prepared review_contact:returned_for_correction reopens with its original immutable action (0.097834ms)
+✔ prepared set_sms_muted:preference reopens with its original immutable action (0.08125ms)
+✔ prepared resolve_conflict:keep_ceo reopens with its original immutable action (0.075125ms)
+✔ a permission rejection retains the selected management action for review (0.107292ms)
+✔ expired authentication cannot discard a prepared management action (0.311792ms)
+✔ server allowedActions takes precedence over role and projected assignment (0.095875ms)
+✔ a pending assignment cannot create approval rights before acceptance (1.3045ms)
+✔ legacy permission fallback respects grants, expiry, staff status and deletion (0.200584ms)
+✔ queued review decisions never claim accepted approval and block duplicates (0.160291ms)
+✔ a locally queued contact is not reviewable before server acceptance (0.084458ms)
+✔ a projected correction of a server-known contact queues review for its exact revision (0.153ms)
+✔ queued correction review never expands permission or bypasses queued review and invalidation locks (0.109125ms)
+✔ new local reports and acknowledgement-only projections have no accepted contact baseline (0.087458ms)
+✔ ACK-only approval remains terminal before the fresh snapshot arrives (0.064125ms)
+✔ ACK-only returned revision still permits a subsequent approval (0.048792ms)
+(node:31068) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/components/mentoring/operational-form-state.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ blank required reminder cannot become a valid zero through numeric coercion (1.856125ms)
+✔ every policy numeric field rejects fractions, exponents, negatives, and overflow with its own message (0.160083ms)
+✔ recovered policy enum tampering and whitespace or overlong reasons stay actionable (0.077667ms)
+✔ contact inputs reject recovered enums and text beyond the shared 20,000 character boundary (0.273208ms)
+✔ authority drafts reject invalid toggle selections before normalizing an intent (0.15825ms)
+✔ grant recipient, role, revoke availability, and current expiration are checked locally (4.496ms)
+✔ protection choices must refer to an available record and fields belonging to that record (0.116333ms)
+✔ nested wire errors point at the visible control instead of an inaccessible array index (0.135208ms)
+✔ all administrative intents pass the shared wire contract without changing retry payloads (10.627792ms)
+(node:31069) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/components/mentoring/participant-form-state.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ a CEO name-only create protects the supplied name while an authorized mentor can fill the blank phone (3.508125ms)
+✔ create preserves every supplied input after normalization (0.621167ms)
+✔ an entirely blank create omits every field including an empty name (0.08725ms)
+✔ updating populated optional inputs to blank still sends explicit null clears (0.125042ms)
+✔ a legacy prepared create replays its full null payload and original identity when queued (0.274167ms)
+✔ a legacy prepared create replays its full null payload and original identity when accepted (0.081667ms)
+✔ profile save includes only normalized changes, omitting unchanged protected keys (0.217333ms)
+✔ a newly protected field stays out of a saved draft's payload without blocking other changes (0.156458ms)
+✔ assignment and lifecycle protection do not lock unrelated profile fields (0.229208ms)
+✔ whole-record protection (null) blocks all non-CEO profile fields (16.0595ms)
+✔ whole-record protection ([]) blocks all non-CEO profile fields (0.253917ms)
+✔ inactive, unrelated, and foreign protection rows never disable a field (0.079792ms)
+✔ coordinator initial assignments offer only active mentors in their own team and organization (0.143167ms)
+✔ replacement of an existing primary mentor is CEO-only (0.063833ms)
+✔ a view-only grant on an unassigned card does not offer coordinator assignment (0.064042ms)
+✔ server actions deny editing even when a projected assignment points to the actor (0.055042ms)
+✔ legacy fallback uses only accepted assignments and explicit unassigned ownership (0.065083ms)
+✔ pending staff can be chosen as queued dependencies without granting actor authority (0.073833ms)
+✔ assignment protection, deleted cards, inactive actors, and cross-organization cards deny assignment (0.07275ms)
+✔ assignment recovery replays the prepared operation and original base version after a lost response (0.133167ms)
+✔ closing and reopening an incomplete assignment restores choices without submitting them (0.055042ms)
+✔ equivalent local and international phone values do not create edits (0.162917ms)
+✔ invalid phone stays in the payload and is rejected; a blank explicitly clears (0.159416ms)
+✔ restored oversized draft values are checked even when inputs have maxLength (1.989ms)
+✔ an unchanged invalid legacy phone does not block an unrelated profile edit (0.185375ms)
+✔ restored profile drafts enforce every text limit at the actual boundary (0.106458ms)
+✔ a restored unknown service value is rejected even when phone and other fields are valid (0.067042ms)
+✔ the all-blank participant create payload satisfies the shared command policy (1.807375ms)
+(node:31070) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/components/mentoring/participant-history-state.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ revision evidence keeps the original author and the correction author distinct (14.29425ms)
+✔ review entries identify the exact revision even after a newer correction (0.927666ms)
+✔ assignment attribution uses matching accepted audit evidence and never invents an author (8.786125ms)
+✔ audit entries allowlist human fields and do not expose arbitrary internal details (0.160709ms)
+✔ appointments preserve planned time separately from time of change and carry review warning (0.1085ms)
+✔ contact field protections remain field-specific in attributed history (0.107584ms)
+✔ appointment protection history uses its Hebrew field label (0.079459ms)
+✔ pending projection history always retains its unaccepted status (0.151542ms)
+✔ accepted receipt projection does not claim its device timestamp is server evidence (0.08775ms)
+(node:31071) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/components/mentoring/recovered-document-state.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ orphan contact recovery exposes entered fields without prepared command or concurrency metadata (1.36425ms)
+✔ orphan assignment recovery keeps mentor and coordinator choices readable (0.869375ms)
+✔ known contact recovery links to the actual participant query contract (0.091625ms)
+✔ new profile recovery remains a draft and opens the participant list (0.080208ms)
+✔ free text cannot be translated as an enum and technical prepared action metadata stays hidden (0.113208ms)
+✔ zero, false and settings audience survive document formatting (0.093958ms)
+✔ grant and protection arrays are readable while original instant timestamps remain identified (0.113542ms)
+✔ monthly recovery retains month and team context encoded only in the draft key (0.158583ms)
+✔ staff access recovery identifies the person from the draft key before showing the requested action (0.097709ms)
+(node:31072) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/components/mentoring/staff-form-state.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ pending preapprovals are distinguished from accepted inactive staff and pending edits (0.876625ms)
+✔ staff drafts retain their original concurrency version (2.941584ms)
+✔ ordinary staff edits exclude unchanged role and team authority (0.301708ms)
+✔ phone clearing is explicit and normalized (0.166708ms)
+✔ changing a mentor to coordinator also clears her former team (0.187042ms)
+✔ CEO profile edits never send role or team fields (0.1545ms)
+✔ create_staff response loss reuses its prepared identity when queued (0.28675ms)
+✔ create_staff response loss reuses its prepared identity when accepted (0.106292ms)
+✔ update_staff response loss reuses its prepared identity when queued (0.10125ms)
+✔ update_staff response loss reuses its prepared identity when accepted (0.149291ms)
+✔ set_staff_active response loss reuses its prepared identity when queued (0.161833ms)
+✔ set_staff_active response loss reuses its prepared identity when accepted (0.112833ms)
+✔ canonical phone comparison avoids false changes and invalid input is not a clear (0.144917ms)
+✔ legacy invalid phone is omitted from unrelated edits but a changed invalid value is retained (0.073541ms)
+(node:31073) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/lib/mentoring/offline.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"locksEnabled":false,"correctedIntent":"PASS","lostResponseReplay":"PASS","accountSwitchBinding":"PASS","cookieSwitchPostBinding":"PASS","invalidAuthBodyQuarantine":"PASS"}
+{"locksEnabled":true,"correctedIntent":"PASS","lostResponseReplay":"PASS","accountSwitchBinding":"PASS","cookieSwitchPostBinding":"PASS","invalidAuthBodyQuarantine":"PASS"}
+{"staleSnapshotCAS":"PASS","initialWrongClock":"PASS"}
+✔ controller preserves identity, replay, recovery, and snapshot versions with and without Web Locks (219.214542ms)
+✔ multi-resource dependency failure blocks only its causal children (21.638459ms)
+✔ failed durable storage never reports an offline intent as queued or accepted (3.00625ms)
+✔ quarantined work needs matching renewed authority and explicit recovery before its payload is readable (21.911ms)
+✔ an empty command-level permission denial locks pending work without destroying its durable evidence (6.599125ms)
+✔ same-account recovery retains newly unreadable participant work until explicit discard (9.817625ms)
+✔ each recovery invocation requires a fresh successful authorization response (25.092458ms)
+✔ a fresh controller for another account archives durable work before opening its own workspace (9.336375ms)
+✔ late same-account form writes cannot reopen a participant removed from the authorized snapshot (4.269333ms)
+✔ quarantine storage failure leaves an independent lock and requires explicit recovery after renewed authorization (16.317917ms)
+✔ a coordinator can autosave a newly queued participant child form through the original reconnect snapshot (8.698292ms)
+✔ accepted historical contact corrections on paused and closed cases survive a failed follow-up refresh (16.557208ms)
+✔ offline correction, exact-revision review, and invalidation replay in order without replacing their immutable payloads (21.924875ms)
+✔ draft hydration scope stays stable for authorized gains and changes only when authority is reduced or replaced (14.915083ms)
+✔ malformed or unknown command failures remain pending and retry the same immutable operation (47.057834ms)
+✔ known server failures are field-aware and never expose technical server messages (5.052875ms)
+(node:31074) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/lib/mentoring/offline-projections.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ offline staff creation is an inactive display identity and acceptance keeps auth identity empty (1.258792ms)
+✔ pending role, team and activation commands advance staff tokens without changing authority (0.162917ms)
+✔ pending grants support sequential concurrency tokens without creating readable authority (4.507833ms)
+✔ pending protection unlocks keep the accepted protection enforced until central acceptance (0.254125ms)
+✔ contact corrections retain immutable authorship and historical review evidence (1.496292ms)
+✔ correcting the current completed contact replaces one appointment and records provenance (0.236416ms)
+✔ invalidation retains the appointment with a persistent review warning and revised contact (0.156667ms)
+✔ an unrelated mentor cannot project a correction to another author's contact (0.092708ms)
+✔ appointment and manual color commands project the correct participant versions in queue order (0.177375ms)
+✔ protected participant fields retain authoritative data while unrelated fields remain editable (0.197666ms)
+✔ lifecycle deletion and restore preserve the prior lifecycle and deterministic version sequence (0.142083ms)
+✔ organization policy projection advances settings tokens without extending the signed offline lease (0.074625ms)
+✔ monthly review projections preserve scope, independent history and CEO protection (0.112625ms)
+✔ coordinators can create an inactive pending mentor in their own team for later assignment (0.078625ms)
+✔ automatic CEO protection advances pending tokens without changing the accepted active state (0.137333ms)
+✔ deleted or CEO-protected contacts cannot acquire projected coordinator approval (0.068834ms)
+✔ acknowledged changes retain provisional receipt timestamps and accepted baselines until refresh (20.360167ms)
+✔ pending assignment cannot turn view-only coordinator access into local edit authority (0.240167ms)
+✔ coordinator create acknowledgement retains creator ownership for its queued assignment (0.17825ms)
+✔ an unanswered attempt with a stale appointment token never changes its pending projection (0.058333ms)
+✔ pending lifecycle and profile projections carry a durable generic pending badge (0.09325ms)
+✔ SMS preference projections advance actor and roster versions before a queued self profile edit (0.107292ms)
+✔ paused and closed historical corrections survive acknowledgement without scheduling a new appointment (0.899583ms)
+✔ appointment and whole locks block new completed contacts while permitting unchanged-color unanswered attempts (0.303625ms)
+✔ CEO completed contacts protect their own content and a changed color without locking future appointment cycles (1.482791ms)
+✔ automatic feature protections clear an obsolete active reason only after central acceptance (0.195791ms)
+✔ routine mentor reporting remains possible after CEO profile, assignment, lifecycle and creation work (1.152291ms)
+✔ a CEO completed contact protects that report while the mentor can advance the next contact cycle (0.362333ms)
+✔ automatic participant protections preserve an existing active whole lock (0.120583ms)
+✔ deletion and restoration preserve protection rows and tokens exactly (0.127584ms)
+✔ an empty create field set never becomes an implicit whole-record lock (0.0635ms)
+✔ a new completed contact clears the prior appointment warning and retains both history versions (0.414291ms)
+(node:31075) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/lib/mentoring/offline.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ loaded Clerk without a user exposes a terminal sign-in state and synchronously masks previous private context (124.359458ms)
+✔ the first loaded signed-out render is terminal before controller effects run (22.279625ms)
+✔ a different loaded identity stays synchronously private while its own workspace is being authorized (19.234666ms)
+✔ memoized context updates between a different loaded account and signed-out without waiting for controller effects (18.664875ms)
+✔ unloaded Clerk retains the existing authorized offline-lease context path (18.187916ms)
+✔ the matching loaded identity retains controller loading and terminal membership failures (34.985208ms)
+✔ an old awaited-publication mutation reproduces the stalled Clerk-script delivery regression (42.089083ms)
+✔ actual public script delivery returns fresh Clerk bytes while Cache.put remains pending (8.737167ms)
+✔ actual public script delivery clones network bytes before queued cache publication (1.3845ms)
+✔ actual public delivery catches background cache failure without replacing fresh network bytes (1.008458ms)
+✔ successful readable proxy SDK and UI responses normalize redirect metadata and only transport headers (6.491667ms)
+✔ proxy preparation normalizes each script before storing the replacement shell and dependencies (2.63175ms)
+✔ old redirected proxy cache entries are normalized when a rejected network request needs fallback (1.298792ms)
+✔ proxy normalization returns an open lazy body without calling a buffering method or waiting for completion (3.673458ms)
+✔ normalization leaves legacy, unrelated, wrong-MIME, unsuccessful, and unexpected external-finalURL responses unchanged (11.939416ms)
+✔ used or locked proxy bodies stay unchanged when cache publication is unavailable (3.74275ms)
+✔ preparation caches only tagged anonymous HTML and warms its permitted public assets (1.733375ms)
+✔ failed, redirected, unmarked, non-HTML, and malformed preparations cannot become an offline shell (3.0725ms)
+✔ an incomplete asset warmup retains the previous complete shell and never publishes the new one (1.809459ms)
+✔ staff navigations use the network and fall back only to the prepared anonymous shell (1.255084ms)
+✔ an unprepared offline navigation returns an uncached Hebrew 503 (0.685667ms)
+✔ private APIs, RSC payloads, authentication, public pages, and writes are never intercepted (0.85325ms)
+✔ static public assets use cache-first while allowed credential-free Clerk JavaScript revalidates online (5.796958ms)
+✔ a Clerk major-version alias updates online and falls back to its latest bytes only on network rejection (1.620333ms)
+✔ proxy SDK and modern UI scripts warm with origin-scoped credentials and remain pinned with legacy prepared scripts (13.073542ms)
+✔ proxy Clerk delivery preserves caller credentials and warmup uses same-origin SSO without widening other fetches (13.488167ms)
+✔ all recognized Clerk scripts refresh aliases network-first with origin-scoped credentials (10.24125ms)
+✔ Clerk aliases still attempt the network when navigator.onLine is false (2.438417ms)
+✔ Clerk public selectors allow major or full semantic versions and reject private or malformed paths (6.306292ms)
+✔ Clerk HTTP failures and wrong MIME types are served unchanged without stale fallback or private caching (13.630916ms)
+✔ proxy SSO challenges and private final redirects stay unchanged and cannot overwrite accepted public bytes (4.749084ms)
+✔ proxy protection failures leave the prior complete shell and its script dependencies intact during preparation (9.610625ms)
+✔ proxy fallback rejects preexisting SSO challenges and private final redirects even when they claim JavaScript (6.194375ms)
+✔ SSO credential handling never intercepts, rewrites, warms, or caches private API and auth paths (4.797583ms)
+✔ proxy scripts cache only the explicit visible JavaScript MIME family (6.753708ms)
+✔ network rejection never serves visible JSON or HTML poisoned under an eligible Clerk cache key (5.103333ms)
+✔ wrong-type proxy scripts abort replacement preparation and preserve the prior complete shell (2.737084ms)
+✔ proxy SDK and modern UI retain separate cache identities through preparation, alias refresh, and offline fallback (1.515083ms)
+✔ opaque compatibility is limited to trusted external legacy scripts and never admits opaque proxy cache entries (1.997583ms)
+✔ unsuccessful public asset responses are served without being cached (0.475333ms)
+✔ activation claims clients and removes only obsolete mentoring shell caches (0.474917ms)
+✔ asset eviction stays bounded while preserving the prepared anonymous entry (12.676291ms)
+✔ trim pins every dependency referenced by the current HTML, including the oldest shared chunk, CSS, and font (15.802791ms)
+✔ a failed large warmup preserves the old shell and all its dependencies through later cache pressure (16.918584ms)
+✔ preparation refuses more than 256 unique dependencies before fetching any assets (1.516084ms)
+✔ a shell with exactly 256 unique dependencies is published with every asset intact (25.823875ms)
+✔ a concurrent public-asset trim cannot evict current or candidate shell dependencies during preparation (22.828958ms)
+✔ candidate cache-write failure preserves the old shell and a subsequent ordinary asset write still succeeds (1.79175ms)
+✔ candidate publication and ordinary cache trims share one mutation lock (33.639708ms)
+(node:31122) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/lib/mentoring/offline.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ every field draft survives reopening its account-scoped store (39.832417ms)
+✔ rapid keystroke writes preserve the final draft in invocation order (9.825583ms)
+✔ changing verified account locks old drafts and queues and rejects stale form writes (10.4335ms)
+✔ scope removal rejects delayed drafts for removed participant IDs and nested management payloads (50.017791ms)
+✔ quarantined blocked failures and acknowledged history retain immutable server evidence after explicit recovery (32.655667ms)
+✔ one account cannot recover work into a different staff membership or organization (8.509541ms)
+✔ settings, contact revisions, grant revisions and monthly reviews capture causal dependencies (15.315708ms)
+✔ accepted contact corrections remain immutable dependent intents through further correction, exact review, and invalidation (17.540917ms)
+✔ self-mute captures its implicit staff version for a following immutable staff update (3.564208ms)
+✔ prepared cache requires matching identity or explicitly permitted last-account offline recovery (3.052ms)
+✔ lease expiry and a backwards clock lock data without deleting pending submissions (8.336583ms)
+✔ inactive actors and overlong leases never become an offline working set (2.88875ms)
+✔ a device clock far behind trusted issuance cannot extend a lease beyond 24 hours (1.16225ms)
+✔ the queue preserves immutable operation identity and payload across retries (6.657791ms)
+✔ causally ordered edits project once and remain readable after central acceptance (4.935625ms)
+✔ conflicted payloads stay durable and readable without changing protected CEO data (2.100584ms)
+✔ a server conflict and preserved local operation do not produce duplicate review cards (1.86675ms)
+✔ unanswered attempts preserve appointment and weekly anchor while completed contacts replace one obligation (15.98425ms)
+✔ offline creation uses the real deterministic participant identifier for subsequent immutable edits (3.352542ms)
+✔ drafts for an authorized offline-created participant survive revalidation before creation is acknowledged (2.287084ms)
+✔ rejected new-record drafts recover as author-owned documents while the rejected intent stays blocked (9.004375ms)
+✔ IndexedDB quota failures preserve the last saved draft and never create a phantom queue entry (5.617958ms)
+✔ recovered-draft deletion atomically rejects stale confirmation after a form or another tab rewrites its key (8.534ms)
+✔ reassignment carries the original follow-up anchor and current appointment (1.015542ms)
+✔ logout cleanup covers drafts, pending changes, accepted receipts, and stale writes (3.438625ms)
+✔ a stale asynchronous snapshot cannot reopen a changed account (0.961166ms)
+✔ cross-tab stale snapshots cannot overwrite a newer accepted receipt or logout (2.048292ms)
+✔ opaque snapshot CAS tokens reject account and same-account ABA after quarantine resets revisions (2.582917ms)
+✔ recovery acknowledges failure without deleting its payload or blocking an independent fresh intent (2.567875ms)
+✔ independent logout lock closes residual cache even if IndexedDB cannot be cleared (0.254291ms)
+ℹ tests 278
+ℹ suites 0
+ℹ pass 278
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1258.237208
+(node:31149) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/components/staff/auth/auth-validation.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ login and recovery require a valid bounded email without rejecting existing short passwords (1.7275ms)
+✔ new password and signup enforce the existing 15 character policy with clear bounds (1.044583ms)
+✔ OTP requires six digits while backup codes retain their provider format (0.165084ms)
+✔ known provider failures explain credentials, codes, blocked email, Google, security and rate limits (0.270792ms)
+✔ provider field metadata maps safe localized inline messages and unknown internals never appear (11.236834ms)
+(node:31150) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/components/staff/auth/auth-validation.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ login validates fields accessibly before contacting Clerk (215.027792ms)
+✔ login retains credentials after network loss and suppresses duplicate submissions (18.190625ms)
+✔ recovery validates OTP, preserves expired codes and only clears codes after successful resend (12.669125ms)
+✔ TOTP can switch to backup code with an explicit required error (73.026083ms)
+✔ signup validates password policy and keeps input after provider rejection (8.372375ms)
+✔ new-password recovery validates locally and retains the new password after rejection (9.939916ms)
+✔ signup validates its verification code and preserves it through failed resends (88.850833ms)
+✔ completed authentication retries session activation without reusing credentials or a consumed code (61.425708ms)
+✔ English comments show localized field errors and focus the first invalid input without fetching (43.2445ms)
+✔ comments preserve entries on rate limits and network failures and reset only after confirmed success (6.565584ms)
+✔ comments reject malformed successful responses and suppress a second click while sending (13.824959ms)
+(node:31151) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/lib/mentoring/features/authority/server.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ authority handler verifies current CEO role before reading or mutating records (168.060959ms)
+✔ stale or cross-organization authority requests cannot mutate a loaded record (0.207917ms)
+✔ mentor approval and inactive-target grants are denied before permission writes (0.333625ms)
+✔ grant expiry uses the database clock after waiting for target and grant locks (2.0385ms)
+✔ resource-specific protection allowlists reject contact fields on a participant (0.30575ms)
+✔ pause and deletion cancel unsent reminders while retaining anchor and appointment history (1.279375ms)
+✔ delete and restore retain whole, selected and inactive CEO protection metadata (0.64375ms)
+✔ staff role changes cannot demote CEO or strand current owners (0.316667ms)
+(node:31152) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/lib/mentoring/features/authority/schema.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ authority schemas require current versions and reject client identity assertions (3.259ms)
+✔ grant actions cannot delegate deletion or omit the view prerequisite (0.839208ms)
+✔ protection scopes are closed and whole-object protection is explicit null (1.062291ms)
+✔ lifecycle, delete and restore keep reason and concurrency requirements (0.847458ms)
+✔ staff updates cannot alter provider identity, email, activation or CEO role (1.639375ms)
+✔ deletion helper recognizes only an actual tombstone timestamp (0.0775ms)
+(node:31153) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/lib/mentoring/features/contacts/policy.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ a narrative-only correction retains the current appointment without inventing a new date (2.079042ms)
+✔ correcting a completed contact's method retains its actual time and appointment (0.121917ms)
+✔ changing the latest qualifying occurrence requires an explicit next appointment (0.138083ms)
+✔ an equivalent instant in another timezone does not require replacing the appointment (0.07775ms)
+✔ historical correction never rewinds or replaces the newer contact's appointment (0.08325ms)
+✔ moving a historical contact after the newest contact preserves the accepted appointment and flags review (0.062ms)
+✔ reclassifying the latest completed contact as unanswered retains an appointment with a review warning (0.064291ms)
+✔ moving the latest contact behind a previous qualifying contact retains the appointment with a warning (0.0735ms)
+✔ invalidated contacts cannot become the current qualifying anchor (0.11025ms)
+✔ an unsuccessful attempt is not a qualifying anchor and its invalidation needs no schedule review (0.11725ms)
+✔ correcting a latest attempt into a completed contact requires an explicit next appointment (0.095083ms)
+✔ correcting the first and only attempt into completed contact requires and sets the next appointment (0.08475ms)
+✔ an older attempt corrected into completed contact cannot replace a newer accepted schedule (0.078042ms)
+✔ changing an older attempt's time while correcting its outcome still cannot replace a newer schedule (0.068584ms)
+✔ a correction cannot claim an actual occurrence in the future (0.044542ms)
+✔ missing or invalidated reports cannot be revised into accepted active contact (0.053875ms)
+✔ invalid actual instants are rejected while exact current-time occurrence is allowed (0.061708ms)
+✔ no-answer revisions must be phone attempts and cannot replace the next appointment (0.051917ms)
+✔ a required replacement must occur strictly after the corrected actual occurrence (0.052083ms)
+✔ paused participants accept a latest-contact time correction without a replacement appointment (0.047041ms)
+✔ paused participants accept correcting their first attempt to completed without creating an appointment (0.043209ms)
+✔ paused participants reject any supplied next appointment during a contact correction (0.071917ms)
+✔ paused participants retain the appointment for historical time and narrative corrections (1.908291ms)
+✔ paused participants flag contact anchor changes while retaining the appointment (0.091ms)
+✔ closed participants accept a latest-contact time correction without a replacement appointment (0.034916ms)
+✔ closed participants accept correcting their first attempt to completed without creating an appointment (0.031166ms)
+✔ closed participants reject any supplied next appointment during a contact correction (0.037875ms)
+✔ closed participants retain the appointment for historical time and narrative corrections (0.054709ms)
+✔ closed participants flag contact anchor changes while retaining the appointment (0.031ms)
+(node:31154) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/lib/mentoring/features/contacts/schema.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ all four contact lifecycle commands accept their complete typed payloads (4.619083ms)
+✔ a narrative correction may omit a new appointment while retaining its required concurrency token (0.275708ms)
+✔ contact revision, participant, and appointment tokens must be bounded positive integers (0.545416ms)
+✔ identity and permission assertions cannot be added to any contact lifecycle command (0.393083ms)
+✔ administrative scheduling and correction reasons are required, trimmed, and bounded (0.435834ms)
+✔ manual color is a deliberate enum choice and has an optional bounded explanation (0.169125ms)
+✔ revision timestamps and rescheduled dates require real calendar instants with a timezone (0.298833ms)
+✔ no-answer corrections remain phone attempts and cannot carry a replacement schedule (0.154333ms)
+✔ oversized notes and unrecognized contact methods or outcomes are rejected before database access (0.1255ms)
+(node:31155) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/lib/mentoring/domain/index.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ mentors see their own assigned participants; explicit current grants can extend scope (11.116625ms)
+✔ coordinator own-team default is fail-closed outside team; CEO sees their organization (0.108417ms)
+✔ revoked accounts cannot use assignments, CEO role, or explicit grants (0.061084ms)
+✔ unexpected runtime actions and non-boolean account flags fail closed (0.155209ms)
+✔ approval is management-only and deletion remains CEO-only (0.07175ms)
+✔ write preconditions honor current active/scope and expected revision (0.867917ms)
+✔ CEO protection survives unrelated later editors/revisions and preserves CEO authority (0.124792ms)
+✔ protected conflict keeps both versions and a stable operation-derived conflict identity (0.619792ms)
+(node:31156) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/lib/mentoring/domain/index.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ first deadline is assignment plus seven local calendar days (29.175209ms)
+✔ a participant without assignment or contact has no fabricated deadline (0.097791ms)
+✔ reassignment preserves the existing obligation when no successful contact occurred (0.189667ms)
+✔ successful occurrence, rather than upload or approval time, anchors the clock (0.238ms)
+✔ unanswered, invalidated, and another participant's contacts cannot reset the clock (0.187333ms)
+✔ deadline boundaries are before, at, and after, with overdue starting at equality (0.46575ms)
+✔ an earlier missed appointment is separate from the seven-day deadline (0.36025ms)
+✔ Israeli calendar days preserve wall time across both clock changes (0.329209ms)
+✔ proposed DST disambiguation shifts nonexistent times forward and chooses earlier overlaps (0.289416ms)
+✔ manual green remains green while computed follow-up can be overdue (1.030708ms)
+✔ finalization reports incomplete, future, and non-chronological inputs (0.3375ms)
+✔ late next appointment warns under the documented default rather than resetting contact (0.929917ms)
+✔ completed contact replaces one appointment and preserves prior history without mutation (0.442542ms)
+✔ attempt appends history but does not replace appointment or successful clock (0.16675ms)
+✔ stale completed uploads return a reviewable conflict without changing the appointment (0.164791ms)
+✔ approval is for one exact revision and does not apply to later edits (0.06625ms)
+✔ completed uploads require the current appointment version and preserve omitted or stale submissions (0.386333ms)
+(node:31157) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/lib/mentoring/server/http.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ commands require same-origin JSON, including when Origin is missing (35.531291ms)
+✔ oversized or malformed command bodies fail before parsing or authentication (0.533083ms)
+✔ permission, concurrency, and configuration failures preserve distinct HTTP outcomes (0.087792ms)
+✔ queued intent cannot be submitted with another tab's authenticated identity (0.257ms)
+(node:31158) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/lib/mentoring/features/oversight/schema.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ settings use explicit provisional defaults and reject unsafe lease/timing input (3.132584ms)
+✔ monthly review has strict month/scope/version and no invented outcome fields (0.738ms)
+(node:31159) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/lib/mentoring/features/oversight/selectors.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ Israel calendar months include the DST transition and are half-open (2.703208ms)
+✔ actual occurrence, original receipt and later upload are separate facts (2.144125ms)
+✔ current revisions and invalidations do not fabricate contacts or reuse old approval (0.529125ms)
+✔ management scope remains fail-closed even if a snapshot contains broad grants (1.2145ms)
+✔ staff coverage uses the current roster and current overdue is independent of the selected month (0.6155ms)
+✔ offline reports across a month boundary have no invented central receipt (0.618458ms)
+✔ a pending correction preserves accepted receipt and occurrence metrics until acceptance (0.319958ms)
+✔ queued review decisions never stand in for the accepted approval (0.536583ms)
+✔ a local reschedule cannot erase the accepted current missed appointment (0.335167ms)
+✔ real offline projection preserves unknown server receipt after queued and acknowledged saves (1.251459ms)
+✔ real queued review projection retains the accepted decision baseline (0.401167ms)
+✔ real queued reschedule projection retains the accepted missed appointment (0.411125ms)
+✔ deleted active cards retain historical activity without current roster or overdue duties (0.760208ms)
+(node:31160) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/lib/mentoring/features/oversight/server.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ non-management and another team's summary are denied before database access (1.104083ms)
+✔ CEO-protected monthly text cannot be overwritten by an otherwise authorized coordinator (0.21825ms)
+✔ a stale month version cannot change narrative or append history (0.117125ms)
+✔ mentor extras query only operational settings and never monthly narratives (0.878333ms)
+(node:31161) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/lib/mentoring/features/reminders/micropay.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ Micropay sends one UTF-8 JSON request with one staff phone and no invented deduplication field (44.136ms)
+✔ registry requires explicit Micropay selection and exact send enablement (0.187208ms)
+✔ missing or unsafe token and sender configuration remains blocked and cannot issue a request (0.349875ms)
+✔ valid text senders and already-verified numeric sender shapes are accepted without verifying or calling them (0.079708ms)
+✔ recipient validation excludes lists, other countries and non-staff-mobile destinations (0.15975ms)
+✔ empty and oversized messages cannot reach the provider (0.1155ms)
+✔ acceptance requires the exact success envelope and a positive numeric task ID (3.789583ms)
+✔ only explicit parameter rejection is failed and provider narratives never escape (0.497625ms)
+✔ HTTP errors, redirects, malformed JSON and invalid UTF-8 are uncertain without retries (0.645292ms)
+✔ response reading is bounded even without an honest content length (0.371417ms)
+✔ unread response bytes are cancelled after a decoding failure (0.473208ms)
+✔ an already-aborted request is uncertain and never reaches the provider (0.091667ms)
+✔ abort during a provider handoff remains uncertain with exactly one attempt (0.112375ms)
+✔ the dispatcher timeout bounds a stalled adapter response body and never retries (39.374625ms)
+(node:31162) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/lib/mentoring/features/oversight/contracts.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ default plan has one appointment and one seven-day breach with deterministic identities (4.535459ms)
+✔ appointment offset changes scheduling and validation generation without changing delivered occurrence identity (0.421916ms)
+✔ a no-answer changes validation generation while preserving occurrence delivery keys and cadence (0.370917ms)
+✔ successful contact, correction, invalidation, appointment and settings versions invalidate stale claims (0.18375ms)
+✔ cadence uses latest valid successful occurrence and preserves Israel wall time across DST (0.388542ms)
+✔ no qualifying contact uses the assignment continuity anchor (0.213584ms)
+✔ paused, closed, deleted, unassigned and wrong-organization participants have no jobs or recipients (0.219041ms)
+✔ responsible team recipients are primary mentor, assigned coordinator and unmuted CEO only (0.676583ms)
+✔ all-staff routing must be explicit and still excludes inactive and cross-org accounts (0.112333ms)
+✔ missing or invalid staff mobile remains an explicit transport problem, never a substituted participant number (0.300459ms)
+✔ repeats are disabled by default and explicit repetition schedules only base plus latest occurrence (4.64725ms)
+✔ message contains only the provided name, relevant date/time and need, with no narrative or phones (0.386333ms)
+(node:31163) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/lib/mentoring/server/db.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+▶ known external acceptance survives scheduler actor loss without authorizing new work
+  ✔ revocation, next claim (10.600375ms)
+  ✔ revocation, final authority check (2.242708ms)
+  ✔ demotion, next claim (3.386167ms)
+  ✔ demotion, final authority check (0.959292ms)
+✔ known external acceptance survives scheduler actor loss without authorizing new work (18.643625ms)
+▶ raw result persistence still enforces the original claim token and provider
+  ✔ claim_token (0.959958ms)
+  ✔ provider (0.564625ms)
+✔ raw result persistence still enforces the original claim token and provider (1.831583ms)
+(node:31164) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/lib/mentoring/features/reminders/scheduled.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ HEAD and unsupported methods cannot consult configuration or start scheduled work (73.816416ms)
+✔ missing secret or invalid exact Bearer authorization performs zero actor and run calls (36.594042ms)
+✔ request selectors and absent or malformed configured membership cannot reach the runner (0.639875ms)
+✔ successful response exposes only fixed aggregate fields and current hosted status (0.440833ms)
+✔ blocked delivery and unfinished evaluation are HTTP failures with truthful aggregate state (0.360833ms)
+✔ exceptions and invalid aggregates expose no engine, SQL or provider narratives (0.621625ms)
+✔ evaluation follows all internal pages and dispatches once through the guarded transaction (0.802916ms)
+✔ missing, inactive, foreign or non-CEO membership cannot evaluate or dispatch (0.439833ms)
+✔ demotion during an evaluation rolls back that phase and cannot reach dispatch (0.172167ms)
+✔ dispatcher transaction boundaries also reject a membership revoked after scanning (0.192875ms)
+✔ the page ceiling reports incomplete rather than dispatching a partial organization scan (0.235625ms)
+✔ elapsed budget and repeated cursors stop safely without pretending evaluation completed (0.188417ms)
+✔ the real unconfigured dispatcher performs lease maintenance but no claim or delivery (0.400625ms)
+(node:31165) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/lib/mentoring/features/reminders/transport.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ production registry has no delivery fallback and reports each missing capability explicitly (0.908667ms)
+✔ provider acceptance and delivery require an opaque validated provider reference (1.776792ms)
+✔ explicit rejection is failed, while unrecognized or malformed provider responses stay uncertain (0.258834ms)
+✔ thrown provider errors expose no narrative and invoke send once without retry (0.268375ms)
+✔ provider timeout aborts the signal, returns uncertain, and never retries even after late acceptance (9.593958ms)
+✔ a transport rejecting on abort is also uncertain and is called once (6.852583ms)
+✔ safe references reject provider narratives, URLs and known credential token prefixes (0.203583ms)
+✔ provider names allow short opaque adapter names only (0.185625ms)
+✔ reconciliation invokes only the read-only lookup and preserves its original idempotency key (0.159667ms)
+✔ an adapter without read-only lookup leaves reconciliation uncertain and never sends (0.102ms)
+✔ blocked dispatcher performs only lease maintenance and never enters delivery work (0.2665ms)
+(node:31166) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/lib/phone.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ phone normalization accepts local and international forms and stores E.164 (3.798709ms)
+✔ empty phone stays optional and invalid or multiple numbers never become a destination (0.428667ms)
+✔ public forms trim values and normalize the optional phone before submission (1.015125ms)
+✔ every public field enforces its format and boundaries with localized actionable errors (0.862334ms)
+✔ public error codes always resolve to safe useful localized messages (0.144416ms)
+✔ public API returns per-field errors without contacting the mail provider (137.436166ms)
+✔ public API rejects wrong content type, malformed JSON, oversized submissions and honors honeypot (0.91125ms)
+✔ accepted team email stays successful if courtesy confirmation is rejected or throws (1.373167ms)
+(node:31167) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/lib/mentoring/validation.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ client-safe and server command parsers share every supported command shape (17.102375ms)
+✔ client-safe validation dependency graph contains no server or Node imports (16.677291ms)
+✔ every required form field rejects omission with a Hebrew field error (10.590708ms)
+✔ all identity, version and boolean fields reject invalid primitive values (11.036333ms)
+✔ staff and participant phone input is validated and canonicalized at every write boundary (4.845291ms)
+✔ optional participant profile fields retain their established empty and nullable contract (0.585542ms)
+✔ text fields have clear length limits and required staff names and reasons cannot be blank (3.683916ms)
+✔ enum choices and authority arrays explain invalid selections and preserve policy constraints (1.130666ms)
+✔ all date inputs reject invalid calendar dates, missing timezones and wrong types (0.862541ms)
+✔ organization number inputs enforce documented whole-number ranges and nullable recurrence (0.542833ms)
+✔ direct schema use also returns Hebrew errors for unsupported and malformed forms (0.137791ms)
+(node:31168) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/lib/mentoring/server/validation.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ legacy create_participant retries retain trimmed raw and invalid phone receipts (10.170458ms)
+✔ legacy update_participant retries retain trimmed raw and invalid phone receipts (2.333375ms)
+✔ legacy create_staff retries retain trimmed raw and invalid phone receipts (4.0415ms)
+✔ legacy update_staff retries retain trimmed raw and invalid phone receipts (1.247125ms)
+✔ invalid new phone is rejected without creating a receipt (0.173ms)
+✔ receipt comparison preserves non-phone payload identity and current normalized retries (0.343875ms)
+✔ legacy receipt cannot bypass identity, role or current participant scope (0.619458ms)
+✔ approval manifest accepts only deliberate production unbound-email preapproval and unique approved owners (12.238125ms)
+✔ production connection refuses accidental dev, pooler, target, transport, and public-key mismatches (1.19025ms)
+✔ CLI is explicit, strict and read-only by default (0.711167ms)
+✔ actual CLI help is credential-free and wrong environment fails before reading an approval file (330.861167ms)
+✔ approval file must be private, regular, bounded JSON and cannot be a symlink (24.104125ms)
+✔ migration verification uses all current ordered source checksums (4.524041ms)
+✔ default preflight performs no insert, commit, row lock or membership change (1.0755ms)
+✔ initial apply atomically writes approved NULL-bound CEOs with matching receipts and external-approval audits (0.507708ms)
+✔ exact replay is a no-op; different approval, changed identity, revocation, timestamps, and receipts refuse (3.113083ms)
+✔ preflight and apply reject inherited QA/partial memberships, application data, changed seeds, unknown/RLS tables and migration drift (2.698875ms)
+✔ truthy non-boolean apply cannot enter a write transaction (0.109292ms)
+✔ live database/role checks cannot be replaced by URL-only approval (0.142875ms)
+✔ every write failure rolls back the entire batch and provider/database narratives are redacted (1.937791ms)
+✔ Clerk proxy includes public scripts and dispatches only its exact prefix (17.902583ms)
+✔ production keys use Clerk DNS and leave the first-party proxy inactive (5.70825ms)
+✔ provider uses the proxy only for development keys and keeps anonymous static rendering (10.878041ms)
+✔ production and missing-key paths retain Clerk staff/API delegation and fail closed on unavailable auth (13.670458ms)
+✔ existing staff/API dispatch and Hebrew canonical redirects remain intact (5.900167ms)
+✔ staff callback retains authentication and private API/auth-page cache rules (3.803458ms)
+✔ public pathname forwarding replaces spoofed headers and retains unrelated request headers (4.124333ms)
+✔ staff continuations forward the request pathname without weakening auth or cache boundaries (3.508083ms)
+(node:31171) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/lib/mentoring/features/reminders/scheduled.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ actual scheduled route fails closed and explicit HEAD never reads configuration (32.679208ms)
+✔ actual scheduled GET requires only its Bearer secret before actor or database work (8.47525ms)
+✔ actual scheduled GET wires the configured membership only after authenticating (2.462833ms)
+✔ installed Next matcher leaves scheduled Bearer authentication outside the Clerk API path (8.581292ms)
+(node:31172) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/components/staff/auth/auth-validation.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ Google starts a sign-in with fixed destinations without requiring password fields (72.125458ms)
+✔ Google is unavailable before Clerk loads and hidden for signed-in users (53.032ms)
+✔ Google provider failures leave a recoverable login error (22.828625ms)
+✔ callback permits a first Google identity to complete signup at /staff and retains verification routes (12.033042ms)
+✔ callback failures stop loading and offer a return to login (3.397375ms)
+✔ Google fallback explains staff approval rather than requiring an existing Clerk account (10.585042ms)
+✔ pending Google signup delegates required fields to Clerk without restarting password signup (31.098958ms)
+✔ password signup continues to use the existing form (5.652042ms)
+✔ Clerk keeps ownership of completed Google signup until session activation (5.256583ms)
+✔ a first verified Google identity binds only an active preapproved email and preserves its role (0.351875ms)
+✔ a new Google identity without staff preapproval receives 403 and cannot create membership (25.316583ms)
+✔ Google continuation keeps email verification and password-reset requirements (17.410125ms)
+✔ Google account-link verification resumes the pending sign-in with the existing password (7.410875ms)
+(node:31178) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/lib/mentoring/ui-errors.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ known field and offline failures preserve their actionable Hebrew guidance (0.846583ms)
+✔ unknown exceptions are replaced with guidance without claiming the draft was saved (0.227375ms)
+(node:31182) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/bodokh/projects/sherut-im-mashmaut/lib/mentoring/server/validation.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/bodokh/projects/sherut-im-mashmaut/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ partial participant fields are valid and trimmed without inventing required data (3.802333ms)
+✔ request data cannot supply identity, role, organization, or unrecognized participant fields (0.413708ms)
+✔ contact concurrency tokens are required even when no appointment exists (1.616625ms)
+✔ timestamps require a real calendar date and an explicit timezone (0.262958ms)
+✔ completed contacts require a scheduled next meeting (0.208ms)
+✔ a no-answer attempt is a phone attempt and cannot replace an appointment (0.142375ms)
+✔ empty updates and oversized notes are rejected before database access (0.576417ms)
+✔ canonical payload hashes ignore object key order but preserve values and array order (1.144042ms)
+✔ staff preapproval permits only non-owner roles and never accepts provider or organization identity (0.732042ms)
+✔ staff activation changes require a current positive revision and a boolean state (0.450083ms)
+ℹ tests 250
+ℹ suites 0
+ℹ pass 250
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1415.431792
+[check:mentoring] Whole-repository ESLint
+[check:mentoring] Next route type generation
+Generating route types...
+✓ Types generated successfully
+[check:mentoring] TypeScript
+[check:mentoring] All local quality checks passed.

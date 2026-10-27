@@ -734,6 +734,7 @@ export const en: Dictionary = {
     successTitle: "Comment received",
     success: "Thank you. We will review it, and if approved it will appear on the site.",
     again: "Send another comment",
+    validationSummary: "Correct the highlighted fields before sending your comment.",
     errorRequired: "Please fill in this field",
     errorEmail: "Invalid email address",
     errorSubmit: "We couldn't send your comment. Please try again in a moment.",

@@ -70,3 +70,16 @@ for (const type of ["create_staff", "update_staff", "set_staff_active"]) {
     });
   }
 }
+
+
+test("canonical phone comparison avoids false changes and invalid input is not a clear", () => {
+  assert.deepEqual(changedStaffFields(member, { ...staffEditValues(member), phone: "+972501234567" }), {});
+  assert.deepEqual(changedStaffFields(member, { ...staffEditValues(member), phone: "123" }), { phone: "123" });
+});
+
+
+test("legacy invalid phone is omitted from unrelated edits but a changed invalid value is retained", () => {
+  const legacy = { ...member, phone: "legacy-invalid" };
+  assert.deepEqual(changedStaffFields(legacy, { ...staffEditValues(legacy), displayName: "שם אחר" }), { displayName: "שם אחר" });
+  assert.deepEqual(changedStaffFields(legacy, { ...staffEditValues(legacy), phone: "123" }), { phone: "123" });
+});

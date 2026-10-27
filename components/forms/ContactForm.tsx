@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import type { Dictionary } from "@/i18n/dictionaries";
+import { PhoneInput } from "@/components/staff/ui/phone-input";
+import { contactSubmissionMessage, validateContactSubmission, type ContactErrors, type ContactField, type ContactLocale } from "@/lib/contact-validation";
 
 type FormDict = Dictionary["contact"]["form"];
 
@@ -11,28 +13,56 @@ const fieldClass =
 
 type SubmitState = "idle" | "sending" | "success" | "error";
 
-export function ContactForm({ form, privacyNotice }: { form: FormDict; privacyNotice: ReactNode }) {
+export function ContactForm({ form, privacyNotice, locale = "he" }: { form: FormDict; privacyNotice: ReactNode; locale?: ContactLocale }) {
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
+  const [phone, setPhone] = useState("");
+  const [errors, setErrors] = useState<ContactErrors>({});
+  const [submitError, setSubmitError] = useState("");
+  const submitting = useRef(false);
+
+  const fieldProps = (field: ContactField) => ({ "aria-invalid": Boolean(errors[field]) || undefined, "aria-describedby": errors[field] ? `contact-${field}-error` : undefined });
+  const fieldError = (field: ContactField) => errors[field] ? <p id={`contact-${field}-error`} className="mt-2 text-sm text-danger">{errors[field]}</p> : null;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formElement = event.currentTarget;
+    if (submitting.current) return;
+    const payload = { ...Object.fromEntries(new FormData(formElement)), phone, locale };
+    const validation = validateContactSubmission(payload, locale);
+    setErrors(validation.errors);
+    if (Object.keys(validation.errors).length) {
+      setSubmitState("error");
+      setSubmitError(contactSubmissionMessage("invalid_submission", locale));
+      formElement.querySelector<HTMLElement>(`#contact-${Object.keys(validation.errors)[0]}`)?.focus();
+      return;
+    }
 
+    submitting.current = true;
     setSubmitState("sending");
+    setSubmitError("");
 
     try {
       const response = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(Object.fromEntries(new FormData(formElement))),
+        body: JSON.stringify({ ...payload, ...validation.values }),
       });
-
-      if (!response.ok) throw new Error("Contact form submission failed");
+      const result = await response.json().catch(() => null);
+      if (!response.ok || result?.success !== true) {
+        setErrors(result?.error === "invalid_submission" ? validateContactSubmission(payload, locale).errors : {});
+        setSubmitError(contactSubmissionMessage(response.status === 429 ? "429" : result?.error, locale));
+        setSubmitState("error");
+        return;
+      }
 
       formElement.reset();
+      setPhone("");
       setSubmitState("success");
     } catch {
+      setSubmitError(contactSubmissionMessage("network", locale));
       setSubmitState("error");
+    } finally {
+      submitting.current = false;
     }
   }
 
@@ -46,6 +76,7 @@ export function ContactForm({ form, privacyNotice }: { form: FormDict; privacyNo
   return (
     <form
       onSubmit={handleSubmit}
+      noValidate
       aria-describedby={submitState === "success" ? undefined : "contact-privacy-notice"}
       className="rounded-3xl border border-line bg-surface p-6 sm:p-8"
     >
@@ -67,7 +98,7 @@ export function ContactForm({ form, privacyNotice }: { form: FormDict; privacyNo
           </button>
         </div>
       ) : (
-        <>
+        <fieldset disabled={submitState === "sending"} className="min-w-0 border-0 p-0">
           <div className="sr-only" aria-hidden="true">
             <label htmlFor="contact-website">Website</label>
             <input id="contact-website" name="website" tabIndex={-1} autoComplete="off" />
@@ -77,39 +108,50 @@ export function ContactForm({ form, privacyNotice }: { form: FormDict; privacyNo
             <div>
               {labelFor("name", form.name, true)}
               <input
+                {...fieldProps("name")}
                 id="contact-name"
                 name="name"
                 required
+                minLength={2}
+                maxLength={100}
                 placeholder={form.namePlaceholder}
                 className={cn(fieldClass, "border-line focus:border-brand-500")}
               />
+              {fieldError("name")}
             </div>
             <div>
               {labelFor("phone", form.phone)}
-              <input
+              <PhoneInput
+                {...fieldProps("phone")}
                 id="contact-phone"
-                name="phone"
-                type="tel"
-                dir="ltr"
+                value={phone}
+                onChange={setPhone}
+                locale={locale}
+                appearance="public"
+                disabled={submitState === "sending"}
                 placeholder={form.phonePlaceholder}
-                className={cn(fieldClass, "border-line text-start focus:border-brand-500")}
               />
+              {fieldError("phone")}
             </div>
             <div>
               {labelFor("email", form.email, true)}
               <input
+                {...fieldProps("email")}
                 id="contact-email"
                 name="email"
                 type="email"
                 dir="ltr"
                 required
+                maxLength={254}
                 placeholder={form.emailPlaceholder}
                 className={cn(fieldClass, "border-line text-start focus:border-brand-500")}
               />
+              {fieldError("email")}
             </div>
             <div>
               {labelFor("topic", form.topic)}
               <select
+                {...fieldProps("topic")}
                 id="contact-topic"
                 name="topic"
                 defaultValue={form.topics[0]}
@@ -121,19 +163,24 @@ export function ContactForm({ form, privacyNotice }: { form: FormDict; privacyNo
                   </option>
                 ))}
               </select>
+              {fieldError("topic")}
             </div>
           </div>
 
           <div className="mt-5">
             {labelFor("message", form.message, true)}
             <textarea
+              {...fieldProps("message")}
               id="contact-message"
               name="message"
               rows={4}
               required
+              minLength={5}
+              maxLength={5_000}
               placeholder={form.messagePlaceholder}
               className={cn(fieldClass, "resize-y border-line focus:border-brand-500")}
             />
+            {fieldError("message")}
           </div>
 
           {privacyNotice}
@@ -150,10 +197,10 @@ export function ContactForm({ form, privacyNotice }: { form: FormDict; privacyNo
           </button>
           {submitState === "error" ? (
             <p className="mt-4 text-sm font-semibold text-danger" role="alert">
-              {form.errorSubmit}
+              {submitError || form.errorSubmit}
             </p>
           ) : null}
-        </>
+        </fieldset>
       )}
     </form>
   );

@@ -1,29 +1,46 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useAuth, useSignIn } from "@clerk/nextjs";
 import { AuthFrame } from "./auth-frame";
 import { AuthError, CodeField, SignedInActions, SubmitButton, authErrorMessage, useResendCooldown } from "./auth-controls";
+import { authErrorFields, validateAuthInput, type AuthField, type AuthFieldErrors, type AuthStage } from "./auth-validation";
 import { Button } from "@/components/staff/ui/button";
-import { Field, FieldDescription, FieldGroup, FieldLabel, FieldSeparator } from "@/components/staff/ui/field";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldSeparator } from "@/components/staff/ui/field";
 import { Input } from "@/components/staff/ui/input";
 
-type Stage = "password" | "verification" | "recovery-email" | "recovery-code" | "new-password" | "google-verification" | "google-account";
 type Factor = "email_code" | "totp" | "backup_code";
 
 export function SignInForm({ googleResult }: { googleResult?: string } = {}) {
-  const { signIn, errors, fetchStatus } = useSignIn();
+  const { signIn, fetchStatus } = useSignIn();
   const { isLoaded, isSignedIn } = useAuth();
-  const [stage, setStage] = useState<Stage>(googleResult === "continue" ? "google-verification" : googleResult === "verify-account" ? "google-account" : "password");
+  const [stage, setStage] = useState<AuthStage>(googleResult === "continue" ? "google-verification" : googleResult === "verify-account" ? "google-account" : "password");
   const [factor, setFactor] = useState<Factor>("email_code");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
+  const operationActive = useRef(false);
+  const [fieldErrors, setFieldErrors] = useState<AuthFieldErrors>({});
   const [message, setMessage] = useState<string | null>(googleResult === "unavailable" ? "לא ניתן להשלים את הכניסה עם Google. יש לנסות שוב עם כתובת הדוא״ל שאושרה לצוות או לפנות להנהלה." : googleResult === "verify-account" ? "כדי לחבר את Google לחשבון הקיים, נדרש אימות עם כתובת הדוא״ל והסיסמה של חשבון הצוות." : null);
   const cooldown = useResendCooldown();
   const pending = busy || fetchStatus === "fetching" || !isLoaded;
+
+  function fail(error: unknown) {
+    setMessage(authErrorMessage(error));
+    setFieldErrors(authErrorFields(error));
+  }
+
+  function clearField(field: AuthField) {
+    setFieldErrors((current) => ({ ...current, [field]: undefined }));
+    setMessage(null);
+  }
+
+  function validateField(field: AuthField) {
+    const validation = validateAuthInput({ stage, identifier, password, code, factor });
+    setFieldErrors((current) => ({ ...current, [field]: validation[field] }));
+  }
 
   async function finalize() {
     const { error } = await signIn.finalize({
@@ -36,7 +53,7 @@ export function SignInForm({ googleResult }: { googleResult?: string } = {}) {
         window.location.assign(decorateUrl("/staff"));
       },
     });
-    if (error) setMessage(authErrorMessage(error));
+    if (error) fail(error);
   }
 
   async function advance() {
@@ -51,7 +68,7 @@ export function SignInForm({ googleResult }: { googleResult?: string } = {}) {
         const alreadySent = verification.strategy === "email_code" && verification.status === "unverified" && verification.expireAt && verification.expireAt.getTime() > Date.now();
         if (!alreadySent) {
           const { error } = await signIn.mfa.sendEmailCode();
-          if (error) { setMessage(authErrorMessage(error)); return; }
+          if (error) { fail(error); return; }
         }
         cooldown.restart();
         return;
@@ -65,40 +82,52 @@ export function SignInForm({ googleResult }: { googleResult?: string } = {}) {
   }
 
   async function run(operation: () => Promise<void>) {
-    if (pending) return;
+    if (pending || operationActive.current) return;
+    operationActive.current = true;
     setBusy(true);
     setMessage(null);
-    try { await operation(); } catch { setMessage(authErrorMessage(null)); } finally { setBusy(false); }
+    try { await operation(); } catch (error) { fail(error); } finally { operationActive.current = false; setBusy(false); }
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (pending || operationActive.current) return;
+    // A completed provider verification must not consume credentials or a code
+    // again when only activating the session needs a retry.
+    if (signIn.status === "complete") { await run(finalize); return; }
+    const validation = validateAuthInput({ stage, identifier, password, code, factor });
+    setFieldErrors(validation);
+    if (Object.values(validation).some(Boolean)) {
+      setMessage("יש לתקן את השדות המסומנים לפני שממשיכים.");
+      return;
+    }
     await run(async () => {
       if (stage === "google-verification") {
         await advance();
       } else if (stage === "password" || stage === "google-account") {
         // Keep account-link verification on the provider's pending identifier.
         const { error } = await signIn.password(stage === "google-account" ? { password } : { identifier: identifier.trim(), password });
-        if (error) { setMessage(authErrorMessage(error)); return; }
+        if (error) { fail(error); return; }
         setPassword("");
         await advance();
       } else if (stage === "recovery-email") {
         const { error } = await signIn.create({ identifier: identifier.trim() });
-        if (error) { setMessage(authErrorMessage(error)); return; }
+        if (error) { fail(error); return; }
         const result = await signIn.resetPasswordEmailCode.sendCode();
-        if (result.error) { setMessage(authErrorMessage(result.error)); return; }
+        if (result.error) { fail(result.error); return; }
         setStage("recovery-code"); cooldown.restart();
       } else if (stage === "recovery-code") {
-        const { error } = await signIn.resetPasswordEmailCode.verifyCode({ code });
-        if (error) { setMessage(authErrorMessage(error)); return; }
+        const { error } = await signIn.resetPasswordEmailCode.verifyCode({ code: code.trim() });
+        if (error) { fail(error); return; }
         setCode(""); await advance();
       } else if (stage === "new-password") {
         const { error } = await signIn.resetPasswordEmailCode.submitPassword({ password, signOutOfOtherSessions: true });
-        if (error) { setMessage(authErrorMessage(error)); return; }
+        if (error) { fail(error); return; }
         setPassword(""); await advance();
       } else {
-        const result = factor === "email_code" ? await signIn.mfa.verifyEmailCode({ code }) : factor === "totp" ? await signIn.mfa.verifyTOTP({ code }) : await signIn.mfa.verifyBackupCode({ code });
-        if (result.error) { setMessage(authErrorMessage(result.error)); return; }
+        const verification = { code: code.trim() };
+        const result = factor === "email_code" ? await signIn.mfa.verifyEmailCode(verification) : factor === "totp" ? await signIn.mfa.verifyTOTP(verification) : await signIn.mfa.verifyBackupCode(verification);
+        if (result.error) { fail(result.error); return; }
         setCode(""); await advance();
       }
     });
@@ -107,25 +136,27 @@ export function SignInForm({ googleResult }: { googleResult?: string } = {}) {
   async function signInWithGoogle() {
     await run(async () => {
       signIn.reset();
+      setFieldErrors({});
       const { error } = await signIn.sso({
         strategy: "oauth_google",
         redirectUrl: "/staff",
         redirectCallbackUrl: "/staff/login/google-callback",
         oidcPrompt: "select_account",
       });
-      if (error) setMessage(authErrorMessage(error));
+      if (error) fail(error);
     });
   }
 
   function restart(recovery = false) {
-    signIn.reset(); setPassword(""); setCode(""); setMessage(null); setStage(recovery ? "recovery-email" : "password");
+    signIn.reset(); setPassword(""); setCode(""); setMessage(null); setFieldErrors({}); setStage(recovery ? "recovery-email" : "password");
   }
 
   async function resend() {
+    if (cooldown.seconds > 0) return;
     await run(async () => {
       const result = stage === "recovery-code" ? await signIn.resetPasswordEmailCode.sendCode() : await signIn.mfa.sendEmailCode();
-      if (result.error) { setMessage(authErrorMessage(result.error)); return; }
-      setCode(""); cooldown.restart();
+      if (result.error) { fail(result.error); return; }
+      setCode(""); setFieldErrors({}); cooldown.restart();
     });
   }
 
@@ -137,7 +168,7 @@ export function SignInForm({ googleResult }: { googleResult?: string } = {}) {
   return (
     <AuthFrame title={title} description={description} footer={<p className="text-sm text-muted-foreground">עדיין אין לך חשבון? <Link href="/staff/signup" className="font-medium text-primary underline-offset-4 hover:underline">יצירת חשבון לצוות</Link></p>}>
       {isSignedIn ? <SignedInActions /> : (
-        <form onSubmit={submit}>
+        <form onSubmit={submit} noValidate aria-busy={pending}>
           <FieldGroup>
             {stage === "password" && <>
               <Button type="button" variant="outline" size="lg" className="w-full" disabled={pending} onClick={signInWithGoogle}>
@@ -152,25 +183,29 @@ export function SignInForm({ googleResult }: { googleResult?: string } = {}) {
               <FieldDescription className="text-center">עם אותה כתובת דוא״ל שכבר רשומה בחשבון הצוות.</FieldDescription>
               <FieldSeparator>או עם דוא״ל וסיסמה</FieldSeparator>
             </>}
-            {(stage === "password" || stage === "google-account" || stage === "recovery-email") && <Field data-invalid={!!errors.fields.identifier || undefined}>
+            {(stage === "password" || stage === "google-account" || stage === "recovery-email") && <Field data-invalid={!!fieldErrors.identifier || undefined}>
               <FieldLabel htmlFor="staff-email">כתובת דוא״ל</FieldLabel>
-              <Input id="staff-email" name="email" type="email" dir="ltr" autoComplete="username" placeholder="name@example.com" value={stage === "google-account" ? signIn.identifier ?? "" : identifier} readOnly={stage === "google-account"} onChange={(event) => setIdentifier(event.target.value)} disabled={pending} aria-invalid={!!errors.fields.identifier} required maxLength={254} />
+              <Input id="staff-email" name="email" type="email" dir="ltr" autoComplete="username" placeholder="name@example.com" value={stage === "google-account" ? signIn.identifier ?? "" : identifier} readOnly={stage === "google-account"} onChange={(event) => { setIdentifier(event.target.value); clearField("identifier"); }} onBlur={() => validateField("identifier")} disabled={pending} aria-invalid={!!fieldErrors.identifier} aria-describedby={fieldErrors.identifier ? "staff-email-error" : undefined} required maxLength={254} />
+              {fieldErrors.identifier && <FieldError id="staff-email-error">{fieldErrors.identifier}</FieldError>}
             </Field>}
-            {(stage === "password" || stage === "google-account" || stage === "new-password") && <Field data-invalid={!!errors.fields.password || undefined}>
+            {(stage === "password" || stage === "google-account" || stage === "new-password") && <Field data-invalid={!!fieldErrors.password || undefined}>
               <FieldLabel htmlFor="staff-password">{stage === "new-password" ? "סיסמה חדשה" : "סיסמה"}</FieldLabel>
-              <Input id="staff-password" name="password" type="password" dir="ltr" autoComplete={stage === "new-password" ? "new-password" : "current-password"} value={password} onChange={(event) => setPassword(event.target.value)} disabled={pending} aria-invalid={!!errors.fields.password} minLength={stage === "new-password" ? 15 : undefined} maxLength={512} required />
-              {stage === "new-password" && <FieldDescription>לפחות 15 תווים. מומלץ לבחור משפט סודי וייחודי.</FieldDescription>}
+              <Input id="staff-password" name="password" type="password" dir="ltr" autoComplete={stage === "new-password" ? "new-password" : "current-password"} value={password} onChange={(event) => { setPassword(event.target.value); clearField("password"); }} onBlur={() => validateField("password")} disabled={pending} aria-invalid={!!fieldErrors.password} aria-describedby={[stage === "new-password" ? "staff-password-description" : null, fieldErrors.password ? "staff-password-error" : null].filter(Boolean).join(" ") || undefined} minLength={stage === "new-password" ? 15 : undefined} maxLength={512} required />
+              {stage === "new-password" && <FieldDescription id="staff-password-description">לפחות 15 תווים. מומלץ לבחור משפט סודי וייחודי.</FieldDescription>}
+              {fieldErrors.password && <FieldError id="staff-password-error">{fieldErrors.password}</FieldError>}
             </Field>}
-            {verifying && (factor === "backup_code" && stage === "verification" ? <Field>
+            {verifying && (factor === "backup_code" && stage === "verification" ? <Field data-invalid={!!fieldErrors.code || undefined}>
               <FieldLabel htmlFor="backup-code">קוד גיבוי</FieldLabel>
-              <Input id="backup-code" name="backup-code" dir="ltr" autoComplete="off" value={code} onChange={(event) => setCode(event.target.value)} disabled={pending} required />
-            </Field> : <CodeField value={code} onChange={setCode} disabled={pending} invalid={!!errors.fields.code} description={stage === "verification" && factor === "totp" ? "יש להזין את שש הספרות מאפליקציית האימות." : "יש להזין את שש הספרות שנשלחו לכתובת הדוא״ל של החשבון."} />)}
+              <Input id="backup-code" name="backup-code" dir="ltr" autoComplete="off" value={code} onChange={(event) => { setCode(event.target.value); clearField("code"); }} onBlur={() => validateField("code")} disabled={pending} maxLength={128} aria-invalid={!!fieldErrors.code} aria-describedby={`backup-code-description${fieldErrors.code ? " backup-code-error" : ""}`} required />
+              <FieldDescription id="backup-code-description">יש להזין קוד גיבוי אחד ששמרת בהגדרת האימות. ניתן להשתמש בכל קוד פעם אחת בלבד.</FieldDescription>
+              {fieldErrors.code && <FieldError id="backup-code-error">{fieldErrors.code}</FieldError>}
+            </Field> : <CodeField value={code} onChange={(value) => { setCode(value); clearField("code"); }} onBlur={() => validateField("code")} disabled={pending} error={fieldErrors.code} description={stage === "verification" && factor === "totp" ? "יש להזין את שש הספרות מאפליקציית האימות." : "יש להזין את שש הספרות שנשלחו לכתובת הדוא״ל של החשבון."} />)}
             <AuthError message={message} />
-            <SubmitButton pending={pending} disabled={verifying && factor !== "backup_code" && code.length !== 6}>{stage === "google-verification" ? "המשך אימות החשבון" : verifying ? "אימות וכניסה" : stage === "recovery-email" ? "שליחת קוד לשחזור" : stage === "new-password" ? "שמירת הסיסמה וכניסה" : "כניסה למרחב הליווי"}</SubmitButton>
+            <SubmitButton pending={pending}>{stage === "google-verification" ? "המשך אימות החשבון" : verifying ? "אימות וכניסה" : stage === "recovery-email" ? "שליחת קוד לשחזור" : stage === "new-password" ? "שמירת הסיסמה וכניסה" : "כניסה למרחב הליווי"}</SubmitButton>
             {stage === "password" ? <Button type="button" variant="link" disabled={pending} onClick={() => restart(true)}>שכחת את הסיסמה?</Button> : <div className="flex flex-wrap items-center justify-between gap-2">
               <Button type="button" variant="ghost" disabled={pending} onClick={() => restart()}>חזרה לכניסה</Button>
               {verifying && (stage === "recovery-code" || factor === "email_code") && <Button type="button" variant="link" disabled={pending || cooldown.seconds > 0} onClick={resend}>{cooldown.seconds > 0 ? `שליחה חוזרת בעוד ${cooldown.seconds} שנ׳` : "שליחת קוד חדש"}</Button>}
-              {stage === "verification" && factor === "totp" && signIn.supportedSecondFactors.some((item) => item.strategy === "backup_code") && <Button type="button" variant="link" disabled={pending} onClick={() => { setFactor("backup_code"); setCode(""); }}>שימוש בקוד גיבוי</Button>}
+              {stage === "verification" && factor === "totp" && signIn.supportedSecondFactors.some((item) => item.strategy === "backup_code") && <Button type="button" variant="link" disabled={pending} onClick={() => { setFactor("backup_code"); setCode(""); setFieldErrors({}); setMessage(null); }}>שימוש בקוד גיבוי</Button>}
             </div>}
           </FieldGroup>
         </form>

@@ -39,6 +39,7 @@ import {
   Field,
   FieldContent,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
 } from "@/components/staff/ui/field";
@@ -88,6 +89,7 @@ import {
 } from "./common";
 import { formatDateTime } from "./format";
 import { DraftStatus, useFormDraft } from "./form-draft";
+import { focusFormIssue, operationalCommandIssue, operationalFieldName, settingsInputIssues } from "./operational-form-state";
 
 function monthLabel(month: string) {
   return new Intl.DateTimeFormat("he-IL", {
@@ -166,6 +168,8 @@ function MonthlyOversightWorkspace({
   const [scope, setScope] = useState(
     snapshot.actor.role === "coordinator" ? snapshot.actor.id : "organization",
   );
+  const [monthInput, setMonthInput] = useState(month);
+  const [filterIssues, setFilterIssues] = useState<Record<string, string>>({});
   const scopeStaffId =
     snapshot.actor.role === "coordinator"
       ? snapshot.actor.id
@@ -218,17 +222,24 @@ function MonthlyOversightWorkspace({
         </CardHeader>
         <CardContent>
           <FieldGroup className="sm:flex-row sm:items-end">
-            <Field className="sm:max-w-60">
+            <Field className="sm:max-w-60" data-invalid={Boolean(filterIssues.month)}>
               <FieldLabel htmlFor="oversight-month">חודש לסקירה</FieldLabel>
               <Input
                 id="oversight-month"
                 type="month"
                 min="0001-01"
-                value={month}
+                value={monthInput}
+                required
+                aria-invalid={Boolean(filterIssues.month)}
+                aria-describedby={filterIssues.month ? "oversight-month-error" : undefined}
                 onChange={(event) => {
-                  if (isMonth(event.target.value)) setMonth(event.target.value);
+                  const value = event.target.value;
+                  setMonthInput(value);
+                  setFilterIssues((previous) => ({ ...previous, month: isMonth(value) ? "" : "יש לבחור חודש ושנה תקינים. מוצג החודש התקין האחרון שנבחר." }));
+                  if (isMonth(value)) setMonth(value);
                 }}
               />
+              {filterIssues.month && <FieldError id="oversight-month-error">{filterIssues.month}</FieldError>}
             </Field>
             {snapshot.actor.role === "ceo" && (
               <Field className="sm:max-w-80">
@@ -236,10 +247,13 @@ function MonthlyOversightWorkspace({
                 <Select
                   value={scope}
                   onValueChange={(value) => {
-                    if (value) setScope(value);
+                    if (value === "organization" || coordinators.some((member) => member.id === value)) {
+                      setScope(value!);
+                      setFilterIssues((previous) => ({ ...previous, scope: "" }));
+                    } else setFilterIssues((previous) => ({ ...previous, scope: "יש לבחור את כל הארגון או רכז/ת מהרשימה." }));
                   }}
                 >
-                  <SelectTrigger id="oversight-scope" className="w-full">
+                  <SelectTrigger id="oversight-scope" className="w-full" aria-invalid={Boolean(filterIssues.scope)} aria-describedby={filterIssues.scope ? "oversight-scope-error" : undefined}>
                     <SelectValue>
                       {scope === "organization"
                         ? "כל הארגון"
@@ -259,6 +273,7 @@ function MonthlyOversightWorkspace({
                     </SelectGroup>
                   </SelectContent>
                 </Select>
+                {filterIssues.scope && <FieldError id="oversight-scope-error">{filterIssues.scope}</FieldError>}
               </Field>
             )}
           </FieldGroup>
@@ -614,6 +629,7 @@ function MonthlyOversightWorkspace({
         scopeStaffId={scopeStaffId}
         review={review}
         canEdit={!review?.ceoProtected || snapshot.actor.role === "ceo"}
+        invalidFilter={!isMonth(monthInput) ? "month" : filterIssues.scope ? "scope" : null}
         onNewDraft={() => setFormSession((value) => value + 1)}
       />
     </div>
@@ -625,12 +641,14 @@ function MonthlyReviewForm({
   scopeStaffId,
   review,
   canEdit,
+  invalidFilter,
   onNewDraft,
 }: {
   month: string;
   scopeStaffId: string | null;
   review?: MonthlyReview;
   canEdit: boolean;
+  invalidFilter: "month" | "scope" | null;
   onNewDraft: () => void;
 }) {
   const { submit } = useWorkspace();
@@ -644,6 +662,7 @@ function MonthlyReviewForm({
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [issues, setIssues] = useState<Record<string, string>>({});
   const [receipt, setReceipt] = useState<CommandSuccess | null>(null);
   const submitting = useRef(false);
   const result = receipt ?? draft.recovered;
@@ -666,8 +685,10 @@ function MonthlyReviewForm({
     event.preventDefault();
     if (submitting.current || !draft.hydrated || !canEdit || stale || result)
       return;
-    submitting.current = true;
-    setBusy(true);
+    if (invalidFilter) {
+      document.getElementById(`oversight-${invalidFilter}`)?.focus();
+      return;
+    }
     setError(null);
     const payload: Omit<
       Extract<OversightCommand, { type: "save_monthly_review" }>,
@@ -680,13 +701,29 @@ function MonthlyReviewForm({
       summary: draft.value.summary.trim(),
       reviewed: draft.value.reviewed,
     };
+    const invalidCommand = operationalCommandIssue(payload);
+    if (invalidCommand) {
+      setIssues({ [invalidCommand.field]: invalidCommand.message });
+      setError(invalidCommand.message);
+      focusFormIssue(event.currentTarget, { [invalidCommand.field]: invalidCommand.message });
+      return;
+    }
+    setIssues({});
+    submitting.current = true;
+    setBusy(true);
+    let submissionStarted = false;
+    let received = false;
     try {
       const operationId = await draft.prepare(payload);
+      submissionStarted = true;
       const saved = await submit({ ...payload, operationId });
       if (!saved.ok) {
         setError(saved.error.message);
+        if (saved.error.field) setIssues({ [operationalFieldName(saved.error.field)]: saved.error.message });
+        draft.recheck();
         return;
       }
+      received = true;
       setReceipt(saved);
       await draft.clear();
       toast.success(
@@ -696,6 +733,7 @@ function MonthlyReviewForm({
       );
     } catch (error) {
       setError(readableError(error));
+      if (submissionStarted && !received) draft.recheck();
     } finally {
       submitting.current = false;
       setBusy(false);
@@ -745,6 +783,7 @@ function MonthlyReviewForm({
         ) : (
           <form
             onSubmit={(event) => void save(event)}
+            noValidate
             className="flex flex-col gap-5"
           >
             {stale && (
@@ -779,17 +818,22 @@ function MonthlyReviewForm({
                 </FieldLabel>
                 <Textarea
                   id="monthly-review-summary"
+                  data-validation-field="summary"
+                  aria-invalid={Boolean(issues.summary)}
+                  aria-describedby={issues.summary ? "monthly-review-summary-error" : undefined}
                   rows={6}
                   maxLength={20000}
                   value={draft.value.summary}
                   disabled={!draft.hydrated || busy || !canEdit}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    setIssues((previous) => ({ ...previous, summary: "" }));
                     draft.update({
                       ...draft.value,
                       summary: event.target.value,
-                    })
-                  }
+                    });
+                  }}
                 />
+                {issues.summary && <FieldError id="monthly-review-summary-error">{issues.summary}</FieldError>}
                 <FieldDescription>
                   אפשר לתעד תובנות מתוך דיווחי הצוות, נושאים להמשך בדיקה והחלטות
                   ליווי.
@@ -809,12 +853,17 @@ function MonthlyReviewForm({
                 </FieldContent>
                 <Switch
                   id="monthly-reviewed"
+                  data-validation-field="reviewed"
+                  aria-invalid={Boolean(issues.reviewed)}
+                  aria-describedby={issues.reviewed ? "monthly-reviewed-error" : undefined}
                   checked={draft.value.reviewed}
                   disabled={!draft.hydrated || busy || !canEdit}
-                  onCheckedChange={(checked) =>
-                    draft.update({ ...draft.value, reviewed: checked })
-                  }
+                  onCheckedChange={(checked) => {
+                    setIssues((previous) => ({ ...previous, reviewed: "" }));
+                    draft.update({ ...draft.value, reviewed: checked });
+                  }}
                 />
+                {issues.reviewed && <FieldError id="monthly-reviewed-error">{issues.reviewed}</FieldError>}
               </Field>
             </FieldGroup>
             <DraftStatus status={draft.status} onRetry={draft.retry} />
@@ -916,6 +965,7 @@ function SettingsEditor({
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [issues, setIssues] = useState<Record<string, string>>({});
   const [receipt, setReceipt] = useState<CommandSuccess | null>(null);
   const submitting = useRef(false);
   const result = receipt ?? draft.recovered;
@@ -934,26 +984,19 @@ function SettingsEditor({
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting.current || !draft.hydrated || stale || result) return;
+    const found = settingsInputIssues(draft.value);
+    setIssues(found);
+    setError(null);
+    if (Object.keys(found).length) {
+      focusFormIssue(event.currentTarget, found);
+      return;
+    }
     const lease = Number(draft.value.offlineLeaseHours);
     const reminder = Number(draft.value.appointmentReminderMinutesBefore);
     const repeat =
       draft.value.overdueRepeatHours.trim() === ""
         ? null
         : Number(draft.value.overdueRepeatHours);
-    if (
-      !Number.isInteger(lease) ||
-      lease < 1 ||
-      lease > 24 ||
-      !Number.isInteger(reminder) ||
-      reminder < 0 ||
-      reminder > 1440 ||
-      (repeat !== null &&
-        (!Number.isInteger(repeat) || repeat < 1 || repeat > 168)) ||
-      !draft.value.reason.trim()
-    ) {
-      setError("יש לבדוק את טווחי השעות והדקות ולהוסיף סיבה לשינוי.");
-      return;
-    }
     const payload: Omit<
       Extract<OversightCommand, { type: "update_organization_settings" }>,
       "operationId"
@@ -969,16 +1012,29 @@ function SettingsEditor({
       },
       reason: draft.value.reason.trim(),
     };
+    const invalidCommand = operationalCommandIssue(payload);
+    if (invalidCommand) {
+      setIssues({ [invalidCommand.field]: invalidCommand.message });
+      setError(invalidCommand.message);
+      focusFormIssue(event.currentTarget, { [invalidCommand.field]: invalidCommand.message });
+      return;
+    }
     submitting.current = true;
     setBusy(true);
     setError(null);
+    let submissionStarted = false;
+    let received = false;
     try {
       const operationId = await draft.prepare(payload);
+      submissionStarted = true;
       const saved = await submit({ ...payload, operationId });
       if (!saved.ok) {
         setError(saved.error.message);
+        if (saved.error.field) setIssues({ [operationalFieldName(saved.error.field)]: saved.error.message });
+        draft.recheck();
         return;
       }
+      received = true;
       setReceipt(saved);
       await draft.clear();
       toast.success(
@@ -988,6 +1044,7 @@ function SettingsEditor({
       );
     } catch (error) {
       setError(readableError(error));
+      if (submissionStarted && !received) draft.recheck();
     } finally {
       submitting.current = false;
       setBusy(false);
@@ -1032,6 +1089,7 @@ function SettingsEditor({
         ) : (
           <form
             onSubmit={(event) => void save(event)}
+            noValidate
             className="flex flex-col gap-5"
           >
             {stale && (
@@ -1077,6 +1135,9 @@ function SettingsEditor({
                 </FieldLabel>
                 <Input
                   id="settings-offline-hours"
+                  data-validation-field="offlineLeaseHours"
+                  aria-invalid={Boolean(issues.offlineLeaseHours)}
+                  aria-describedby={issues.offlineLeaseHours ? "settings-offline-hours-error" : undefined}
                   type="number"
                   min={1}
                   max={24}
@@ -1084,13 +1145,15 @@ function SettingsEditor({
                   required
                   value={draft.value.offlineLeaseHours}
                   disabled={!draft.hydrated || busy}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    setIssues((previous) => ({ ...previous, offlineLeaseHours: "" }));
                     draft.update({
                       ...draft.value,
                       offlineLeaseHours: event.target.value,
-                    })
-                  }
+                    });
+                  }}
                 />
+                {issues.offlineLeaseHours && <FieldError id="settings-offline-hours-error">{issues.offlineLeaseHours}</FieldError>}
                 <FieldDescription>
                   בין שעה ל־24 שעות. תוקף הרשאה זמנית עשוי לקצר את משך הגישה.
                 </FieldDescription>
@@ -1103,11 +1166,16 @@ function SettingsEditor({
                   value={draft.value.reminderAudience}
                   disabled={!draft.hydrated || busy}
                   onValueChange={(value) => {
-                    if (value === "responsible_team" || value === "all_staff")
+                    if (value === "responsible_team" || value === "all_staff") {
+                      setIssues((previous) => ({ ...previous, reminderAudience: "" }));
                       draft.update({ ...draft.value, reminderAudience: value });
+                    }
                   }}
                 >
-                  <SelectTrigger id="settings-audience" className="w-full">
+                  <SelectTrigger id="settings-audience"
+                  data-validation-field="reminderAudience"
+                  aria-invalid={Boolean(issues.reminderAudience)}
+                  aria-describedby={issues.reminderAudience ? "settings-audience-error" : undefined} className="w-full">
                     <SelectValue>
                       {draft.value.reminderAudience === "responsible_team"
                         ? "לצוות הליווי האחראי"
@@ -1123,6 +1191,7 @@ function SettingsEditor({
                     </SelectGroup>
                   </SelectContent>
                 </Select>
+                {issues.reminderAudience && <FieldError id="settings-audience-error">{issues.reminderAudience}</FieldError>}
                 <FieldDescription>
                   לפי מדיניות התזכורות והרשאות הנמען. השתקת המנכ״ל נשמרת בנפרד.
                 </FieldDescription>
@@ -1133,6 +1202,9 @@ function SettingsEditor({
                 </FieldLabel>
                 <Input
                   id="settings-reminder-minutes"
+                  data-validation-field="appointmentReminderMinutesBefore"
+                  aria-invalid={Boolean(issues.appointmentReminderMinutesBefore)}
+                  aria-describedby={issues.appointmentReminderMinutesBefore ? "settings-reminder-minutes-error" : undefined}
                   type="number"
                   min={0}
                   max={1440}
@@ -1140,13 +1212,15 @@ function SettingsEditor({
                   required
                   value={draft.value.appointmentReminderMinutesBefore}
                   disabled={!draft.hydrated || busy}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    setIssues((previous) => ({ ...previous, appointmentReminderMinutesBefore: "" }));
                     draft.update({
                       ...draft.value,
                       appointmentReminderMinutesBefore: event.target.value,
-                    })
-                  }
+                    });
+                  }}
                 />
+                {issues.appointmentReminderMinutesBefore && <FieldError id="settings-reminder-minutes-error">{issues.appointmentReminderMinutesBefore}</FieldError>}
                 <FieldDescription>
                   0 שולח במועד שנקבע. אפשר לבחור עד 1,440 דקות מראש.
                 </FieldDescription>
@@ -1165,15 +1239,20 @@ function SettingsEditor({
                 </FieldContent>
                 <Switch
                   id="settings-overdue-enabled"
+                  data-validation-field="overdueRemindersEnabled"
+                  aria-invalid={Boolean(issues.overdueRemindersEnabled)}
+                  aria-describedby={issues.overdueRemindersEnabled ? "settings-overdue-enabled-error" : undefined}
                   checked={draft.value.overdueRemindersEnabled}
                   disabled={!draft.hydrated || busy}
-                  onCheckedChange={(checked) =>
+                  onCheckedChange={(checked) => {
+                    setIssues((previous) => ({ ...previous, overdueRemindersEnabled: "" }));
                     draft.update({
                       ...draft.value,
                       overdueRemindersEnabled: checked,
-                    })
-                  }
+                    });
+                  }}
                 />
+                {issues.overdueRemindersEnabled && <FieldError id="settings-overdue-enabled-error">{issues.overdueRemindersEnabled}</FieldError>}
               </Field>
               <Field data-disabled={!draft.hydrated || busy}>
                 <FieldLabel htmlFor="settings-repeat-hours">
@@ -1181,6 +1260,9 @@ function SettingsEditor({
                 </FieldLabel>
                 <Input
                   id="settings-repeat-hours"
+                  data-validation-field="overdueRepeatHours"
+                  aria-invalid={Boolean(issues.overdueRepeatHours)}
+                  aria-describedby={issues.overdueRepeatHours ? "settings-repeat-hours-error" : undefined}
                   type="number"
                   min={1}
                   max={168}
@@ -1188,13 +1270,15 @@ function SettingsEditor({
                   placeholder="ללא חזרה אוטומטית"
                   value={draft.value.overdueRepeatHours}
                   disabled={!draft.hydrated || busy}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    setIssues((previous) => ({ ...previous, overdueRepeatHours: "" }));
                     draft.update({
                       ...draft.value,
                       overdueRepeatHours: event.target.value,
-                    })
-                  }
+                    });
+                  }}
                 />
+                {issues.overdueRepeatHours && <FieldError id="settings-repeat-hours-error">{issues.overdueRepeatHours}</FieldError>}
                 <FieldDescription>
                   אפשר להשאיר ריק כדי לא לשלוח תזכורות חוזרות. אחרת, בין שעה ל־168
                   שעות.
@@ -1206,15 +1290,20 @@ function SettingsEditor({
                 </FieldLabel>
                 <Textarea
                   id="settings-reason"
+                  data-validation-field="reason"
+                  aria-invalid={Boolean(issues.reason)}
+                  aria-describedby={issues.reason ? "settings-reason-error" : undefined}
                   rows={3}
                   required
                   maxLength={2000}
                   value={draft.value.reason}
                   disabled={!draft.hydrated || busy}
-                  onChange={(event) =>
-                    draft.update({ ...draft.value, reason: event.target.value })
-                  }
+                  onChange={(event) => {
+                    setIssues((previous) => ({ ...previous, reason: "" }));
+                    draft.update({ ...draft.value, reason: event.target.value });
+                  }}
                 />
+                {issues.reason && <FieldError id="settings-reason-error">{issues.reason}</FieldError>}
               </Field>
             </FieldGroup>
             <DraftStatus status={draft.status} onRetry={draft.retry} />

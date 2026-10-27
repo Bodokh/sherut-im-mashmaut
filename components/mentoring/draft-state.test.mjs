@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { reconcileStoredDraft } from "./draft-state.ts";
+import { reconcileStoredDraft, restoreDraftValue } from "./draft-state.ts";
 
 const operationId = "d4ef7e11-03fa-4f96-853c-2bc06cf374a3";
 const payload = {
@@ -92,3 +92,68 @@ test("malformed prepared intent is retained for recovery without submitting", as
     /Invalid saved command/,
   );
 });
+
+test("new draft fields receive defaults while existing content and unknown future fields survive", () => {
+  const old = { notes: "טיוטה קיימת", baseVersion: 1, futureField: "נשמר" };
+  assert.deepEqual(restoreDraftValue(old, { notes: "", baseVersion: 2, reason: "", actions: [] }), {
+    ...old, reason: "", actions: [],
+  });
+  assert.deepEqual(old, { notes: "טיוטה קיימת", baseVersion: 1, futureField: "נשמר" });
+});
+
+for (const malformed of [null, [], { notes: null }, { notes: 4 }, { notes: "נשמר", actions: "view" }, { notes: "נשמר", baseVersion: NaN }]) {
+  test(`malformed draft shape ${JSON.stringify(malformed)} blocks editing and preserves its prepared intent`, async () => {
+    const saved = { ...stored, value: malformed };
+    await assert.rejects(reconcileStoredDraft(saved, { notes: "", baseVersion: 1, actions: [] }, async () => assert.fail("malformed drafts must not submit")), /Invalid saved draft shape/);
+    assert.equal(saved.intent, stored.intent);
+    assert.equal(saved.value, malformed);
+  });
+}
+
+test("nullable dynamic versions and nullable management drafts remain recoverable", () => {
+  assert.deepEqual(restoreDraftValue({ appointmentVersion: 2 }, { appointmentVersion: null }), { appointmentVersion: 2 });
+  assert.deepEqual(restoreDraftValue({ payload }, null), { payload });
+  for (const appointmentVersion of [{ invalid: true }, [], NaN]) {
+    assert.throws(() => restoreDraftValue({ appointmentVersion }, { appointmentVersion: null }), /Invalid saved draft shape/);
+  }
+});
+
+
+for (const field of ["appointmentVersion", "contactRevision", "baseTargetVersion"]) {
+  test(`${field} restores null and finite versions in both directions, rejecting malformed values`, () => {
+    assert.deepEqual(restoreDraftValue({ [field]: null }, { [field]: 2 }), { [field]: null });
+    assert.deepEqual(restoreDraftValue({ [field]: 2 }, { [field]: null }), { [field]: 2 });
+    for (const invalid of ["2", {}, [], NaN, Infinity]) {
+      assert.throws(() => restoreDraftValue({ [field]: invalid }, { [field]: null }), /Invalid saved draft shape/);
+      assert.throws(() => restoreDraftValue({ [field]: invalid }, { [field]: 2 }), /Invalid saved draft shape/);
+    }
+  });
+}
+
+test("only monthly and participant profile base versions are nullable", () => {
+  const monthly = { summary: "", reviewed: false, baseVersion: 1 };
+  const profile = { displayName: "", serviceType: "unknown", profileNotes: "", baseVersion: 1 };
+  for (const initial of [monthly, profile]) {
+    assert.equal(restoreDraftValue({ ...initial, baseVersion: null }, initial).baseVersion, null);
+    assert.equal(restoreDraftValue(initial, { ...initial, baseVersion: null }).baseVersion, 1);
+    for (const invalid of ["1", {}, [], NaN]) assert.throws(() => restoreDraftValue({ ...initial, baseVersion: invalid }, initial), /Invalid saved draft shape/);
+  }
+  assert.throws(() => restoreDraftValue({ notes: "", baseVersion: null }, { notes: "", baseVersion: 1 }), /Invalid saved draft shape/);
+});
+
+for (const acceptance of ["accepted", "queued"]) {
+  test(`prepared nullable versions replay unchanged before rebase when ${acceptance}`, async () => {
+    const cases = [
+      { savedValue: { ...value, appointmentVersion: null }, initial: { ...value, baseVersion: 2, appointmentVersion: 2 }, command: payload },
+      { savedValue: { summary: "טיוטה", reviewed: true, baseVersion: null }, initial: { summary: "עדכני", reviewed: false, baseVersion: 1 }, command: { type: "save_monthly_review", expectedVersion: null, summary: "טיוטה" } },
+    ];
+    for (const { savedValue, initial, command } of cases) {
+      const draft = { kind: "mentoring-form-draft-v1", value: savedValue, intent: { operationId, signature: JSON.stringify(command) } };
+      const receipt = { ok: true, operationId, acceptance, replayed: true };
+      const restored = await reconcileStoredDraft(draft, initial, async (sent) => { assert.deepEqual(sent, { ...command, operationId }); return receipt; });
+      assert.deepEqual(restored.value, savedValue);
+      assert.deepEqual(restored.intent, draft.intent);
+      assert.equal(restored.recovered, receipt);
+    }
+  });
+}

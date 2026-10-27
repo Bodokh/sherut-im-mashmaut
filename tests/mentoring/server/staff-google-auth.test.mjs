@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
+import * as authValidation from "../../../components/staff/auth/auth-validation.ts";
 import { identityInTransaction, requireIdentity } from "../../../lib/mentoring/server/repository.ts";
 import { serverFailure } from "../../../lib/mentoring/server/db.ts";
 import { privateFailure } from "../../../lib/mentoring/server/http.ts";
@@ -34,6 +35,7 @@ function componentHarness(file, clerkHooks) {
     if (id === "react") return react;
     if (id === "react/jsx-runtime") return { jsx, jsxs: jsx, Fragment: "Fragment" };
     if (id === "@clerk/nextjs") return clerkHooks;
+    if (id === "./auth-validation") return authValidation;
     if (id === "./auth-controls") return {
       AuthError: "AuthError", CodeField: "CodeField", SignedInActions: "SignedInActions", SubmitButton: "SubmitButton",
       authErrorMessage: () => "provider error",

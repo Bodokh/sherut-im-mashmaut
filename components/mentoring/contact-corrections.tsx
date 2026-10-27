@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import {
   CalendarClockIcon,
   CircleAlertIcon,
@@ -62,6 +62,7 @@ import { DraftRecovery } from "./draft-recovery";
 import { DraftStatus, useFormDraft } from "./form-draft";
 import { formatDateTime, fromDateTimeInput, toDateTimeInput } from "./format";
 import { RecoveredDraft } from "./recovered-draft";
+import { contactInputIssues, focusFormIssue, operationalCommandIssue, operationalFieldName } from "./operational-form-state";
 
 type ActionKind = "revise" | "invalidate" | "reschedule" | "color";
 
@@ -295,6 +296,7 @@ function ContactActionForm({
   const [error, setError] = useState<string | null>(null);
   const [issues, setIssues] = useState<Record<string, string>>({});
   const [queued, setQueued] = useState(false);
+  const submitting = useRef(false);
   const draft = useFormDraft<ActionDraft>(
     `contact-action:${kind}:${view.participant.id}:${entry?.id ?? "followup"}`,
     {
@@ -385,9 +387,13 @@ function ContactActionForm({
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy || queued || !draft.hydrated || stale || !allowed || locked) return;
+    if (submitting.current || busy || queued || !draft.hydrated || stale || !allowed || locked) return;
     const submittedAt = new Date();
-    const found: Record<string, string> = {};
+    const found = kind === "revise"
+      ? contactInputIssues({ method: values.method, outcome: values.outcome, notes: values.notes })
+      : kind === "color"
+        ? contactInputIssues({ method: "phone", outcome: "completed", notes: "", color: values.color })
+        : {};
     const reason = values.reason.trim();
     if (kind !== "color" && !reason) found.reason = "יש לכתוב את סיבת השינוי.";
     if (reason.length > 2000) found.reason = "הסיבה יכולה להכיל עד 2,000 תווים.";
@@ -456,15 +462,29 @@ function ContactActionForm({
         ...(reason ? { reason } : {}),
       };
     }
+    const invalidCommand = operationalCommandIssue(payload);
+    if (invalidCommand) {
+      const field = invalidCommand.field;
+      found[field] ??= invalidCommand.message;
+    }
     setIssues(found);
     setError(null);
-    if (Object.keys(found).length) return;
+    if (Object.keys(found).length) {
+      focusFormIssue(event.currentTarget, found);
+      if (invalidCommand && !["method", "outcome", "notes", "occurredAt", "nextAppointmentAt", "reason", "color"].includes(invalidCommand.field)) setError(invalidCommand.message);
+      return;
+    }
+    submitting.current = true;
     setBusy(true);
     onBusyChange(true);
+    let prepared = false;
     try {
-      const result = await submit({ ...payload, operationId: await draft.prepare(payload) });
+      const operationId = await draft.prepare(payload);
+      prepared = true;
+      const result = await submit({ ...payload, operationId });
       if (!result.ok) {
         setError(result.error.message);
+        if (result.error.field) setIssues({ [operationalFieldName(result.error.field)]: result.error.message });
         draft.recheck();
         return;
       }
@@ -481,9 +501,12 @@ function ContactActionForm({
         onClose();
       }
     } catch {
-      setError("לא התקבל אישור לשינוי. הטיוטה שמורה ואפשר לנסות שוב עם אותה פעולת שמירה.");
-      draft.recheck();
+      setError(prepared
+        ? "לא התקבל אישור לשינוי. זהות הבקשה נשמרה ותיבדק לניסיון נוסף."
+        : "לא ניתן להכין את הבקשה לשמירה. הפרטים נשארו בטופס; יש להשאיר אותו פתוח, לבדוק את מצב הטיוטה ולנסות שוב.");
+      if (prepared) draft.recheck();
     } finally {
+      submitting.current = false;
       setBusy(false);
       onBusyChange(false);
     }
@@ -598,7 +621,7 @@ function ContactActionForm({
                 <Select items={{ phone: "שיחה טלפונית", in_person: "פגישה פנים אל פנים" }} value={values.method} onValueChange={(value) => {
                   if (value === "phone" || value === "in_person") update("method", value);
                 }} disabled={busy || !draft.hydrated || !allowed || locked}>
-                  <SelectTrigger id={`${prefix}-method`} className="w-full" aria-invalid={Boolean(issues.method)} aria-describedby={issues.method ? `${prefix}-method-error` : undefined}><SelectValue /></SelectTrigger>
+                  <SelectTrigger id={`${prefix}-method`} data-validation-field="method" className="w-full" aria-invalid={Boolean(issues.method)} aria-describedby={issues.method ? `${prefix}-method-error` : undefined}><SelectValue /></SelectTrigger>
                   <SelectContent><SelectGroup>
                     <SelectItem value="phone">שיחה טלפונית</SelectItem>
                     <SelectItem value="in_person" disabled={values.outcome === "no_answer"}>פגישה פנים אל פנים</SelectItem>
@@ -606,7 +629,7 @@ function ContactActionForm({
                 </Select>
                 {issues.method && <FieldError id={`${prefix}-method-error`}>{issues.method}</FieldError>}
               </Field>
-              <Field>
+              <Field data-invalid={Boolean(issues.outcome)}>
                 <FieldLabel htmlFor={`${prefix}-outcome`}>תוצאת הקשר</FieldLabel>
                 <Select items={{ completed: "הקשר הושלם", no_answer: "לא היה מענה" }} value={values.outcome} onValueChange={(value) => {
                   if (value === "completed" || value === "no_answer") {
@@ -614,29 +637,31 @@ function ContactActionForm({
                     setIssues({});
                   }
                 }} disabled={busy || !draft.hydrated || !allowed || locked}>
-                  <SelectTrigger id={`${prefix}-outcome`} className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectTrigger id={`${prefix}-outcome`} data-validation-field="outcome" className="w-full" aria-invalid={Boolean(issues.outcome)} aria-describedby={issues.outcome ? `${prefix}-outcome-error` : undefined}><SelectValue /></SelectTrigger>
                   <SelectContent><SelectGroup>
                     <SelectItem value="completed">הקשר הושלם</SelectItem>
                     <SelectItem value="no_answer">לא היה מענה</SelectItem>
                   </SelectGroup></SelectContent>
                 </Select>
+                {issues.outcome && <FieldError id={`${prefix}-outcome-error`}>{issues.outcome}</FieldError>}
               </Field>
               <Field data-invalid={Boolean(issues.occurredAt)}>
                 <FieldLabel htmlFor={`${prefix}-occurred`}>מועד הקשר בפועל</FieldLabel>
-                <Input id={`${prefix}-occurred`} type="datetime-local" dir="ltr" value={values.occurredAt} onChange={(event) => update("occurredAt", event.target.value)} aria-invalid={Boolean(issues.occurredAt)} aria-describedby={issues.occurredAt ? `${prefix}-occurred-error` : undefined} required />
+                <Input id={`${prefix}-occurred`} data-validation-field="occurredAt" type="datetime-local" dir="ltr" value={values.occurredAt} onChange={(event) => update("occurredAt", event.target.value)} aria-invalid={Boolean(issues.occurredAt)} aria-describedby={issues.occurredAt ? `${prefix}-occurred-error` : undefined} required />
                 <FieldDescription>התאריך והשעה לפי שעון ישראל.</FieldDescription>
                 {issues.occurredAt && <FieldError id={`${prefix}-occurred-error`}>{issues.occurredAt}</FieldError>}
               </Field>
-              <Field>
+              <Field data-invalid={Boolean(issues.notes)}>
                 <FieldLabel htmlFor={`${prefix}-notes`}>סיכום הדיווח המתוקן</FieldLabel>
-                <Textarea id={`${prefix}-notes`} rows={5} maxLength={20000} value={values.notes} onChange={(event) => update("notes", event.target.value)} />
+                <Textarea id={`${prefix}-notes`} data-validation-field="notes" rows={5} aria-invalid={Boolean(issues.notes)} aria-describedby={issues.notes ? `${prefix}-notes-error` : undefined} maxLength={20000} value={values.notes} onChange={(event) => update("notes", event.target.value)} />
+                {issues.notes && <FieldError id={`${prefix}-notes-error`}>{issues.notes}</FieldError>}
               </Field>
             </>
           )}
           {view.participant.lifecycle === "active" && (kind === "reschedule" || needsNext) && (
             <Field data-invalid={Boolean(issues.nextAppointmentAt)}>
               <FieldLabel htmlFor={`${prefix}-next`}>מועד הקשר הבא</FieldLabel>
-              <Input id={`${prefix}-next`} type="datetime-local" dir="ltr" value={values.nextAppointmentAt} onChange={(event) => update("nextAppointmentAt", event.target.value)} aria-invalid={Boolean(issues.nextAppointmentAt)} aria-describedby={issues.nextAppointmentAt ? `${prefix}-next-error` : undefined} required />
+              <Input id={`${prefix}-next`} data-validation-field="nextAppointmentAt" type="datetime-local" dir="ltr" value={values.nextAppointmentAt} onChange={(event) => update("nextAppointmentAt", event.target.value)} aria-invalid={Boolean(issues.nextAppointmentAt)} aria-describedby={issues.nextAppointmentAt ? `${prefix}-next-error` : undefined} required />
               <FieldDescription>
                 {needsNext ? "תיקון מועד הקשר האחרון מחייב קביעת מועד המשך. כל המועדים לפי שעון ישראל." : "שינוי מועד בלבד, ללא תיעוד של קשר חדש. כל המועדים לפי שעון ישראל."}
               </FieldDescription>
@@ -647,23 +672,24 @@ function ContactActionForm({
             <p className="text-sm text-muted-foreground">התיקון הזה שומר את מועד הקשר הבא. לשינוי המועד יש להשתמש בפעולת שינוי מועד.</p>
           )}
           {kind === "color" && (
-            <Field>
+            <Field data-invalid={Boolean(issues.color)}>
               <FieldLabel htmlFor={`${prefix}-color`}>מצב הליווי המדווח</FieldLabel>
               <Select items={manualColorNames} value={values.color} onValueChange={(value) => {
                 if (value === "green" || value === "orange" || value === "red") update("color", value);
               }} disabled={busy || !draft.hydrated || !allowed || locked}>
-                <SelectTrigger id={`${prefix}-color`} className="w-full"><SelectValue /></SelectTrigger>
+                <SelectTrigger id={`${prefix}-color`} data-validation-field="color" className="w-full" aria-invalid={Boolean(issues.color)} aria-describedby={issues.color ? `${prefix}-color-error` : undefined}><SelectValue /></SelectTrigger>
                 <SelectContent><SelectGroup>
                   <SelectItem value="green">{manualColorNames.green}</SelectItem>
                   <SelectItem value="orange">{manualColorNames.orange}</SelectItem>
                   <SelectItem value="red">{manualColorNames.red}</SelectItem>
                 </SelectGroup></SelectContent>
               </Select>
+                {issues.color && <FieldError id={`${prefix}-color-error`}>{issues.color}</FieldError>}
             </Field>
           )}
           <Field data-invalid={Boolean(issues.reason)}>
             <FieldLabel htmlFor={`${prefix}-reason`}>{kind === "color" ? "הערה לעדכון (לא חובה)" : "סיבת השינוי"}</FieldLabel>
-            <Textarea id={`${prefix}-reason`} rows={3} maxLength={2000} value={values.reason} onChange={(event) => update("reason", event.target.value)} aria-invalid={Boolean(issues.reason)} aria-describedby={issues.reason ? `${prefix}-reason-error` : undefined} required={kind !== "color"} />
+            <Textarea id={`${prefix}-reason`} data-validation-field="reason" rows={3} maxLength={2000} value={values.reason} onChange={(event) => update("reason", event.target.value)} aria-invalid={Boolean(issues.reason)} aria-describedby={issues.reason ? `${prefix}-reason-error` : undefined} required={kind !== "color"} />
             <FieldDescription>הסיבה ושם עורך/ת השינוי יישמרו בהיסטוריית הכרטיס.</FieldDescription>
             {issues.reason && <FieldError id={`${prefix}-reason-error`}>{issues.reason}</FieldError>}
           </Field>

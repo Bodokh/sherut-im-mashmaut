@@ -27,6 +27,9 @@ import {
   FieldLabel,
 } from "@/components/staff/ui/field";
 import { Input } from "@/components/staff/ui/input";
+import { PhoneInput } from "@/components/staff/ui/phone-input";
+import { normalizePhoneNumber } from "@/lib/phone";
+import { parseCommand } from "@/lib/mentoring/validation";
 import {
   Select,
   SelectContent,
@@ -42,7 +45,7 @@ import { InlineError } from "./common";
 import { DraftStatus, useFormDraft } from "./form-draft";
 import { DraftRecovery } from "./draft-recovery";
 import { RecoveredDraft } from "./recovered-draft";
-import { assignmentScope, canEditParticipant, changedParticipantFields, createdParticipantFields, fieldIsProtected, participantFieldNames, participantFormFields, type ParticipantFieldName } from "./participant-form-state";
+import { assignmentScope, canEditParticipant, changedParticipantFields, createdParticipantFields, fieldIsProtected, participantFieldNames, participantFormFields, participantInputError, type ParticipantFieldName } from "./participant-form-state";
 
 export function ParticipantEditor({ view }: { view?: ParticipantView }) {
   const { snapshot } = useWorkspace();
@@ -109,11 +112,12 @@ function ParticipantProfileForm({
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldError, setFieldError] = useState<{ field: string; message: string } | null>(null);
   const draft = useFormDraft(
     `participant-profile:${view?.participant.id ?? "new"}`,
     {
       displayName: view?.participant.displayName ?? "",
-      phone: view?.participant.phone ?? "",
+      phone: normalizePhoneNumber(view?.participant.phone) ?? view?.participant.phone ?? "",
       serviceType: view?.participant.serviceType ?? "unknown",
       servicePlace: view?.participant.servicePlace ?? "",
       serviceRole: view?.participant.serviceRole ?? "",
@@ -132,10 +136,14 @@ function ParticipantProfileForm({
     view && draft.hydrated && values.baseVersion !== (currentView?.participant.version ?? view.participant.version);
   function update(field: keyof typeof values, value: string) {
     draft.update({ ...values, [field]: value });
+    setFieldError((previous) => previous?.field === field ? null : previous);
   }
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy || !draft.hydrated || stale || !editable || !hasChanges) return;
+    if (busy || !draft.hydrated || stale || !editable) return;
+    const inputError = participantInputError(values, (field) => locked(field) || Boolean(view && field === "phone" && !("phone" in changedFields)));
+    if (inputError) { setFieldError(inputError); document.getElementById(`participant-${{ displayName: "name", phone: "phone", serviceType: "service", servicePlace: "place", serviceRole: "role", profileNotes: "notes" }[inputError.field]}`)?.focus(); return; }
+    if (!hasChanges) { setError("לא בוצע שינוי בפרטים."); return; }
     const fields = view ? changedFields : createdParticipantFields(values);
     const payload = view
       ? {
@@ -145,14 +153,25 @@ function ParticipantProfileForm({
           fields,
         }
       : { type: "create_participant" as const, fields };
+    const validation = parseCommand({ ...payload, operationId: crypto.randomUUID() });
+    if (!validation.ok) {
+      const field = validation.error.field?.split(".").at(-1);
+      if (field && participantFieldNames.includes(field as ParticipantFieldName)) {
+        setFieldError({ field, message: validation.error.message });
+        const ids: Record<string, string> = { displayName: "name", phone: "phone", serviceType: "service", servicePlace: "place", serviceRole: "role", profileNotes: "notes" };
+        document.getElementById(`participant-${ids[field]}`)?.focus();
+      } else setError(validation.error.message);
+      return;
+    }
     setBusy(true);
     onBusyChange(true);
     setError(null);
+    setFieldError(null);
+    let prepared = false;
     try {
-      const result = await submit({
-        ...payload,
-        operationId: await draft.prepare(payload),
-      });
+      const operationId = await draft.prepare(payload);
+      prepared = true;
+      const result = await submit({ ...payload, operationId });
       if (!result.ok) {
         setError(result.error.message);
         draft.recheck();
@@ -178,10 +197,10 @@ function ParticipantProfileForm({
           `/staff/participants/${encodeURIComponent(result.participantId)}`,
         );
     } catch {
-      setError(
-        "לא ניתן לשמור כרגע. הפרטים שהזנת נשארו בטופס, ואפשר לנסות שוב.",
-      );
-      draft.recheck();
+      setError(prepared
+        ? "לא התקבל אישור מהמערכת. הפרטים נשארו בטופס וזהות הבקשה נשמרה ותיבדק לניסיון נוסף."
+        : "לא ניתן להכין את הבקשה לשמירה. הפרטים נשארו בטופס; יש להשאיר אותו פתוח, לבדוק את מצב הטיוטה ולנסות שוב.");
+      if (prepared) draft.recheck();
     } finally {
       setBusy(false);
       onBusyChange(false);
@@ -200,6 +219,12 @@ function ParticipantProfileForm({
           <dd>{values.displayName || "טרם הוזן"}</dd>
           <dt>טלפון</dt>
           <dd dir="ltr">{values.phone || "טרם הוזן"}</dd>
+          <dt>סוג השירות</dt>
+          <dd>{values.serviceType === "national" ? "שירות לאומי" : values.serviceType === "military" ? "שירות צבאי" : values.serviceType === "unknown" || !values.serviceType ? "טרם נבחר" : values.serviceType}</dd>
+          <dt>מקום השירות</dt>
+          <dd className="whitespace-pre-wrap break-words">{values.servicePlace || "טרם הוזן"}</dd>
+          <dt>תפקיד במסגרת השירות</dt>
+          <dd className="whitespace-pre-wrap break-words">{values.serviceRole || "טרם הוזן"}</dd>
           <dt>מידע נוסף לליווי</dt>
           <dd className="whitespace-pre-wrap break-words">
             {values.profileNotes || "טרם הוזן"}
@@ -209,7 +234,7 @@ function ParticipantProfileForm({
     );
 
   return (
-    <form onSubmit={save} className="flex flex-col gap-6">
+    <form onSubmit={save} noValidate className="flex flex-col gap-6">
       <InlineError message={error} />
       {!editable && <Alert><AlertTitle>העריכה אינה זמינה לחשבון הזה</AlertTitle><AlertDescription>הטיוטה נשארת שמורה במכשיר. אפשר לפנות להנהלה לבדיקת ההרשאה העדכנית.</AlertDescription></Alert>}
       {participantFieldNames.some(locked) && <Alert><AlertTitle>חלק מהפרטים מוגנים על ידי המנכ״ל</AlertTitle><AlertDescription>הפרטים המוגנים נעולים לעריכה. שמירת הטופס מעדכנת רק פרטים אחרים ששינית.</AlertDescription></Alert>}
@@ -271,7 +296,7 @@ function ParticipantProfileForm({
           <Field data-disabled={locked("displayName")}>
             <FieldLabel htmlFor="participant-name">שם החניכה</FieldLabel>
             <Input
-              id="participant-name"
+              id="participant-name" aria-invalid={fieldError?.field === "displayName" || undefined} aria-describedby={fieldError?.field === "displayName" ? "participant-name-error" : undefined}
               disabled={locked("displayName")}
               maxLength={160}
               autoComplete="off"
@@ -282,20 +307,17 @@ function ParticipantProfileForm({
             <FieldDescription>
               מומלץ להזין שם כדי שיהיה קל לזהות את הכרטיס.
             </FieldDescription>
+          {fieldError?.field === "displayName" && <p id="participant-name-error" role="alert" className="text-sm text-destructive">{fieldError.message}</p>}
           </Field>
           <Field data-disabled={locked("phone")}>
             <FieldLabel htmlFor="participant-phone">טלפון</FieldLabel>
-            <Input
-              id="participant-phone"
+            <PhoneInput
+              id="participant-phone" aria-invalid={fieldError?.field === "phone" || undefined} aria-describedby={fieldError?.field === "phone" ? "participant-phone-error" : undefined}
               disabled={locked("phone")}
-              type="tel"
-              dir="ltr"
-              maxLength={32}
-              autoComplete="off"
               value={values.phone}
-              onChange={(event) => update("phone", event.target.value)}
-              placeholder="050-0000000"
+              onChange={(value) => update("phone", value)}
             />
+          {fieldError?.field === "phone" && <p id="participant-phone-error" role="alert" className="text-sm text-destructive">{fieldError.message}</p>}
           </Field>
           <Field data-disabled={locked("serviceType")}>
             <FieldLabel htmlFor="participant-service">סוג השירות</FieldLabel>
@@ -311,7 +333,7 @@ function ParticipantProfileForm({
                 update("serviceType", value ?? "unknown")
               }
             >
-              <SelectTrigger id="participant-service" className="w-full">
+              <SelectTrigger id="participant-service" aria-invalid={fieldError?.field === "serviceType" || undefined} aria-describedby={fieldError?.field === "serviceType" ? "participant-service-error" : undefined} className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -322,37 +344,40 @@ function ParticipantProfileForm({
                 </SelectGroup>
               </SelectContent>
             </Select>
+          {fieldError?.field === "serviceType" && <p id="participant-service-error" role="alert" className="text-sm text-destructive">{fieldError.message}</p>}
           </Field>
           <Field data-disabled={locked("servicePlace")}>
             <FieldLabel htmlFor="participant-place">מקום השירות</FieldLabel>
             <Input
-              id="participant-place"
+              id="participant-place" aria-invalid={fieldError?.field === "servicePlace" || undefined} aria-describedby={fieldError?.field === "servicePlace" ? "participant-place-error" : undefined}
               disabled={locked("servicePlace")}
               maxLength={240}
               value={values.servicePlace}
               onChange={(event) => update("servicePlace", event.target.value)}
               placeholder="יישוב, מסגרת או יחידה"
             />
+          {fieldError?.field === "servicePlace" && <p id="participant-place-error" role="alert" className="text-sm text-destructive">{fieldError.message}</p>}
           </Field>
           <Field className="sm:col-span-2" data-disabled={locked("serviceRole")}>
             <FieldLabel htmlFor="participant-role">
               תפקיד במסגרת השירות
             </FieldLabel>
             <Input
-              id="participant-role"
+              id="participant-role" aria-invalid={fieldError?.field === "serviceRole" || undefined} aria-describedby={fieldError?.field === "serviceRole" ? "participant-role-error" : undefined}
               disabled={locked("serviceRole")}
               maxLength={240}
               value={values.serviceRole}
               onChange={(event) => update("serviceRole", event.target.value)}
               placeholder="אפשר להשלים בהמשך"
             />
+          {fieldError?.field === "serviceRole" && <p id="participant-role-error" role="alert" className="text-sm text-destructive">{fieldError.message}</p>}
           </Field>
           <Field className="sm:col-span-2" data-disabled={locked("profileNotes")}>
             <FieldLabel htmlFor="participant-notes">
               מידע נוסף לליווי
             </FieldLabel>
             <Textarea
-              id="participant-notes"
+              id="participant-notes" aria-invalid={fieldError?.field === "profileNotes" || undefined} aria-describedby={fieldError?.field === "profileNotes" ? "participant-notes-error" : undefined}
               disabled={locked("profileNotes")}
               maxLength={8000}
               value={values.profileNotes}
@@ -363,6 +388,7 @@ function ParticipantProfileForm({
             <FieldDescription>
               סיכומי השיחות והפגישות נשמרים בנפרד, בתיעוד הקשר.
             </FieldDescription>
+          {fieldError?.field === "profileNotes" && <p id="participant-notes-error" role="alert" className="text-sm text-destructive">{fieldError.message}</p>}
           </Field>
         </FieldGroup>
       </fieldset>
@@ -378,7 +404,7 @@ function ParticipantProfileForm({
         </Button>
         <Button
           type="submit"
-          disabled={busy || !draft.hydrated || Boolean(stale) || !editable || !hasChanges}
+          disabled={busy || !draft.hydrated || Boolean(stale) || !editable}
         >
           {busy && (
             <LoaderCircleIcon
@@ -434,6 +460,7 @@ function AssignmentForm({ view, onBusyChange, onClose }: {
   const { snapshot, submit, isOnline } = useWorkspace();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldError, setFieldError] = useState<{ field: "mentorId" | "coordinatorId"; message: string } | null>(null);
   const draft = useFormDraft(`assignment:${view.participant.id}`, {
     mentorId: view.assignment?.mentorId ?? "",
     coordinatorId: snapshot?.actor.role === "coordinator" ? snapshot.actor.id : view.assignment?.coordinatorId ?? "none",
@@ -450,7 +477,9 @@ function AssignmentForm({ view, onBusyChange, onClose }: {
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy || !draft.hydrated || stale || !scope?.canAssign || !validSelection) return;
+    if (busy || !draft.hydrated || stale || !scope?.canAssign) return;
+    if (!scope.mentors.some((mentor) => mentor.id === values.mentorId)) { setFieldError({ field: "mentorId", message: "יש לבחור חונך/ת זמין/ה מתוך הצוות העדכני." }); document.getElementById("assignment-mentor")?.focus(); return; }
+    if (coordinatorId !== "none" && !scope.coordinators.some((coordinator) => coordinator.id === coordinatorId)) { setFieldError({ field: "coordinatorId", message: "יש לבחור רכז/ת זמין/ה או להסיר את השיוך." }); document.getElementById("assignment-coordinator")?.focus(); return; }
     const payload = {
       type: "assign_participant" as const,
       participantId: view.participant.id,
@@ -458,11 +487,23 @@ function AssignmentForm({ view, onBusyChange, onClose }: {
       mentorId: values.mentorId,
       coordinatorId: coordinatorId === "none" ? null : coordinatorId,
     };
+    const validation = parseCommand({ ...payload, operationId: crypto.randomUUID() });
+    if (!validation.ok) {
+      const field = validation.error.field?.split(".").at(-1);
+      if (field === "mentorId" || field === "coordinatorId") {
+        setFieldError({ field, message: validation.error.message });
+        document.getElementById(field === "mentorId" ? "assignment-mentor" : "assignment-coordinator")?.focus();
+      } else setError(validation.error.message);
+      return;
+    }
     setBusy(true);
     onBusyChange(true);
-    setError(null);
+    setError(null); setFieldError(null);
+    let prepared = false;
     try {
-      const result = await submit({ ...payload, operationId: await draft.prepare(payload) });
+      const operationId = await draft.prepare(payload);
+      prepared = true;
+      const result = await submit({ ...payload, operationId });
       if (!result.ok) {
         setError(result.error.message);
         draft.recheck();
@@ -474,8 +515,10 @@ function AssignmentForm({ view, onBusyChange, onClose }: {
       onClose();
       toast.success(result.acceptance === "queued" ? "בקשת השיוך נשמרה במכשיר וממתינה לאישור המערכת" : "החניכה שויכה לחונך/ת");
     } catch {
-      setError("לא ניתן להשלים את השיוך כרגע. הטיוטה ומזהה פעולת השמירה נשמרו לניסיון חוזר.");
-      draft.recheck();
+      setError(prepared
+        ? "לא התקבל אישור לשיוך. הבחירה נשארה בטופס וזהות הבקשה נשמרה ותיבדק לניסיון נוסף."
+        : "לא ניתן להכין את בקשת השיוך. הבחירה נשארה בטופס; יש להשאיר אותו פתוח, לבדוק את מצב הטיוטה ולנסות שוב.");
+      if (prepared) draft.recheck();
     } finally {
       setBusy(false);
       onBusyChange(false);
@@ -497,27 +540,29 @@ function AssignmentForm({ view, onBusyChange, onClose }: {
       <FieldGroup>
         <Field data-disabled={busy || !draft.hydrated || !scope?.canAssign}>
           <FieldLabel htmlFor="assignment-mentor">חונך/ת אחראי/ת</FieldLabel>
-          <Select items={Object.fromEntries(snapshot.staff.map((staff) => [staff.id, staff.displayName]))} disabled={busy || !draft.hydrated || !scope?.canAssign} value={values.mentorId || null} onValueChange={(value) => draft.update({ ...values, mentorId: value ?? "" })}>
-            <SelectTrigger id="assignment-mentor" className="w-full"><SelectValue placeholder="בחירת חונך/ת מהצוות" /></SelectTrigger>
+          <Select items={Object.fromEntries(snapshot.staff.map((staff) => [staff.id, staff.displayName]))} disabled={busy || !draft.hydrated || !scope?.canAssign} value={values.mentorId || null} onValueChange={(value) => { draft.update({ ...values, mentorId: value ?? "" }); setFieldError(null); }}>
+            <SelectTrigger id="assignment-mentor" className="w-full" aria-invalid={fieldError?.field === "mentorId" || undefined} aria-describedby={fieldError?.field === "mentorId" ? "assignment-mentor-error" : undefined}><SelectValue placeholder="בחירת חונך/ת מהצוות" /></SelectTrigger>
             <SelectContent><SelectGroup>{scope?.mentors.map((staff) => <SelectItem key={staff.id} value={staff.id}>{staff.displayName}</SelectItem>)}</SelectGroup></SelectContent>
           </Select>
           {scope?.mentors.length === 0 && <FieldDescription>אין כרגע חונכים או חונכות עם גישה פעילה הזמינים לשיוך.</FieldDescription>}
           {values.mentorId && !validSelection && <FieldDescription>יש לבחור חונך/ת ורכז/ת עם גישה פעילה שאפשר לשייך לפי המידע העדכני.</FieldDescription>}
+        {fieldError?.field === "mentorId" && <p id="assignment-mentor-error" role="alert" className="text-sm text-destructive">{fieldError.message}</p>}
         </Field>
         <Field data-disabled={snapshot.actor.role === "coordinator" || busy || !draft.hydrated || !scope?.canAssign}>
           <FieldLabel htmlFor="assignment-coordinator">רכז/ת אחראי/ת</FieldLabel>
-          <Select items={{ none: "ללא שיוך לרכז/ת", ...Object.fromEntries(snapshot.staff.map((staff) => [staff.id, staff.displayName])) }} disabled={snapshot.actor.role === "coordinator" || busy || !draft.hydrated || !scope?.canAssign} value={coordinatorId} onValueChange={(value) => draft.update({ ...values, coordinatorId: value ?? "none" })}>
-            <SelectTrigger id="assignment-coordinator" className="w-full"><SelectValue /></SelectTrigger>
+          <Select items={{ none: "ללא שיוך לרכז/ת", ...Object.fromEntries(snapshot.staff.map((staff) => [staff.id, staff.displayName])) }} disabled={snapshot.actor.role === "coordinator" || busy || !draft.hydrated || !scope?.canAssign} value={coordinatorId} onValueChange={(value) => { draft.update({ ...values, coordinatorId: value ?? "none" }); setFieldError(null); }}>
+            <SelectTrigger id="assignment-coordinator" className="w-full" aria-invalid={fieldError?.field === "coordinatorId" || undefined} aria-describedby={fieldError?.field === "coordinatorId" ? "assignment-coordinator-error" : undefined}><SelectValue /></SelectTrigger>
             <SelectContent><SelectGroup><SelectItem value="none">ללא שיוך לרכז/ת</SelectItem>{scope?.coordinators.map((staff) => <SelectItem key={staff.id} value={staff.id}>{staff.displayName}</SelectItem>)}</SelectGroup></SelectContent>
           </Select>
           {snapshot.actor.role === "coordinator" && <FieldDescription>החניכה תישאר באחריות הצוות שלך.</FieldDescription>}
+        {fieldError?.field === "coordinatorId" && <p id="assignment-coordinator-error" role="alert" className="text-sm text-destructive">{fieldError.message}</p>}
         </Field>
       </FieldGroup>
       {!isOnline && <Alert><AlertTitle>הבקשה תישמר במכשיר</AlertTitle><AlertDescription>עם חזרת החיבור המערכת תבדוק את ההרשאות ואת השיוך העדכני. הרשאות הצפייה ישתנו רק אחרי קבלת הבקשה.</AlertDescription></Alert>}
       <DraftStatus status={draft.status} onRetry={draft.retry} />
       <DialogFooter>
         <Button type="button" variant="outline" disabled={busy} onClick={onClose}>סגירה</Button>
-        <Button type="submit" disabled={busy || !draft.hydrated || Boolean(stale) || !scope?.canAssign || !validSelection}>
+        <Button type="submit" disabled={busy || !draft.hydrated || Boolean(stale) || !scope?.canAssign}>
           {busy && <LoaderCircleIcon data-icon="inline-start" className="animate-spin" />}
           אישור השיוך
         </Button>

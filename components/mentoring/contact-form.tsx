@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -71,6 +71,7 @@ import { RecoveredDraft } from "./recovered-draft";
 import { AssignmentEditor } from "./participant-forms";
 import { AppointmentReviewWarning } from "./contact-corrections";
 import { canScheduleContact, contactEditAccess, contactResourceLocked } from "./contact-correction-state";
+import { contactInputIssues, focusFormIssue, operationalCommandIssue, operationalFieldName } from "./operational-form-state";
 
 export function ContactFormView({
   initialParticipantId,
@@ -213,6 +214,7 @@ function ContactFields({ view }: { view: ParticipantView }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [issues, setIssues] = useState<Record<string, string>>({});
+  const submitting = useRef(false);
   const draft = useFormDraft<ContactDraft>(`contact:${view.participant.id}`, {
     method: "phone",
     outcome: "completed",
@@ -252,9 +254,9 @@ function ContactFields({ view }: { view: ParticipantView }) {
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (busy || !draft.hydrated || stale || blocked) return;
+    if (submitting.current || busy || !draft.hydrated || stale || blocked) return;
     const submittedAt = new Date();
-    const foundIssues: Record<string, string> = {};
+    const foundIssues = contactInputIssues(values);
     if (values.outcome === "no_answer" && values.method !== "phone")
       foundIssues.method =
         "ניסיון ללא מענה מתועד כשיחה טלפונית. יש לבחור שיחה טלפונית.";
@@ -280,11 +282,7 @@ function ContactFields({ view }: { view: ParticipantView }) {
     setIssues(foundIssues);
     setError(null);
     if (Object.keys(foundIssues).length) {
-      requestAnimationFrame(() =>
-        document
-          .getElementById(`contact-${Object.keys(foundIssues)[0]}`)
-          ?.focus(),
-      );
+      focusFormIssue(event.currentTarget, foundIssues);
       return;
     }
     const payload = {
@@ -303,15 +301,25 @@ function ContactFields({ view }: { view: ParticipantView }) {
         ? { nextAppointmentAt }
         : {}),
     };
+    const invalidCommand = operationalCommandIssue(payload);
+    if (invalidCommand) {
+      const commandIssues = { [invalidCommand.field]: invalidCommand.message };
+      setIssues(commandIssues);
+      setError(invalidCommand.message);
+      focusFormIssue(event.currentTarget, commandIssues);
+      return;
+    }
+    submitting.current = true;
     setBusy(true);
     let completed = false;
+    let prepared = false;
     try {
-      const result = await submit({
-        ...payload,
-        operationId: await draft.prepare(payload),
-      });
+      const operationId = await draft.prepare(payload);
+      prepared = true;
+      const result = await submit({ ...payload, operationId });
       if (!result.ok) {
         setError(result.error.message);
+        if (result.error.field) setIssues({ [operationalFieldName(result.error.field)]: result.error.message });
         draft.recheck();
         return;
       }
@@ -335,11 +343,12 @@ function ContactFields({ view }: { view: ParticipantView }) {
         window.location.assign(href);
       } else router.push(href);
     } catch {
-      setError(
-        "לא ניתן להשלים את התיעוד כרגע. הטופס נשאר פתוח ואפשר לנסות שוב.",
-      );
-      draft.recheck();
+      setError(prepared
+        ? "לא התקבל אישור לתיעוד. זהות הבקשה נשמרה ותיבדק לניסיון נוסף."
+        : "לא ניתן להכין את הבקשה לשמירה. הפרטים נשארו בטופס; יש להשאיר אותו פתוח, לבדוק את מצב הטיוטה ולנסות שוב.");
+      if (prepared) draft.recheck();
     } finally {
+      submitting.current = false;
       if (!completed) setBusy(false);
     }
   }
@@ -482,6 +491,7 @@ function ContactFields({ view }: { view: ParticipantView }) {
                       >
                         <SelectTrigger
                           id="contact-method"
+                          data-validation-field="method"
                           className="w-full"
                           aria-invalid={Boolean(issues.method)}
                           aria-describedby={
@@ -508,7 +518,7 @@ function ContactFields({ view }: { view: ParticipantView }) {
                         </FieldError>
                       )}
                     </Field>
-                    <Field>
+                    <Field data-invalid={Boolean(issues.outcome)}>
                       <FieldLabel htmlFor="contact-outcome">
                         תוצאת הקשר
                       </FieldLabel>
@@ -532,7 +542,7 @@ function ContactFields({ view }: { view: ParticipantView }) {
                           }
                         }}
                       >
-                        <SelectTrigger id="contact-outcome" className="w-full">
+                        <SelectTrigger id="contact-outcome" data-validation-field="outcome" className="w-full" aria-invalid={Boolean(issues.outcome)} aria-describedby={issues.outcome ? "contact-outcome-error" : undefined}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -546,6 +556,7 @@ function ContactFields({ view }: { view: ParticipantView }) {
                           </SelectGroup>
                         </SelectContent>
                       </Select>
+                      {issues.outcome && <FieldError id="contact-outcome-error">{issues.outcome}</FieldError>}
                     </Field>
                   </FieldGroup>
                 </FieldSet>
@@ -555,6 +566,7 @@ function ContactFields({ view }: { view: ParticipantView }) {
                   </FieldLabel>
                   <Input
                     id="contact-occurredAt"
+                    data-validation-field="occurredAt"
                     type="datetime-local"
                     dir="ltr"
                     value={values.occurredAt}
@@ -576,7 +588,7 @@ function ContactFields({ view }: { view: ParticipantView }) {
                     </FieldError>
                   )}
                 </Field>
-                <Field>
+                <Field data-invalid={Boolean(issues.notes)}>
                   <FieldLabel htmlFor="contact-notes">
                     סיכום והערות לצוות
                   </FieldLabel>
@@ -584,15 +596,19 @@ function ContactFields({ view }: { view: ParticipantView }) {
                     id="contact-notes"
                     value={values.notes}
                     onChange={(event) => update("notes", event.target.value)}
-                    maxLength={8000}
+                    maxLength={20000}
+                    data-validation-field="notes"
+                    aria-invalid={Boolean(issues.notes)}
+                    aria-describedby={issues.notes ? "contact-notes-error" : undefined}
                     rows={6}
                     placeholder="מה עלה בשיחה, איך החניכה מרגישה ומה חשוב להמשך הליווי?"
                   />
+                  {issues.notes && <FieldError id="contact-notes-error">{issues.notes}</FieldError>}
                   <FieldDescription>
                     הסיכום מיועד לצוות המורשה ואינו נשלח לחניכה.
                   </FieldDescription>
                 </Field>
-                <Field>
+                <Field data-invalid={Boolean(issues.manualColor)}>
                   <FieldLabel htmlFor="contact-color">
                     דיווח החונך/ת על מצב הליווי
                   </FieldLabel>
@@ -615,7 +631,7 @@ function ContactFields({ view }: { view: ParticipantView }) {
                         update("manualColor", value);
                     }}
                   >
-                    <SelectTrigger id="contact-color" className="w-full">
+                    <SelectTrigger id="contact-color" data-validation-field="manualColor" className="w-full" aria-invalid={Boolean(issues.manualColor)} aria-describedby={issues.manualColor ? "contact-color-error" : undefined}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -631,6 +647,7 @@ function ContactFields({ view }: { view: ParticipantView }) {
                       </SelectGroup>
                     </SelectContent>
                   </Select>
+                  {issues.manualColor && <FieldError id="contact-color-error">{issues.manualColor}</FieldError>}
                   <FieldDescription>
                     הצבע נבחר ידנית. הוא אינו מבטל חריגה מהמעקב השבועי.
                   </FieldDescription>
@@ -663,6 +680,7 @@ function ContactFields({ view }: { view: ParticipantView }) {
                 </FieldLabel>
                 <Input
                   id="contact-nextAppointmentAt"
+                  data-validation-field="nextAppointmentAt"
                   type="datetime-local"
                   dir="ltr"
                   value={values.nextAppointmentAt}
