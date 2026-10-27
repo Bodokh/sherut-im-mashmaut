@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
-import { useAuth, useSignUp } from "@clerk/nextjs";
+import { SignUp, useAuth, useSignUp } from "@clerk/nextjs";
 import { Info } from "lucide-react";
 import { AuthFrame } from "./auth-frame";
 import { AuthError, CodeField, SignedInActions, SubmitButton, authErrorMessage, useResendCooldown } from "./auth-controls";
@@ -60,6 +60,16 @@ export function SignUpForm() {
       });
       if (result.error) setMessage(authErrorMessage(result.error));
     });
+  }
+
+  // Resume the provider-verified signup with Clerk's supported requirements UI;
+  // starting a password signup here would discard the pending Google identity.
+  if (!isSignedIn && signUp.verifications.externalAccount.strategy === "oauth_google") {
+    return (
+      <AuthFrame title="השלמת ההרשמה עם Google" description="נשלים את פרטי החשבון. הגישה למרחב הליווי מחייבת אישור הצטרפות לצוות.">
+        <SignUp routing="hash" signInUrl="/staff/login" forceRedirectUrl="/staff" signInForceRedirectUrl="/staff" />
+      </AuthFrame>
+    );
   }
 
   return (

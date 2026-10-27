@@ -21,7 +21,7 @@ export function SignInForm({ googleResult }: { googleResult?: string } = {}) {
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(googleResult === "unavailable" ? "לא ניתן להיכנס עם חשבון Google הזה. הכניסה זמינה רק עם כתובת דוא״ל של חשבון צוות קיים." : googleResult === "verify-account" ? "כדי לחבר את Google לחשבון הקיים, נדרש אימות עם כתובת הדוא״ל והסיסמה של חשבון הצוות." : null);
+  const [message, setMessage] = useState<string | null>(googleResult === "unavailable" ? "לא ניתן להשלים את הכניסה עם Google. יש לנסות שוב עם כתובת הדוא״ל שאושרה לצוות או לפנות להנהלה." : googleResult === "verify-account" ? "כדי לחבר את Google לחשבון הקיים, נדרש אימות עם כתובת הדוא״ל והסיסמה של חשבון הצוות." : null);
   const cooldown = useResendCooldown();
   const pending = busy || fetchStatus === "fetching" || !isLoaded;
 

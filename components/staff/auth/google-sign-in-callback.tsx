@@ -16,18 +16,19 @@ export function GoogleSignInCallback() {
   useEffect(() => {
     if (!clerk.loaded || started.current) return;
     started.current = true;
-    // HandleSSOCallback automatically transfers unknown OAuth users to signup.
-    // The supported callback API lets this login-only flow explicitly forbid it.
+    // A preapproved staff email may not have a Clerk identity yet. Clerk handles
+    // identity signup; server-side membership checks still decide staff access.
     void clerk.handleRedirectCallback({
-      transferable: false,
+      transferable: true,
       reloadResource: "signIn",
       signInUrl: "/staff/login?google=unavailable",
-      signUpUrl: "/staff/login?google=unavailable",
-      continueSignUpUrl: "/staff/login?google=unavailable",
+      signUpUrl: "/staff/signup",
+      continueSignUpUrl: "/staff/signup#/continue",
       firstFactorUrl: "/staff/login?google=verify-account",
       secondFactorUrl: "/staff/login?google=continue",
       resetPasswordUrl: "/staff/login?google=continue",
       signInForceRedirectUrl: "/staff",
+      signUpForceRedirectUrl: "/staff",
     }).catch((error: unknown) => setMessage(authErrorMessage(error)));
   }, [clerk, clerk.loaded]);
 

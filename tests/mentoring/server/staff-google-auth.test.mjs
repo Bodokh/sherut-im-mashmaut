@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
+import { identityInTransaction, requireIdentity } from "../../../lib/mentoring/server/repository.ts";
+import { serverFailure } from "../../../lib/mentoring/server/db.ts";
+import { privateFailure } from "../../../lib/mentoring/server/http.ts";
 
 // Exercise the real components' handlers with isolated hook state, without
 // calling Google, creating Clerk accounts, or changing staff records.
@@ -37,6 +40,7 @@ function componentHarness(file, clerkHooks) {
       useResendCooldown: () => ({ seconds: 0, restart() {} }),
     };
     if (id === "next/link") return { default: "Link" };
+    if (id === "lucide-react") return { Info: "Info" };
     if (id === "./auth-frame") return { AuthFrame: "AuthFrame" };
     if (id.startsWith("@/components/staff/ui/")) return new Proxy({}, { get: (_target, key) => key });
     throw new Error(`Unexpected dependency: ${id}`);
@@ -101,7 +105,7 @@ test("Google provider failures leave a recoverable login error", async () => {
   }
 });
 
-test("callback forbids signup transfer and retains verification routes", async () => {
+test("callback permits a first Google identity to complete signup at /staff and retains verification routes", async () => {
   const calls = [];
   const clerk = { loaded: false, async handleRedirectCallback(params) { calls.push(params); } };
   const harness = componentHarness("google-sign-in-callback", { useClerk: () => clerk });
@@ -114,14 +118,15 @@ test("callback forbids signup transfer and retains verification routes", async (
   harness.render("GoogleSignInCallback");
   await harness.flushEffects();
   assert.equal(calls.length, 1, "Repeated effects must not reprocess the OAuth callback.");
-  assert.equal(calls[0].transferable, false, "An unknown Google email must never transfer into account creation.");
+  assert.equal(calls[0].transferable, true, "A preapproved staff member may not have a Clerk account yet.");
   assert.equal(calls[0].reloadResource, "signIn");
   assert.equal(calls[0].signInUrl, "/staff/login?google=unavailable");
-  assert.equal(calls[0].signUpUrl, calls[0].signInUrl);
-  assert.equal(calls[0].continueSignUpUrl, calls[0].signInUrl);
+  assert.equal(calls[0].signUpUrl, "/staff/signup");
+  assert.equal(calls[0].continueSignUpUrl, "/staff/signup#/continue", "Missing provider fields must open Clerk's continuation card, not restart signup.");
   assert.equal(calls[0].firstFactorUrl, "/staff/login?google=verify-account");
   for (const key of ["secondFactorUrl", "resetPasswordUrl"]) assert.equal(calls[0][key], "/staff/login?google=continue");
   assert.equal(calls[0].signInForceRedirectUrl, "/staff");
+  assert.equal(calls[0].signUpForceRedirectUrl, "/staff", "New Google identities must reach the same server-authorized staff workspace.");
 });
 
 test("callback failures stop loading and offer a return to login", async () => {
@@ -136,9 +141,111 @@ test("callback failures stop loading and offer a return to login", async () => {
   assert.equal(nodes.find((item) => item.type === "Button").props.render.props.href, "/staff/login");
 });
 
-test("unknown Google emails explain the existing-account requirement", () => {
+test("Google fallback explains staff approval rather than requiring an existing Clerk account", () => {
   const tree = signInHarness().render("SignInForm", { googleResult: "unavailable" });
-  assert.match(elements(tree).find((item) => item.type === "AuthError").props.message, /חשבון צוות קיים/);
+  const message = elements(tree).find((item) => item.type === "AuthError").props.message;
+  assert.match(message, /אושרה/);
+  assert.doesNotMatch(message, /חשבון צוות קיים/);
+});
+
+test("pending Google signup delegates required fields to Clerk without restarting password signup", () => {
+  for (const missingFields of [["first_name"], ["phone_number"], ["legal_accepted"], ["password"]]) {
+    const signUp = {
+      status: "missing_requirements", missingFields,
+      verifications: { externalAccount: { strategy: "oauth_google", status: "verified" } },
+      password() { assert.fail("A verified Google signup must not restart the password signup flow."); },
+    };
+    const harness = componentHarness("sign-up-form", {
+      SignUp: "ClerkSignUp",
+      useAuth: () => ({ isLoaded: true, isSignedIn: false }),
+      useSignUp: () => ({ signUp, errors: { fields: {} }, fetchStatus: "idle" }),
+    });
+    const tree = harness.render("SignUpForm");
+    const signup = elements(tree).find((item) => item.type === "ClerkSignUp");
+    assert.ok(signup, `${missingFields[0]} must be handled by Clerk's supported continuation UI.`);
+    assert.equal(signup.props.routing, "hash");
+    assert.equal(signup.props.forceRedirectUrl, "/staff");
+    assert.equal(signup.props.signInForceRedirectUrl, "/staff");
+    assert.equal(signup.props.signInUrl, "/staff/login");
+    assert.equal(elements(tree).some((item) => item.type === "form"), false);
+  }
+});
+
+test("password signup continues to use the existing form", () => {
+  const harness = componentHarness("sign-up-form", {
+    SignUp: "ClerkSignUp",
+    useAuth: () => ({ isLoaded: true, isSignedIn: false }),
+    useSignUp: () => ({ signUp: { status: null, verifications: { externalAccount: {} } }, errors: { fields: {} }, fetchStatus: "idle" }),
+  });
+  const nodes = elements(harness.render("SignUpForm"));
+  assert.equal(nodes.some((item) => item.type === "ClerkSignUp"), false);
+  assert.equal(nodes.some((item) => item.type === "form"), true);
+});
+
+test("Clerk keeps ownership of completed Google signup until session activation", () => {
+  const auth = { isLoaded: true, isSignedIn: false };
+  const signUp = { status: "missing_requirements", verifications: { externalAccount: { strategy: "oauth_google", status: "verified" } } };
+  const harness = componentHarness("sign-up-form", {
+    SignUp: "ClerkSignUp",
+    useAuth: () => auth,
+    useSignUp: () => ({ signUp, errors: { fields: {} }, fetchStatus: "idle" }),
+  });
+  harness.render("SignUpForm");
+  signUp.status = "complete";
+  assert.equal(elements(harness.render("SignUpForm")).some((item) => item.type === "ClerkSignUp"), true);
+  auth.isSignedIn = true;
+  const signedIn = elements(harness.render("SignUpForm"));
+  assert.equal(signedIn.some((item) => item.type === "ClerkSignUp"), false);
+  assert.equal(signedIn.some((item) => item.type === "SignedInActions"), true);
+});
+
+test("a first verified Google identity binds only an active preapproved email and preserves its role", async () => {
+  const approved = {
+    id: "approved-staff", organization_id: "11111111-1111-4111-8111-111111111111",
+    auth_user_id: null, display_name: "Approved owner", email: "approved@example.org", phone: null,
+    coordinator_id: null, sms_muted: false, role: "ceo", active: true, version: 1,
+  };
+  const calls = [];
+  const client = { async query(sql, params) {
+    calls.push({ sql, params });
+    if (sql.startsWith("SELECT") && sql.includes("auth_user_id = $2")) return { rows: [] };
+    if (sql.startsWith("SELECT") && sql.includes("lower(email) = $2")) {
+      assert.match(sql, /auth_user_id IS NULL AND active = true/);
+      assert.equal(params[1], approved.email);
+      return { rows: [approved] };
+    }
+    if (sql.startsWith("UPDATE mentoring.memberships")) {
+      assert.deepEqual(params.slice(1), [approved.id, "new_google_identity"]);
+      assert.match(sql, /auth_user_id IS NULL AND active = true/);
+      return { rows: [{ ...approved, auth_user_id: params[2], version: 2 }] };
+    }
+    assert.fail(`Unexpected SQL: ${sql}`);
+  } };
+  const actor = await identityInTransaction(client, "new_google_identity", " APPROVED@EXAMPLE.ORG ");
+  assert.equal(actor.id, approved.id);
+  assert.equal(actor.authUserId, "new_google_identity");
+  assert.equal(actor.role, "ceo");
+  assert.equal(calls.filter(({ sql }) => sql.startsWith("UPDATE")).length, 1);
+  assert.equal(calls.some(({ sql }) => sql.startsWith("INSERT")), false);
+});
+
+test("a new Google identity without staff preapproval receives 403 and cannot create membership", async () => {
+  const calls = [];
+  const client = { async query(sql, params) {
+    assert.ok(sql.startsWith("SELECT"), "An unapproved identity must never insert, update or reactivate staff membership.");
+    calls.push({ sql, params });
+    return { rows: [] };
+  } };
+  await assert.rejects(requireIdentity(client, "unknown_google_identity", "unknown@example.org"), (error) => {
+    const response = privateFailure(serverFailure(error));
+    assert.equal(error.code, "not_staff");
+    assert.equal(response.status, 403);
+    return true;
+  });
+  assert.equal(calls.length, 2);
+  calls.length = 0;
+  assert.equal(await identityInTransaction(client, "unverified_google_identity", null), null);
+  assert.equal(calls.length, 1, "An unverified primary email cannot query or bind the approved-email membership.");
 });
 
 test("Google continuation keeps email verification and password-reset requirements", async () => {
