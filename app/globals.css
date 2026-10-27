@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
 /* =========================================================================
    שירות עם משמעות — design tokens
@@ -358,3 +360,143 @@
     color: inherit;
   }
 }
+
+/* Staff component utilities; theme values are scoped to .staff-app. */
+@theme inline {
+  --color-sidebar-ring:  var(--sidebar-ring);
+  --color-sidebar-border:  var(--sidebar-border);
+  --color-sidebar-accent-foreground:  var(--sidebar-accent-foreground);
+  --color-sidebar-accent:  var(--sidebar-accent);
+  --color-sidebar-primary-foreground:  var(--sidebar-primary-foreground);
+  --color-sidebar-primary:  var(--sidebar-primary);
+  --color-sidebar-foreground:  var(--sidebar-foreground);
+  --color-sidebar:  var(--sidebar);
+  --color-chart-5:  var(--chart-5);
+  --color-chart-4:  var(--chart-4);
+  --color-chart-3:  var(--chart-3);
+  --color-chart-2:  var(--chart-2);
+  --color-chart-1:  var(--chart-1);
+  --color-ring:  var(--ring);
+  --color-input:  var(--input);
+  --color-border:  var(--border);
+  --color-destructive:  var(--destructive);
+  --color-accent-foreground:  var(--accent-foreground);
+  --color-accent:  var(--accent);
+  --color-muted-foreground:  var(--muted-foreground);
+  --color-muted:  var(--muted);
+  --color-secondary-foreground:  var(--secondary-foreground);
+  --color-secondary:  var(--secondary);
+  --color-primary-foreground:  var(--primary-foreground);
+  --color-primary:  var(--primary);
+  --color-popover-foreground:  var(--popover-foreground);
+  --color-popover:  var(--popover);
+  --color-card-foreground:  var(--card-foreground);
+  --color-card:  var(--card);
+  --color-foreground:  var(--foreground);
+  --color-background:  var(--background);
+  --radius-sm:  var(--staff-radius-sm, 0.25rem);
+  --radius-md:  var(--staff-radius-md, 0.375rem);
+  --radius-lg:  var(--staff-radius-lg, 0.5rem);
+  --radius-xl:  var(--staff-radius-xl, 0.75rem);
+  --radius-2xl:  var(--staff-radius-2xl, 1rem);
+  --radius-3xl:  var(--staff-radius-3xl, 1.5rem);
+  --radius-4xl:  var(--staff-radius-4xl, 2rem);
+}
+
+/* Staff workspace: a self-contained blue system, including portalled controls. */
+.staff-app {
+  --font-sans: var(--font-staff), Arial, sans-serif;
+  --font-display: var(--font-staff), Arial, sans-serif;
+  --background: oklch(0.977 0.008 255);
+  --foreground: oklch(0.275 0.047 257);
+  --card: oklch(1 0 0);
+  --card-foreground: var(--foreground);
+  --popover: oklch(1 0 0);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.49 0.195 260);
+  --primary-foreground: oklch(0.99 0.004 255);
+  --secondary: oklch(0.94 0.025 255);
+  --secondary-foreground: oklch(0.385 0.11 259);
+  --muted: oklch(0.952 0.014 255);
+  --muted-foreground: oklch(0.49 0.037 257);
+  --accent: oklch(0.937 0.032 255);
+  --accent-foreground: oklch(0.38 0.14 260);
+  --destructive: oklch(0.49 0.19 25);
+  --border: oklch(0.908 0.017 255);
+  --input: oklch(0.64 0.025 255);
+  --ring: oklch(0.535 0.19 258);
+  --radius: 0.75rem;
+  --staff-radius-sm: calc(var(--radius) * 0.6);
+  --staff-radius-md: calc(var(--radius) * 0.8);
+  --staff-radius-lg: var(--radius);
+  --staff-radius-xl: calc(var(--radius) * 1.4);
+  --staff-radius-2xl: calc(var(--radius) * 1.8);
+  --staff-radius-3xl: calc(var(--radius) * 2.2);
+  --staff-radius-4xl: calc(var(--radius) * 2.6);
+  --sidebar: oklch(0.253 0.065 261);
+  --sidebar-foreground: oklch(0.962 0.012 255);
+  --sidebar-primary: oklch(0.80 0.105 248);
+  --sidebar-primary-foreground: oklch(0.22 0.065 261);
+  --sidebar-accent: oklch(0.355 0.097 260);
+  --sidebar-accent-foreground: oklch(0.99 0.005 250);
+  --sidebar-border: oklch(0.38 0.065 260);
+  --sidebar-ring: oklch(0.80 0.105 248);
+  --chart-1: var(--primary);
+  --chart-2: oklch(0.65 0.14 235);
+  --chart-3: oklch(0.77 0.10 245);
+  --chart-4: oklch(0.45 0.11 265);
+  --chart-5: oklch(0.86 0.05 250);
+  --status-success-bg: oklch(0.963 0.037 155);
+  --status-success-ink: oklch(0.36 0.095 153);
+  --status-success-line: oklch(0.835 0.075 153);
+  --status-warning-bg: oklch(0.968 0.040 75);
+  --status-warning-ink: oklch(0.41 0.11 50);
+  --status-warning-line: oklch(0.83 0.09 70);
+  --status-danger-bg: oklch(0.965 0.027 25);
+  --status-danger-ink: oklch(0.45 0.17 25);
+  --status-danger-line: oklch(0.85 0.07 25);
+  min-height: 100dvh;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  line-height: 1.65;
+  color-scheme: light;
+}
+
+@layer base {
+  .staff-app *, .staff-app *::before, .staff-app *::after { border-color: var(--border); }
+}
+.staff-app :is(h1, h2, h3, h4) { color: inherit; line-height: 1.35; }
+.staff-app :focus-visible { outline-color: var(--ring); }
+.staff-app [data-slot="card"] {
+  box-shadow: 0 1px 3px oklch(0.26 0.065 261 / 0.025), 0 8px 26px oklch(0.26 0.065 261 / 0.025);
+}
+.staff-app [data-slot="sidebar-inner"], .staff-app [data-mobile="true"] {
+  --muted-foreground: oklch(0.785 0.035 252);
+  --muted: oklch(0.34 0.075 260);
+  --border: var(--sidebar-border);
+  --ring: var(--sidebar-ring);
+  --foreground: var(--sidebar-foreground);
+  --primary: var(--sidebar-primary);
+  --primary-foreground: var(--sidebar-primary-foreground);
+}
+.staff-app [data-slot="sidebar-menu"] { gap: 0.375rem; }
+.staff-app [data-slot="sidebar-group"] { padding-inline: 1rem; }
+.staff-app [data-slot="sidebar-group-label"] { margin-block-end: 0.5rem; }
+.staff-app [data-slot="sidebar-menu-button"] { border-radius: 0.75rem; }
+.staff-app [data-slot="sidebar-menu-button"][data-active] {
+  box-shadow: inset -3px 0 var(--sidebar-primary);
+}
+@layer components {
+  .staff-app :is([data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"]) { background-color: var(--card); }
+}
+.staff-app :is([data-manual-color="green"], [data-followup-status="within_interval"]) {
+  background: var(--status-success-bg); color: var(--status-success-ink); border-color: var(--status-success-line);
+}
+.staff-app :is([data-manual-color="orange"], [data-followup-status="appointment_missed"]) {
+  background: var(--status-warning-bg); color: var(--status-warning-ink); border-color: var(--status-warning-line);
+}
+.staff-app :is([data-manual-color="red"], [data-followup-status="seven_day_overdue"]) {
+  background: var(--status-danger-bg); color: var(--status-danger-ink); border-color: var(--status-danger-line);
+}
+.staff-app [data-followup-status="unassigned"] { background: var(--muted); color: var(--muted-foreground); }

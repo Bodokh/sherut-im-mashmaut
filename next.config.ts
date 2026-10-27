@@ -21,6 +21,24 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        source: "/staff/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
+      {
+        source: "/staff/offline",
+        headers: [
+          { key: "X-Mentoring-Shell", value: "anonymous-v1" },
+          { key: "Cache-Control", value: "private, no-store" },
+        ],
+      },
+      {
+        source: "/staff-sw.js",
+        headers: [
+          { key: "Service-Worker-Allowed", value: "/staff" },
+          { key: "Cache-Control", value: "no-cache" },
+        ],
+      },
+      {
         source: "/media/home-film/:path*",
         headers: [
           {
