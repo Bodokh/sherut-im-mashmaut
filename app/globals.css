@@ -520,3 +520,32 @@
   background: var(--status-danger-bg); color: var(--status-danger-ink); border-color: var(--status-danger-line);
 }
 .staff-app [data-followup-status="unassigned"] { background: var(--muted); color: var(--muted-foreground); }
+
+/* Centre overlays without Tailwind v4 `translate` (CSS `translate:`), which
+   older Chromium / Samsung Internet ignore, and cap height without `dvh`.
+   Unlayered so a later `max-h-[…dvh]` utility cannot drop the vh fallback. */
+.modal-viewport {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: 100%;
+  height: fit-content;
+  max-height: calc(100vh - 2rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+.sheet-viewport[data-side="top"],
+.sheet-viewport[data-side="bottom"] {
+  max-height: 100vh;
+}
+@supports (height: 1dvh) {
+  .modal-viewport {
+    max-height: calc(100dvh - 2rem);
+  }
+  .sheet-viewport[data-side="top"],
+  .sheet-viewport[data-side="bottom"] {
+    max-height: 100dvh;
+  }
+}
