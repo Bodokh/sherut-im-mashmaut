@@ -10,18 +10,26 @@ const PLACEHOLDER_SLOTS = 6;
 const placeholderItemClass = "w-[calc(50%-0.375rem)] sm:w-[calc(33.333%-0.5rem)] lg:w-[calc(16.666%-0.625rem)]";
 const partnerItemClass = "w-full sm:w-[calc(50%-0.375rem)] lg:w-[calc(33.333%-0.5rem)]";
 
+// Always light, whatever the surrounding theme: the logos' purple and navy text need a light backdrop.
 const chipClass =
-  "flex min-h-24 w-full flex-col items-center justify-center gap-3 rounded-2xl border border-line bg-paper px-5 py-5 text-center";
+  "flex h-full min-h-24 w-full flex-col items-center justify-center gap-4 rounded-2xl border border-line bg-white px-5 py-6 text-center text-ink-800";
 
 function PartnerCard({ partner, linkSuffix }: { partner: Partner; linkSuffix: string }) {
   const content = (
     <>
       {partner.logo ? (
-        <span className="relative block h-10 w-full">
-          <Image src={partner.logo} alt="" fill sizes="160px" className="object-contain" />
+        <span className="flex h-28 w-full items-center justify-center">
+          <Image
+            src={partner.logo}
+            alt=""
+            width={partner.logoWidth ?? 160}
+            height={partner.logoHeight ?? 160}
+            sizes="(min-width: 1024px) 160px, 40vw"
+            className="h-28 w-auto max-w-full object-contain"
+          />
         </span>
       ) : null}
-      <span className="text-base font-semibold leading-snug text-ink-800 text-balance">{partner.name}</span>
+      <span className="text-base font-semibold leading-snug text-balance">{partner.name}</span>
     </>
   );
 

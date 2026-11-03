@@ -245,9 +245,9 @@ export const en: Dictionary = {
     slotLabel: "Partner name coming soon",
     linkSuffix: "(opens in a new tab)",
     items: [
-      { name: "Amana – Bnei Akiva Ulpana, Kfar Saba" },
-      { name: "Horev Jerusalem" },
-      { name: "Ulpanat Ofra" },
+      { name: "Amana – Bnei Akiva Ulpana, Kfar Saba", logo: "/partners/amana-kfar-saba.svg", logoWidth: 1532, logoHeight: 1669 },
+      { name: "Horev Jerusalem", logo: "/partners/horev-jerusalem.png", logoWidth: 635, logoHeight: 640 },
+      { name: "Ulpanat Ofra", logo: "/partners/ulpanat-ofra.png", logoWidth: 640, logoHeight: 583 },
     ] as Partner[],
   },
 

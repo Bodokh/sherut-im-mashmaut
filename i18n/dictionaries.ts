@@ -8,8 +8,18 @@ import { en } from "./dictionaries/en";
  */
 export type Testimonial = { quote: string; name?: string; location?: string; caption?: string };
 
-/** A collaborating institution or organisation. `logo` is a path under /public, `url` an external link. */
-export type Partner = { name: string; logo?: string; url?: string };
+/**
+ * A collaborating institution or organisation. `logo` is a path under /public;
+ * `logoWidth` / `logoHeight` are its intrinsic pixel size (used for the aspect ratio).
+ * `url` is an optional external link.
+ */
+export type Partner = {
+  name: string;
+  logo?: string;
+  logoWidth?: number;
+  logoHeight?: number;
+  url?: string;
+};
 
 const dictionaries: Record<Locale, Dictionary> = { he, en };
 

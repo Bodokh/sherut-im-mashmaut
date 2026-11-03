@@ -257,13 +257,14 @@ export const he = {
     slotLabel: "כאן יופיע שם השותף",
     linkSuffix: "(נפתח בלשונית חדשה)",
     /**
-     * Add partners here: { name: "שם המוסד", logo: "/partners/file.svg", url: "https://…" }.
-     * `logo` and `url` are optional. While the list is empty, placeholder slots are shown.
+     * Add partners here: { name: "שם המוסד", logo: "/partners/file.svg", logoWidth: 640, logoHeight: 580, url: "https://…" }.
+     * `logo` (a file in public/partners, with its pixel size) and `url` are optional.
+     * While the list is empty, placeholder slots are shown.
      */
     items: [
-      { name: "אמנה – אולפנת בני עקיבא כפר סבא" },
-      { name: "חורב ירושלים" },
-      { name: "אולפנת עפרה" },
+      { name: "אמנה – אולפנת בני עקיבא כפר סבא", logo: "/partners/amana-kfar-saba.svg", logoWidth: 1532, logoHeight: 1669 },
+      { name: "חורב ירושלים", logo: "/partners/horev-jerusalem.png", logoWidth: 635, logoHeight: 640 },
+      { name: "אולפנת עפרה", logo: "/partners/ulpanat-ofra.png", logoWidth: 640, logoHeight: 583 },
     ] as Partner[],
   },
 
