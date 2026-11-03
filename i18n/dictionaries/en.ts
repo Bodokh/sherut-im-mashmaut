@@ -244,29 +244,43 @@ export const en: Dictionary = {
     note: "The names of our partner institutions and organizations will be added here soon.",
     slotLabel: "Partner name coming soon",
     linkSuffix: "(opens in a new tab)",
-    items: [] as Partner[],
+    items: [
+      { name: "Amana – Bnei Akiva Ulpana, Kfar Saba" },
+      { name: "Horev Jerusalem" },
+      { name: "Ulpanat Ofra" },
+    ] as Partner[],
   },
 
   testimonials: {
     kicker: "From the field",
     title: "What people say about us",
-    lead: "Words from participants in a national service exposure morning, as they wrote them.",
+    lead: "Words from young women who took part in a national service exposure morning and in talks at ulpanot, as they wrote them.",
     fallbackCaption: "Participant in a national service exposure morning",
     prev: "Previous quote",
     next: "Next quote",
     items: [
-      { quote: "I understood that national service can be as meaningful as military service, and even more so." },
       {
         quote:
-          "The conversations emphasized to me how important national service is, and not less than the army, which strengthened my confidence in my decision.",
+          "Thank you for the talk. I understood there are so many different kinds of service where you can truly contribute. It's important to go to a midrasha before going into any service.",
+        caption: "Ulpana talk participant",
       },
       {
         quote:
-          "It made me think more deeply and look carefully at the options before I decide what I want to do.",
+          "I understood that national service can be as meaningful as military service, and even more so.",
+      },
+      {
+        quote:
+          "How much meaning service can have, and that you need to think about it carefully and how it will affect my future.",
+        caption: "Ulpana talk participant",
       },
       {
         quote:
           "I really appreciate all the investment you put into us, and I'm sure other girls feel the same, even if they don't always say so.",
+      },
+      {
+        quote:
+          "The conversations emphasized to me how important national service is, and not less than the army. It sharpened my confidence in my decision.",
+        caption: "Ulpana talk participant",
       },
       {
         quote:
@@ -278,11 +292,29 @@ export const en: Dictionary = {
       },
       {
         quote:
+          "I understood that national service can be as meaningful as military service, and even more so. It strengthened my sense of how important it is to go to a midrasha!",
+        caption: "Ulpana talk participant",
+      },
+      {
+        quote:
           "It was good to see the different options for national service and what the midrasha can offer.",
       },
       {
         quote:
+          "It made me think more deeply and look carefully at the options before I decide what I want to do.",
+        caption: "Ulpana talk participant",
+      },
+      {
+        quote:
           "I loved that there was variety in the conversations and that they showed how important it is to do a midrasha year.",
+      },
+      {
+        quote:
+          "The conversations emphasized to me how important national service is, and not less than the army, which strengthened my confidence in my decision.",
+      },
+      {
+        quote:
+          "It made me think more deeply and look carefully at the options before I decide what I want to do.",
       },
     ] as Testimonial[],
   },
@@ -697,6 +729,12 @@ export const en: Dictionary = {
         name: "Roi Kfir",
         role: "Content & Research Lead",
         bio: "26, from Ma'ale Efrayim. A student of philosophy, economics and political science. Activist.",
+        anonymousAvatar: true,
+      },
+      {
+        name: "Eshed Fenster",
+        role: "Advisor – IDF roles",
+        bio: "Expert in counselling, specializing in advising on IDF roles. Served several years in a classified role in the army.",
         anonymousAvatar: true,
       },
     ],

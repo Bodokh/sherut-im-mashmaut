@@ -2,16 +2,16 @@ import { Section, Eyebrow } from "@/components/ui/Section";
 import { TestimonialsCarousel } from "@/components/sections/TestimonialsCarousel";
 import type { Dictionary } from "@/i18n/dictionaries";
 
-type Caption = { name?: string; location?: string };
+type Caption = { name?: string; location?: string; caption?: string };
 
-function caption({ name, location }: Caption, fallback: string) {
-  return [name?.trim() || fallback, location?.trim()].filter(Boolean).join(", ");
+function caption({ name, location, caption: custom }: Caption, fallback: string) {
+  return [name?.trim() || custom?.trim() || fallback, location?.trim()].filter(Boolean).join(", ");
 }
 
 /**
  * "מה אומרים עלינו?" — a snap-scroll carousel of quotes from participants.
  * Quotes live in `dict.testimonials.items`; add `name` / `location` there to
- * replace the neutral caption.
+ * replace the neutral caption, or `caption` to override the default label.
  */
 export function Testimonials({ dict }: { dict: Dictionary }) {
   const t = dict.testimonials;

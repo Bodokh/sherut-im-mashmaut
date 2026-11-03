@@ -7,10 +7,11 @@ import type { Dictionary, Partner } from "@/i18n/dictionaries";
 
 const PLACEHOLDER_SLOTS = 6;
 
-const itemClass = "w-[calc(50%-0.375rem)] sm:w-[calc(33.333%-0.5rem)] lg:w-[calc(16.666%-0.625rem)]";
+const placeholderItemClass = "w-[calc(50%-0.375rem)] sm:w-[calc(33.333%-0.5rem)] lg:w-[calc(16.666%-0.625rem)]";
+const partnerItemClass = "w-full sm:w-[calc(50%-0.375rem)] lg:w-[calc(33.333%-0.5rem)]";
 
 const chipClass =
-  "flex h-24 w-full flex-col items-center justify-center gap-2 rounded-2xl border border-line bg-paper px-4 text-center";
+  "flex min-h-24 w-full flex-col items-center justify-center gap-3 rounded-2xl border border-line bg-paper px-5 py-5 text-center";
 
 function PartnerCard({ partner, linkSuffix }: { partner: Partner; linkSuffix: string }) {
   const content = (
@@ -20,7 +21,7 @@ function PartnerCard({ partner, linkSuffix }: { partner: Partner; linkSuffix: st
           <Image src={partner.logo} alt="" fill sizes="160px" className="object-contain" />
         </span>
       ) : null}
-      <span className="text-sm font-semibold text-ink-700 text-balance">{partner.name}</span>
+      <span className="text-base font-semibold leading-snug text-ink-800 text-balance">{partner.name}</span>
     </>
   );
 
@@ -57,14 +58,14 @@ export function Partners({ locale, dict }: { locale: Locale; dict: Dictionary })
       >
         {hasPartners
           ? t.items.map((partner) => (
-              <li key={partner.name} className={itemClass}>
+              <li key={partner.name} className={partnerItemClass}>
                 <PartnerCard partner={partner} linkSuffix={t.linkSuffix} />
               </li>
             ))
           : Array.from({ length: PLACEHOLDER_SLOTS }, (_, i) => (
               <li
                 key={i}
-                className={`${itemClass} flex h-24 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-line bg-paper px-4 text-center`}
+                className={`${placeholderItemClass} flex h-24 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-line bg-paper px-4 text-center`}
               >
                 <svg viewBox="0 0 24 24" className="h-6 w-6 text-ink-300" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
                   <circle cx="12" cy="12" r="8.5" />
