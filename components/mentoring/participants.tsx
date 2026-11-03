@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { staffPublicPath } from "@/lib/staff-host";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -179,7 +180,7 @@ export function ParticipantsView() {
                   <CardTitle>
                     <Link
                       className="rounded-md outline-offset-4 hover:underline"
-                      href={`/staff/participants/${encodeURIComponent(view.participant.id)}`}
+                      href={staffPublicPath(`/staff/participants/${encodeURIComponent(view.participant.id)}`)}
                     >
                       <ParticipantIdentity
                         name={view.participant.displayName}
@@ -233,7 +234,7 @@ export function ParticipantsView() {
                     nativeButton={false}
                     render={
                       <Link
-                        href={`/staff/participants/${encodeURIComponent(view.participant.id)}`}
+                        href={staffPublicPath(`/staff/participants/${encodeURIComponent(view.participant.id)}`)}
                       />
                     }
                   >
@@ -308,7 +309,7 @@ export function ParticipantDetailView({
           action={
             <Button
               nativeButton={false}
-              render={<Link href="/staff/participants" />}
+              render={<Link href={staffPublicPath("/staff/participants")} />}
             >
               <ArrowRightIcon data-icon="inline-start" />
               לרשימת החניכות
@@ -340,7 +341,7 @@ export function ParticipantDetailView({
         <Button
           variant="ghost"
           nativeButton={false}
-          render={<Link href="/staff/participants" />}
+          render={<Link href={staffPublicPath("/staff/participants")} />}
         >
           <ArrowRightIcon data-icon="inline-start" />
           לכל החניכות

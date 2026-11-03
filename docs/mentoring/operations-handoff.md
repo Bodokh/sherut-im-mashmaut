@@ -25,6 +25,7 @@ Store values privately; never in docs/screenshots/logs. Preserve unrelated publi
 | `CRON_SECRET` | Exact Bearer secret for internal reminder GET. |
 | `MENTORING_REMINDER_ACTOR_ID` | Existing real active CEO membership in the fixed organization. |
 | `NODE_ENV`, `VERCEL_ENV` | Environment guards; not independent database-target verification. |
+| `NEXT_PUBLIC_STAFF_HOST` | Production-only hostname `staff.imashmaut.co.il`. Unset in Preview and Development. Manual DNS, Vercel, Clerk, and Google steps are in [staff subdomain](staff-subdomain.md). |
 
 Production live-key DNS/development-key proxy and Google identity signup now work: first approved administrator reached CEO/Online, user confirmed. Reload confirmation and an unapproved-production-account test were not completed before user stop. Identity signup creates no staff authorization. Production SMS remains paused/brand-restricted/no automatic cron; see deployment/provider records without credentials.
 

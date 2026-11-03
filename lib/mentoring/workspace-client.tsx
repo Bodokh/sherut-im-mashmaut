@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useAuth } from "@clerk/nextjs";
+import { isConfiguredStaffHost, toStaffInternalPath } from "@/lib/staff-host";
 import type { ApiFailure, CommandResult, MentoringCommand, WorkspaceSnapshot } from "./contracts";
 import { isMentoringOfflineAccessPrepared, isOfflineDraftAccessCurrent, offlineDraftAccessKey, MENTORING_OFFLINE_CHANNEL, mentoringOfflineStore, OfflineStorageError, prepareMentoringOfflineAccess, projectWorkspace, quarantineMentoringOfflineData, type OfflineOperation, type OfflineScope, type OfflineSession, type OfflineRecoveryMetadata, type OfflineRecoveredDraft } from "./offline";
 
@@ -409,7 +410,8 @@ class WorkspaceController {
 
 function registerStaffWorker() {
   if (!("serviceWorker" in navigator)) return;
-  void navigator.serviceWorker.register("/staff-sw.js", { scope: "/staff", updateViaCache: "none" }).then(async (registration) => {
+  const scope = isConfiguredStaffHost(window.location.hostname) ? "/" : "/staff";
+  void navigator.serviceWorker.register("/staff-sw.js", { scope, updateViaCache: "none" }).then(async (registration) => {
     const worker = registration.active ?? registration.installing ?? registration.waiting;
     worker?.postMessage({ type: "PREPARE_STAFF_SHELL" });
     const ready = await navigator.serviceWorker.ready;
@@ -456,7 +458,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       const anchor = event.target instanceof Element ? event.target.closest("a[href]") : null;
       if (!(anchor instanceof HTMLAnchorElement) || anchor.target || anchor.hasAttribute("download")) return;
       const url = new URL(anchor.href, window.location.href);
-      if (url.origin !== window.location.origin || (url.pathname !== "/staff" && !url.pathname.startsWith("/staff/")) || url.pathname === "/staff/logout" || url.pathname === "/staff/login" || url.pathname === "/staff/signup") return;
+      const internal = toStaffInternalPath(url.pathname);
+      const authPath = ["/staff/logout", "/staff/login", "/staff/signup"].some((prefix) => internal === prefix || internal.startsWith(`${prefix}/`));
+      if (url.origin !== window.location.origin || (internal !== "/staff" && !internal.startsWith("/staff/")) || authPath) return;
       event.preventDefault(); event.stopImmediatePropagation();
       window.location.assign(url.href);
     };

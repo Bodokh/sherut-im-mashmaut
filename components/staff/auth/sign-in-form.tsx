@@ -7,6 +7,7 @@ import { AuthFrame } from "./auth-frame";
 import { AuthError, CodeField, SignedInActions, SubmitButton, authErrorMessage, useResendCooldown } from "./auth-controls";
 import { authErrorFields, validateAuthInput, type AuthField, type AuthFieldErrors, type AuthStage } from "./auth-validation";
 import { Button } from "@/components/staff/ui/button";
+import { staffPublicPath } from "@/lib/staff-host";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldSeparator } from "@/components/staff/ui/field";
 import { Input } from "@/components/staff/ui/input";
 
@@ -50,7 +51,7 @@ export function SignInForm({ googleResult }: { googleResult?: string } = {}) {
           return;
         }
         // Only the provider-generated decoration of our fixed internal destination is used.
-        window.location.assign(decorateUrl("/staff"));
+        window.location.assign(decorateUrl(staffPublicPath("/staff")));
       },
     });
     if (error) fail(error);
@@ -139,8 +140,8 @@ export function SignInForm({ googleResult }: { googleResult?: string } = {}) {
       setFieldErrors({});
       const { error } = await signIn.sso({
         strategy: "oauth_google",
-        redirectUrl: "/staff",
-        redirectCallbackUrl: "/staff/login/google-callback",
+        redirectUrl: staffPublicPath("/staff"),
+        redirectCallbackUrl: staffPublicPath("/staff/login/google-callback"),
         oidcPrompt: "select_account",
       });
       if (error) fail(error);
@@ -166,7 +167,7 @@ export function SignInForm({ googleResult }: { googleResult?: string } = {}) {
   const description = verifying || stage === "google-verification" ? "נשלים את האימות כדי להמשיך למרחב הליווי." : recovering ? "אימות החשבון מאפשר לבחור סיסמה חדשה." : "נכנסים עם Google או עם כתובת הדוא״ל והסיסמה של חשבון הצוות.";
 
   return (
-    <AuthFrame variant="login" title={title} description={description} footer={<p className="text-sm text-muted-foreground">עדיין אין לך חשבון? <Link href="/staff/signup" className="font-medium text-primary underline-offset-4 hover:underline">יצירת חשבון לצוות</Link></p>}>
+    <AuthFrame variant="login" title={title} description={description} footer={<p className="text-sm text-muted-foreground">עדיין אין לך חשבון? <Link href={staffPublicPath("/staff/signup")} className="font-medium text-primary underline-offset-4 hover:underline">יצירת חשבון לצוות</Link></p>}>
       {isSignedIn ? <SignedInActions /> : (
         <form onSubmit={submit} noValidate aria-busy={pending}>
           <FieldGroup>

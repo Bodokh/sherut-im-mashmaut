@@ -1,6 +1,7 @@
 import { defaultLocale, type Locale } from "@/i18n/config";
+import { SITE_ORIGIN } from "./site-origin";
 
-export const SITE_ORIGIN = "https://www.imashmaut.co.il";
+export { SITE_ORIGIN };
 
 export const siteRoutes = {
   home: { slug: "" },

@@ -6,7 +6,8 @@ import { Logo } from "@/components/ui/Logo";
 import type { Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
 import { cn } from "@/lib/cn";
-import { localizedPath, type SiteRouteKey } from "@/lib/routes";
+import { localizedPath, SITE_ORIGIN, type SiteRouteKey } from "@/lib/routes";
+import { staffPathsAtRoot, staffPublicPath } from "@/lib/staff-host";
 import styles from "./NotFoundScreen.module.css";
 
 const CONTINUE_ROUTES = ["lectures", "guidance", "videos", "faq"] as const satisfies readonly SiteRouteKey[];
@@ -23,7 +24,8 @@ export function NotFoundScreen({
   const dict = getDictionary(context === "staff" ? "he" : locale);
   const copy = dict.notFound;
   const staff = context === "staff";
-  const homeHref = staff ? "/staff" : localizedPath(locale, "home");
+  const homeHref = staff ? staffPublicPath("/staff") : localizedPath(locale, "home");
+  const publicSiteHref = staff && staffPathsAtRoot() ? `${SITE_ORIGIN}/` : "/";
 
   if (!staff) {
     return (
@@ -165,10 +167,10 @@ export function NotFoundScreen({
             <div className="flex flex-wrap gap-3">
               {staff ? (
                 <>
-                  <Button href="/staff" variant="primary" size="lg" arrow>
+                  <Button href={homeHref} variant="primary" size="lg" arrow>
                     {copy.staffHome}
                   </Button>
-                  <Button href="/" variant="outline" size="lg">
+                  <Button href={publicSiteHref} variant="outline" size="lg">
                     {copy.staffSite}
                   </Button>
                 </>

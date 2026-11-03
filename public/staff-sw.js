@@ -2,7 +2,6 @@
  * are deliberately never cached here. Authorized records live in leased,
  * account-partitioned IndexedDB and are unlocked by WorkspaceProvider. */
 const CACHE = "mentoring-anonymous-shell-v1";
-const OFFLINE_ENTRY = "/staff/offline";
 const SHELL_HEADER = "anonymous-v1";
 const MAX_ASSETS = 256;
 let cacheWrites = Promise.resolve();
@@ -12,8 +11,24 @@ const CLERK_VERSION = `${CLERK_NUMBER}(?:\\.${CLERK_NUMBER}\\.${CLERK_NUMBER}(?:
 const PROXY_CLERK_SCRIPT = new RegExp(`^/__clerk/npm/@clerk/(?:clerk-js@${CLERK_VERSION}/dist/clerk\\.browser\\.js|ui@${CLERK_VERSION}/dist/ui\\.browser\\.js)$`);
 const LEGACY_CLERK_SCRIPT = new RegExp(`^/npm/@clerk/(?:clerk-js@${CLERK_VERSION}/dist/clerk\\.browser\\.js|clerk-ui@${CLERK_VERSION}/dist/clerk\\.ui\\.js)$`);
 
-function isStaffPath(path) { return path === "/staff" || path.startsWith("/staff/"); }
-function isAuthPath(path) { return ["/staff/login", "/staff/signup", "/staff/logout"].some((prefix) => path === prefix || path.startsWith(`${prefix}/`)); }
+function staffMount() {
+  const registration = self.registration;
+  if (!registration || !registration.scope) return "/staff";
+  return new URL(registration.scope).pathname.replace(/\/$/, "");
+}
+function offlineEntry() { return `${staffMount()}/offline`; }
+function isStaffPath(path) {
+  const mount = staffMount();
+  if (mount === "") return true;
+  return path === mount || path.startsWith(`${mount}/`);
+}
+function isAuthPath(path) {
+  const mount = staffMount();
+  return ["login", "signup", "logout"].some((name) => {
+    const prefix = `${mount}/${name}`;
+    return path === prefix || path.startsWith(`${prefix}/`);
+  });
+}
 function isClerkPublicScript(url) {
   if (url.username || url.password || url.search || url.hash || url.pathname.includes("%")) return false;
   if (url.origin === self.location.origin) return PROXY_CLERK_SCRIPT.test(url.pathname);
@@ -59,10 +74,10 @@ function writeCache(task) {
 }
 
 async function trim(cache) {
-  const shell = await cache.match(OFFLINE_ENTRY);
+  const shell = await cache.match(offlineEntry());
   const pinned = shell ? shellAssets(await shell.text()) : new Set();
   const keys = await cache.keys();
-  const assets = keys.filter((request) => new URL(request.url).pathname !== OFFLINE_ENTRY);
+  const assets = keys.filter((request) => new URL(request.url).pathname !== offlineEntry());
   const removable = assets.filter((request) => !pinned.has(request.url));
   for (const request of removable.slice(0, Math.max(0, assets.length - MAX_ASSETS))) await cache.delete(request);
 }
@@ -73,7 +88,7 @@ async function cachePublicResponse(cache, request, response) {
 }
 
 async function prepareShell() {
-  const response = await fetch(OFFLINE_ENTRY, { credentials: "same-origin", cache: "no-store", headers: { "X-Mentoring-Prepare": "1" } });
+  const response = await fetch(offlineEntry(), { credentials: "same-origin", cache: "no-store", headers: { "X-Mentoring-Prepare": "1" } });
   if (!response.ok || response.redirected || response.headers.get("X-Mentoring-Shell") !== SHELL_HEADER || !response.headers.get("Content-Type")?.includes("text/html")) return;
   const cache = await caches.open(CACHE);
   const html = await response.clone().text();
@@ -91,7 +106,7 @@ async function prepareShell() {
   // cannot trim its newly written dependencies while the old HTML is active.
   await writeCache(async () => {
     for (const result of results) await cachePublicResponse(cache, result.value.url, result.value.asset);
-    await cache.put(OFFLINE_ENTRY, response);
+    await cache.put(offlineEntry(), response);
     await trim(cache);
   });
 }
@@ -115,8 +130,9 @@ self.addEventListener("fetch", (event) => {
     event.respondWith((async () => {
       try { return await fetch(request); }
       catch {
-        const cached = await (await caches.open(CACHE)).match(OFFLINE_ENTRY);
-        return cached ?? new Response("<!doctype html><html lang=\"he\" dir=\"rtl\"><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>נדרש חיבור</title><body><main><h1>נדרש חיבור ראשוני</h1><p>כדי לעבוד ללא חיבור יש לפתוח את סביבת הליווי עם חיבור ולהמתין להכנתה במכשיר.</p><a href=\"/staff\">ניסיון נוסף</a></main></body></html>", { status: 503, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
+        const cached = await (await caches.open(CACHE)).match(offlineEntry());
+        const home = staffMount() === "" ? "/" : "/staff";
+        return cached ?? new Response(`<!doctype html><html lang="he" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>נדרש חיבור</title><body><main><h1>נדרש חיבור ראשוני</h1><p>כדי לעבוד ללא חיבור יש לפתוח את סביבת הליווי עם חיבור ולהמתין להכנתה במכשיר.</p><a href="${home}">ניסיון נוסף</a></main></body></html>`, { status: 503, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
       }
     })());
     return;

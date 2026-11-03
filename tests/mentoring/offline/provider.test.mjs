@@ -15,6 +15,7 @@ const root = fileURLToPath(new URL("../../../", import.meta.url));
 const require = createRequire(`${root}/package.json`);
 const ts = require("typescript");
 const offline = await import("../../../lib/mentoring/offline.ts");
+const staffHost = await import("../../../lib/staff-host.ts");
 const source = readFileSync(`${root}/lib/mentoring/workspace-client.tsx`, "utf8");
 
 function contextRenderer(state, auth) {
@@ -28,7 +29,7 @@ function contextRenderer(state, auth) {
   };
   const compiledModule = { exports: {} };
   new Function("require", "module", "exports", ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 } }).outputText)(
-    (id) => id === "react" ? react : id === "@clerk/nextjs" ? { useAuth: () => currentAuth } : id === "./offline" ? offline : require(id),
+    (id) => id === "react" ? react : id === "@clerk/nextjs" ? { useAuth: () => currentAuth } : id === "./offline" ? offline : id === "@/lib/staff-host" ? staffHost : require(id),
     compiledModule, compiledModule.exports,
   );
   runtime.mount(() => compiledModule.exports.WorkspaceProvider({ children: null }));

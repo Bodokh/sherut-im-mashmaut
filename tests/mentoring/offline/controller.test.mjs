@@ -14,11 +14,12 @@ registerHooks({ resolve(specifier, context, nextResolve) {
   return nextResolve(specifier, context);
 } });
 const offline = await import(`${root}/lib/mentoring/offline.ts`);
+const staffHost = await import(`${root}/lib/staff-host.ts`);
 const ts = require('typescript');
 const source = readFileSync(`${root}/lib/mentoring/workspace-client.tsx`, 'utf8') + '\nexports.ReviewController = WorkspaceController;';
 const compiledModule = { exports: {} };
 new Function('require', 'module', 'exports', ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 } }).outputText)(
-  (id) => id === './offline' ? offline : id === '@clerk/nextjs' ? {} : require(id), compiledModule, compiledModule.exports,
+  (id) => id === './offline' ? offline : id === '@clerk/nextjs' ? {} : id === '@/lib/staff-host' ? staffHost : require(id), compiledModule, compiledModule.exports,
 );
 const Controller = compiledModule.exports.ReviewController;
 const local = new Map(); const session = new Map();

@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { staffPublicPath } from "@/lib/staff-host";
 import {
   LoaderCircleIcon,
   PencilIcon,
@@ -194,7 +195,7 @@ function ParticipantProfileForm({
       );
       if (!view && result.participantId && result.acceptance === "accepted")
         router.push(
-          `/staff/participants/${encodeURIComponent(result.participantId)}`,
+          staffPublicPath(`/staff/participants/${encodeURIComponent(result.participantId)}`),
         );
     } catch {
       setError(prepared

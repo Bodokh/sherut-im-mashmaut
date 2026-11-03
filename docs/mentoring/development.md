@@ -44,6 +44,7 @@ Populate `.env.local` from the project's development integrations. The applicati
 | `MENTORING_DATABASE_URL_UNPOOLED` | Direct PostgreSQL connection for migrations and owner setup. |
 | `CRON_SECRET` | Exact Bearer secret for the internal scheduled reminder GET endpoint. Configure privately in the intended hosted environment; no secret value belongs in documentation. |
 | `MENTORING_REMINDER_ACTOR_ID` | UUID of an existing real active CEO membership in the fixed organization. It is centrally revalidated; no synthetic system account or request-selected actor. |
+| `NEXT_PUBLIC_STAFF_HOST` | Production hostname `staff.imashmaut.co.il`, with no scheme or path. Leave unset for local development and Preview so `/staff` stays on the current host. The cutover order is in [staff subdomain](staff-subdomain.md). |
 
 `.env*` files are ignored by Git. Preserve unrelated existing environment variables when refreshing integration configuration.
 

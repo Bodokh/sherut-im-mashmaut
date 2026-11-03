@@ -9,18 +9,19 @@ import { ContactFormView } from "@/components/mentoring/contact-form";
 import { ConflictsView, ReviewsView, SettingsView, TeamView } from "@/components/mentoring/management";
 import { MonthlyOversightView } from "@/components/mentoring/monthly-oversight";
 import { ReminderCenter } from "@/components/mentoring/reminder-center";
+import { staffPathsAtRoot, toStaffInternalPath } from "@/lib/staff-host";
 
 function subscribe(listener: () => void) {
   window.addEventListener("popstate", listener);
   return () => window.removeEventListener("popstate", listener);
 }
-const serverLocation = () => "/staff";
+const serverLocation = () => (staffPathsAtRoot() ? "/" : "/staff");
 const browserLocation = () => window.location.pathname + window.location.search;
 
 function OfflineRouteContent() {
   const location = useSyncExternalStore(subscribe, browserLocation, serverLocation);
   const url = new URL(location, "https://staff.invalid");
-  const path = url.pathname.replace(/\/$/, "");
+  const path = toStaffInternalPath(url.pathname).replace(/\/$/, "") || "/staff";
   if (path === "/staff/participants") return <ParticipantsView />;
   const participant = path.match(/^\/staff\/participants\/([^/]+)$/);
   if (participant) return <ParticipantDetailView participantId={decodeURIComponent(participant[1])} />;

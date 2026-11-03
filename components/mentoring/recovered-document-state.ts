@@ -1,4 +1,5 @@
 import type { WorkspaceSnapshot } from "../../lib/mentoring/contracts";
+import { staffPublicPath } from "../../lib/staff-host";
 
 export interface RecoveredDocumentRow { readonly label: string; readonly value: string; readonly date?: "local" | "instant" }
 export interface RecoveredDocument { readonly title: string; readonly participantName: string | null; readonly rows: readonly RecoveredDocumentRow[]; readonly orphan: boolean; readonly href: string | null }
@@ -27,7 +28,8 @@ export function recoveredDocument(key: string, stored: unknown, snapshot: Pick<W
   const participantForm = ["contact", "contact-action", "assignment", "participant-profile", "authority"].includes(prefix);
   const orphan = participantForm && participantId !== "new" && !participant;
   const titles: Record<string, string> = { contact: "טיוטת תיעוד קשר", "contact-action": "טיוטת שינוי בדיווח או במעקב", assignment: "טיוטת שיוך לצוות הליווי", "participant-profile": "טיוטת פרטי חניכה", authority: "טיוטת פעולה ניהולית בכרטיס", "staff-preapproval": "טיוטת חברות בצוות", "staff-edit": "טיוטת עריכת פרטי צוות", "staff-access": "טיוטת שינוי גישה לצוות", "monthly-review": "טיוטת בקרה חודשית", "organization-settings": "טיוטת הגדרות הארגון", "management-action": "טיוטת החלטה ניהולית" };
-  const href = orphan ? null : participant ? prefix === "contact" ? `/staff/contacts/new?participant=${encodeURIComponent(participant.id)}` : `/staff/participants/${encodeURIComponent(participant.id)}` : prefix === "participant-profile" ? "/staff/participants" : prefix.startsWith("staff-") ? "/staff/team" : prefix === "monthly-review" ? "/staff/oversight" : prefix === "organization-settings" ? "/staff/settings" : null;
+  const internalHref = orphan ? null : participant ? prefix === "contact" ? `/staff/contacts/new?participant=${encodeURIComponent(participant.id)}` : `/staff/participants/${encodeURIComponent(participant.id)}` : prefix === "participant-profile" ? "/staff/participants" : prefix.startsWith("staff-") ? "/staff/team" : prefix === "monthly-review" ? "/staff/oversight" : prefix === "organization-settings" ? "/staff/settings" : null;
+  const href = internalHref ? staffPublicPath(internalHref) : null;
   const rows: RecoveredDocumentRow[] = [];
   let context = "";
   if (prefix === "monthly-review") {

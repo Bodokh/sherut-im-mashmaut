@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
 import * as authValidation from "../../../components/staff/auth/auth-validation.ts";
+import * as staffHost from "../../../lib/staff-host.ts";
 import * as contactValidation from "../../../lib/contact-validation.ts";
 import { he } from "../../../i18n/dictionaries/he.ts";
 import { en } from "../../../i18n/dictionaries/en.ts";
@@ -39,6 +40,7 @@ function harness(path, providers = {}) {
     if (id === "./auth-frame") return { AuthFrame: "AuthFrame" };
     if (id === "next/link") return { default: "Link" };
     if (id === "lucide-react") return { Info: "Info" };
+    if (id === "@/lib/staff-host") return staffHost;
     if (id.startsWith("@/components/staff/ui/")) return new Proxy({}, { get: (_target, key) => key });
     throw new Error(`Unexpected dependency: ${id}`);
   }, loaded, loaded.exports);

@@ -60,7 +60,7 @@ function assertNormalizedProxyResponse(actual, expected) {
   assert.deepEqual([...actual.headers], [...headers], "Only body transport headers may be removed.");
 }
 
-function harness(fetcher = async () => { throw new TypeError("offline"); }, { beforeCachePut, sourceOverride = source, navigatorOnline = true, cacheUnavailable = false } = {}) {
+function harness(fetcher = async () => { throw new TypeError("offline"); }, { beforeCachePut, sourceOverride = source, navigatorOnline = true, cacheUnavailable = false, scope } = {}) {
   const listeners = new Map();
   const stores = new Map();
   const requests = [];
@@ -88,6 +88,7 @@ function harness(fetcher = async () => { throw new TypeError("offline"); }, { be
     fetch: async (request, options) => { requests.push({ url: absolute(request), request, options }); return fetcher(request, options); },
     self: {
       location: { origin },
+      ...(scope ? { registration: { scope } } : {}),
       addEventListener(name, handler) { listeners.set(name, handler); },
       async skipWaiting() { ++skipped; },
       clients: { async claim() { ++claimed; } },
@@ -936,4 +937,24 @@ test("candidate publication and ordinary cache trims share one mutation lock", {
   assert.equal(await (await cache.match("/staff/offline")).text(), body);
   await assertCachedDependencies(cache, dependencies);
   assert.equal((await cache.keys()).length, 257);
+});
+
+test("a root-scoped worker uses /offline and controls the staff host without the /staff prefix", async () => {
+  const body = "<main>root shell</main>";
+  const worker = harness(async (request) => absolute(request).endsWith("/offline") ? html(body) : javascript("asset"), { scope: `${origin}/` });
+  await worker.prepare();
+  assert.equal(worker.requests.some(({ url }) => url === `${origin}/offline`), true);
+  assert.equal(worker.requests.some(({ url }) => url.endsWith("/staff/offline")), false);
+  assert.equal(await (await worker.caches.open(cacheName)).match("/offline") !== undefined, true);
+  assert.equal(worker.fetch("/", { mode: "navigate" }).intercepted, true);
+  assert.equal(worker.fetch("/participants/p", { mode: "navigate" }).intercepted, true);
+  assert.equal(worker.fetch("/login", { mode: "navigate" }).intercepted, false);
+  assert.equal(worker.fetch("/signup/verify", { mode: "navigate" }).intercepted, false);
+  assert.equal(worker.fetch("/logout", { mode: "navigate" }).intercepted, false);
+  const unprepared = harness(async () => { throw new TypeError("offline"); }, { scope: `${origin}/` });
+  const offline = await unprepared.fetchAndSettle("/participants", { mode: "navigate" });
+  const offlineHtml = await offline.text();
+  assert.equal(offline.status, 503);
+  assert.match(offlineHtml, /href="\/"/);
+  assert.doesNotMatch(offlineHtml, /\/staff/);
 });

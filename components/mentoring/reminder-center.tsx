@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { staffPublicPath } from "@/lib/staff-host";
 import { useRef, useState } from "react";
 import { AlertCircle, Bell, CheckCircle2, RefreshCw, WifiOff } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/staff/ui/alert";
@@ -74,7 +75,7 @@ function ReminderCard({ reminder }: { reminder: ReminderJobView }) {
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <CardTitle><Link href={`/staff/participants/${encodeURIComponent(reminder.participantId)}`} className="rounded-sm underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4">{reminder.participantName}</Link></CardTitle>
+            <CardTitle><Link href={staffPublicPath(`/staff/participants/${encodeURIComponent(reminder.participantId)}`)} className="rounded-sm underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-4">{reminder.participantName}</Link></CardTitle>
             <CardDescription className="mt-1">{reminder.kind === "appointment" ? "תזכורת למועד קשר" : "תזכורת למועד שבעת הימים"} · {reminder.recipientName}</CardDescription>
           </div>
           <StateBadge state={reminder.state} />
