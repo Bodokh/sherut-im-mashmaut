@@ -36,7 +36,7 @@ export default async function TeamPage({
   if (!isLocale(locale)) notFound();
   const dict = getDictionary(locale);
   const t = dict.teamPage;
-  const [odelia, tzofnat, hillel, roi] = t.members;
+  const [odelia, tzofnat, hillel, roi, eshed] = t.members;
   const eranCard = {
     name: t.eran.name,
     role: t.eran.role,
@@ -64,6 +64,7 @@ export default async function TeamPage({
       </>
     ),
   };
+  const anonymous = (member: { anonymousAvatar?: boolean }) => Boolean(member.anonymousAvatar);
   const members = [
     {
       member: t.daniel,
@@ -86,7 +87,7 @@ export default async function TeamPage({
     {
       member: roi,
       image: null,
-      anonymousAvatar: Boolean(roi && "anonymousAvatar" in roi && roi.anonymousAvatar),
+      anonymousAvatar: anonymous(roi),
       imagePosition: "top" as const,
     },
     {
@@ -105,6 +106,12 @@ export default async function TeamPage({
       member: tzofnat,
       image: media.team[1],
       anonymousAvatar: false,
+      imagePosition: "top" as const,
+    },
+    {
+      member: eshed,
+      image: null,
+      anonymousAvatar: anonymous(eshed),
       imagePosition: "top" as const,
     },
   ];

@@ -257,7 +257,7 @@ export function teamPageGraph(locale: Locale, dict: Dictionary): Graph {
     isPartOf: { "@id": WEBSITE_ID },
     about: { "@id": ORGANIZATION_ID },
   };
-  const [odelia, tzofnat, hillel, roi] = dict.teamPage.members;
+  const [odelia, tzofnat, hillel, roi, eshed] = dict.teamPage.members;
   const people = [
     { name: dict.teamPage.daniel.name, role: dict.teamPage.daniel.role, description: dict.teamPage.daniel.bio },
     { name: odelia.name, role: odelia.role, description: odelia.bio },
@@ -270,6 +270,7 @@ export function teamPageGraph(locale: Locale, dict: Dictionary): Graph {
     },
     { name: dict.teamPage.talia.name, role: dict.teamPage.talia.role, description: dict.teamPage.talia.bio },
     { name: tzofnat.name, role: tzofnat.role, description: tzofnat.bio },
+    { name: eshed.name, role: eshed.role, description: eshed.bio },
   ].map(
     ({ name, role, description }, index): Person => {
       const imagePath = TEAM_IMAGE_PATHS[index];
