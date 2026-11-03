@@ -1,4 +1,5 @@
-import type { Dictionary, TestimonialSlot } from "./he";
+import type { Partner, Testimonial } from "../dictionaries";
+import type { Dictionary } from "./he";
 
 // English — secondary language. Mirrors the Hebrew dictionary shape.
 export const en: Dictionary = {
@@ -236,29 +237,54 @@ export const en: Dictionary = {
   },
 
   partners: {
-    kicker: "Partners",
-    title: "Our partners",
-    lead: "The donors, organizations and people who believe in the path — and help us reach another hall, another base, another community.",
+    kicker: "Partnerships",
+    title: "Partnerships",
+    lead: "Institutions and organizations we work with — together helping us reach another hall, another base, another community.",
     cta: "Become a partner",
-    note: "Donor and partner logos will be added here soon.",
-    slotLabel: "Logo coming soon",
+    note: "The names of our partner institutions and organizations will be added here soon.",
+    slotLabel: "Partner name coming soon",
+    linkSuffix: "(opens in a new tab)",
+    items: [] as Partner[],
   },
 
   testimonials: {
     kicker: "From the field",
     title: "What people say about us",
-    lead: "Short films and kind words from the people we've met along the way — soldiers, parents, academy directors and partners.",
-    videoTag: "Film",
-    soonVideo: "This film will be here soon",
-    soonQuote: "This quote will be added soon",
-    note: "We're gathering these moments from the field — they're on their way.",
-    slots: [
-      { kind: "video", title: "Moments from a lecture" },
-      { kind: "quote", role: "Soldier in service" },
-      { kind: "video", title: "What participants say" },
-      { kind: "quote", role: "Mother of a recruit" },
-      { kind: "quote", role: "Pre-military academy director" },
-    ] as TestimonialSlot[],
+    lead: "Words from participants in a national service exposure morning, as they wrote them.",
+    fallbackCaption: "Participant in a national service exposure morning",
+    prev: "Previous quote",
+    next: "Next quote",
+    items: [
+      { quote: "I understood that national service can be as meaningful as military service, and even more so." },
+      {
+        quote:
+          "The conversations emphasized to me how important national service is, and not less than the army, which strengthened my confidence in my decision.",
+      },
+      {
+        quote:
+          "It made me think more deeply and look carefully at the options before I decide what I want to do.",
+      },
+      {
+        quote:
+          "I really appreciate all the investment you put into us, and I'm sure other girls feel the same, even if they don't always say so.",
+      },
+      {
+        quote:
+          "The thought behind the conversations was really precise and well-timed. Thank you so much for the thought and for the organization.",
+      },
+      {
+        quote:
+          "It was really nice that you arranged these conversations and decided to talk about this now and not later.",
+      },
+      {
+        quote:
+          "It was good to see the different options for national service and what the midrasha can offer.",
+      },
+      {
+        quote:
+          "I loved that there was variety in the conversations and that they showed how important it is to do a midrasha year.",
+      },
+    ] as Testimonial[],
   },
 
   donate: {

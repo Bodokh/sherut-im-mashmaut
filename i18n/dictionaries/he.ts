@@ -1,9 +1,6 @@
 // Hebrew — primary language. This object defines the shape of the dictionary.
 
-/** A testimonial carousel slot — a video tile or a quote card (content lands soon). */
-export type TestimonialSlot =
-  | { kind: "video"; title: string }
-  | { kind: "quote"; role: string };
+import type { Partner, Testimonial } from "../dictionaries";
 
 export const he = {
   meta: {
@@ -252,29 +249,49 @@ export const he = {
   },
 
   partners: {
-    kicker: "שותפים",
-    title: "השותפים שלנו",
-    lead: "התורמים, הארגונים והאנשים שמאמינים בדרך — ומאפשרים לנו להגיע לעוד אולם, לעוד בסיס ולעוד קהילה.",
+    kicker: "שיתופי פעולה",
+    title: "שיתופי פעולה",
+    lead: "מוסדות וארגונים שאיתנו בקשר ובשיתוף פעולה — ויחד מאפשרים לנו להגיע לעוד אולם, לעוד בסיס ולעוד קהילה.",
     cta: "להצטרף כשותפים",
-    note: "הלוגואים של התורמים והשותפים יתעדכנו כאן בקרוב.",
-    slotLabel: "כאן יופיע הלוגו",
+    note: "שמות המוסדות והארגונים יתעדכנו כאן בקרוב.",
+    slotLabel: "כאן יופיע שם השותף",
+    linkSuffix: "(נפתח בלשונית חדשה)",
+    /**
+     * Add partners here: { name: "שם המוסד", logo: "/partners/file.svg", url: "https://…" }.
+     * `logo` and `url` are optional. While the list is empty, placeholder slots are shown.
+     */
+    items: [] as Partner[],
   },
 
   testimonials: {
     kicker: "מהשטח",
     title: "מה אומרים עלינו?",
-    lead: "סרטונים קצרים ומילים טובות מהאנשים שפגשנו בדרך — חיילות, הורים, מנהלות מכינות ושותפים.",
-    videoTag: "סרטון",
-    soonVideo: "הסרטון יעלה כאן בקרוב",
-    soonQuote: "הציטוט יתעדכן כאן בקרוב",
-    note: "אספנו את הרגעים האלה מהשטח — והם בדרך לכאן.",
-    slots: [
-      { kind: "video", title: "רגעים מתוך הרצאה" },
-      { kind: "quote", role: "חיילת בשירות" },
-      { kind: "video", title: "מה אומרות המשתתפות" },
-      { kind: "quote", role: "אמא של מתגייסת" },
-      { kind: "quote", role: "מנהלת מכינה קדם־צבאית" },
-    ] as TestimonialSlot[],
+    lead: "מילים של משתתפות בבוקר חשיפה לשירות לאומי, כפי שכתבו אותן.",
+    fallbackCaption: "משתתפת בבוקר חשיפה לשירות לאומי",
+    prev: "הציטוט הקודם",
+    next: "הציטוט הבא",
+    /**
+     * Add `name` and `location` to an item to show "name, location" as its caption,
+     * for example: { quote: "…", name: "נועה כהן", location: "חיפה" }.
+     */
+    items: [
+      { quote: "הבנתי ששירות לאומי יכול להיות משמעותי כמו שירות צבאי ואפילו יותר." },
+      {
+        quote:
+          "השיחות הדגישו לי עד כמה שירות לאומי זהו דבר חשוב ולא נחות יותר מצבא, מה שחידד לי את הביטחון שלי בהחלטה שלי",
+      },
+      {
+        quote: "זה גרם לי לחשוב יותר לעומק ולבחון טוב את האפשרויות לפני שאני מחליטה מה אני רוצה לעשות",
+      },
+      {
+        quote:
+          "אני מאוד מעריכה את כל ההשקעה שאתם משקיעים בנו ואני בטוחה שעוד בנות מרגישות ככה גם אם לא תמיד אומרות",
+      },
+      { quote: "המחשבה על השיחות היתה ממש מדויקת ובמקום, תודה רבה על המחשבה ועל הארגון" },
+      { quote: "היה ממש יפה שהזמנתם שיחות והחלטתם לדבר על זה עכשיו ולא יותר מאוחר" },
+      { quote: "היה טוב לראות את האופציות השונות שיש לעשות בשירות לאומי ומה המדרשה יכולה לתת" },
+      { quote: "אהבתי שהיה גיוון בשיחות ושהראו כמה חשוב זה לעשות שנת מדרשה" },
+    ] as Testimonial[],
   },
 
   donate: {
