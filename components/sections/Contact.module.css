@@ -31,6 +31,14 @@
   line-height: 1.8;
 }
 
+.disclaimer {
+  max-width: 48ch;
+  margin-top: 1rem;
+  color: #52606a;
+  font-size: .95rem;
+  line-height: 1.75;
+}
+
 .direct {
   display: flex;
   flex-wrap: wrap;

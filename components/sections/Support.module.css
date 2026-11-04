@@ -51,6 +51,11 @@
   line-height: 1.85;
 }
 
+.invitationBody > p.disclaimer {
+  margin-block-start: 1rem;
+  font-size: .95rem;
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;

@@ -33,6 +33,7 @@ export function Contact({ locale, dict }: { locale: Locale; dict: Dictionary }) 
           <p className={styles.sectionName}>{t.kicker}</p>
           <h2>{t.title}</h2>
           <p className={styles.lead}>{t.lead}</p>
+          <p className={styles.disclaimer}>{dict.support.disclaimer}</p>
           <div className={styles.direct}>
             <a href={contactLinks.whatsapp} target="_blank" rel="noopener noreferrer" className={styles.whatsapp}>
               <WhatsAppIcon className={styles.icon} />

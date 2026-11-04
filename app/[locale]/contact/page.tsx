@@ -73,6 +73,7 @@ export default async function ContactPage({ params }: { params: Promise<{ locale
           <div className={styles.layout}>
             <div id="contact-form" className={styles.formArea}>
               <h2>{t.formTitle}</h2>
+              <p className={styles.disclaimer}>{dict.support.disclaimer}</p>
               <ContactForm locale={locale} form={dict.contact.form} privacyNotice={<PrivacyNotice locale={locale} id="contact-privacy-notice" />} />
             </div>
 

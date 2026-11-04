@@ -103,7 +103,7 @@ export function InformationPage({ locale, dict, route, copy, graph, related }: {
       <Section tone="navy" className={styles.invitation}>
         <div className={styles.invitationInner}>
           <h2>{copy.ctaTitle}</h2>
-          <div><p>{copy.ctaText}</p><Button href={contactHref} variant="white" size="lg" arrow>{copy.cta}</Button></div>
+          <div><p>{copy.ctaText}</p>{route === "guidance" ? <p>{dict.support.disclaimer}</p> : null}<Button href={contactHref} variant="white" size="lg" arrow>{copy.cta}</Button></div>
         </div>
       </Section>
 

@@ -51,6 +51,7 @@ export function Support({ dict }: { dict: Dictionary }) {
         </div>
         <div className={styles.invitationBody}>
           <p>{t.lead}</p>
+          <p className={styles.disclaimer}>{t.disclaimer}</p>
           <div className={styles.actions}>
             <a href="#contact" className={styles.primary}>
               {t.cta}
