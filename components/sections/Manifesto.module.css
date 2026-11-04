@@ -95,6 +95,13 @@
   opacity: 0.62;
 }
 
+.pathGuides {
+  display: none;
+  stroke-width: 1.3;
+  stroke-linecap: round;
+  opacity: 0.32;
+}
+
 .sageStrand {
   stroke: url(#manifesto-sage-path);
   opacity: 0.66;
@@ -196,6 +203,8 @@
     .manifesto[data-pinned-fit="true"] .choice { animation-name: choiceFrame; }
     .manifesto[data-pinned-fit="true"] .meaning { animation-name: meaningFrame; }
     .manifesto[data-pinned-fit="true"] .womanhood { animation-name: womanhoodFrame; }
+
+    .manifesto[data-pinned-fit="true"] .pathGuides { display: block; }
 
     /* Spread drawing over the approach and introduction, so discrete wheel
        steps produce smaller changes without adding delayed scroll inertia. */
