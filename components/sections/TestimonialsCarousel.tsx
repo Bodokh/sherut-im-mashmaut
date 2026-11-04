@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import styles from "./TestimonialsCarousel.module.css";
 
 type Props = {
   label: string;
@@ -11,39 +12,77 @@ type Props = {
 
 const EDGE_TOLERANCE = 2;
 
+type Position = {
+  first: number;
+  last: number;
+  count: number;
+  atStart: boolean;
+  atEnd: boolean;
+};
+
 /**
  * Horizontal snap-scroll track with previous / next controls. Direction-aware:
  * "next" always moves toward the end of the reading order (left in RTL).
  */
 export function TestimonialsCarousel({ label, prevLabel, nextLabel, children }: Props) {
   const trackRef = useRef<HTMLDivElement>(null);
-  const [edges, setEdges] = useState({ atStart: true, atEnd: false });
+  const measurements = useRef({ distance: 0, cardWidth: 0, viewportWidth: 0, paddingStart: 0, max: 0, count: 0 });
+  const [position, setPosition] = useState<Position>({
+    first: 0, last: 0, count: 0, atStart: true, atEnd: true,
+  });
 
-  const syncEdges = useCallback(() => {
+  const syncPosition = useCallback(() => {
     const track = trackRef.current;
     if (!track) return;
-    const offset = Math.abs(track.scrollLeft);
-    const max = track.scrollWidth - track.clientWidth;
-    const next = { atStart: offset <= EDGE_TOLERANCE, atEnd: offset >= max - EDGE_TOLERANCE };
-    setEdges((prev) => (prev.atStart === next.atStart && prev.atEnd === next.atEnd ? prev : next));
+    const { distance, cardWidth, viewportWidth, paddingStart, max, count } = measurements.current;
+    const offset = Math.min(max, Math.abs(track.scrollLeft));
+    const atEnd = offset >= max - EDGE_TOLERANCE;
+    const first = count && distance
+      ? Math.min(count, Math.max(1, Math.floor((offset - paddingStart - cardWidth + EDGE_TOLERANCE) / distance) + 2))
+      : 0;
+    const last = count && distance
+      ? Math.min(count, Math.max(first, Math.ceil((offset + viewportWidth - paddingStart) / distance)))
+      : 0;
+    const next = { first, last: atEnd ? count : last, count, atStart: offset <= EDGE_TOLERANCE, atEnd };
+    // Scroll events remain cheap: geometry is measured on resize, and React
+    // updates only when the visible quote range or an edge actually changes.
+    setPosition((prev) => (
+      prev.first === next.first && prev.last === next.last && prev.count === next.count
+      && prev.atStart === next.atStart && prev.atEnd === next.atEnd ? prev : next
+    ));
   }, []);
 
   useEffect(() => {
     const track = trackRef.current;
     if (!track) return;
-    syncEdges();
-    const observer = new ResizeObserver(syncEdges);
+    const measure = () => {
+      const list = track.firstElementChild;
+      const card = list?.querySelector("li");
+      const trackStyle = getComputedStyle(track);
+      const gap = list ? parseFloat(getComputedStyle(list).columnGap) || 0 : 0;
+      const cardWidth = card?.getBoundingClientRect().width ?? 0;
+      measurements.current = {
+        distance: cardWidth + gap,
+        cardWidth,
+        viewportWidth: track.clientWidth,
+        paddingStart: parseFloat(trackStyle.paddingInlineStart) || 0,
+        max: Math.max(0, track.scrollWidth - track.clientWidth),
+        count: list?.querySelectorAll("li").length ?? 0,
+      };
+      syncPosition();
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
     observer.observe(track);
+    if (track.firstElementChild) observer.observe(track.firstElementChild);
     return () => observer.disconnect();
-  }, [syncEdges]);
+  }, [syncPosition, children]);
 
   const step = useCallback((direction: 1 | -1) => {
     const track = trackRef.current;
     if (!track) return;
     const rtl = getComputedStyle(track).direction === "rtl";
-    const card = track.querySelector("li");
-    const gap = parseFloat(getComputedStyle(track.firstElementChild as Element).columnGap) || 0;
-    const distance = (card?.getBoundingClientRect().width ?? track.clientWidth * 0.8) + gap;
+    const distance = measurements.current.distance || track.clientWidth * 0.8;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     track.scrollBy({ left: direction * (rtl ? -1 : 1) * distance, behavior: reduce ? "auto" : "smooth" });
   }, []);
@@ -57,14 +96,14 @@ export function TestimonialsCarousel({ label, prevLabel, nextLabel, children }: 
   };
 
   return (
-    <div className="mt-12">
+    <div className={styles.carousel}>
       <div
         ref={trackRef}
         role="region"
         aria-roledescription="carousel"
         aria-label={label}
         tabIndex={0}
-        onScroll={syncEdges}
+        onScroll={syncPosition}
         onKeyDown={onKeyDown}
         className="-mx-[var(--gutter)] snap-x snap-mandatory overflow-x-auto scroll-px-[var(--gutter)] px-[var(--gutter)] pb-4 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         data-reveal
@@ -72,9 +111,17 @@ export function TestimonialsCarousel({ label, prevLabel, nextLabel, children }: 
         {children}
       </div>
 
-      <div className="mt-4 flex justify-center gap-3">
-        <ArrowButton label={prevLabel} disabled={edges.atStart} onClick={() => step(-1)} direction="prev" />
-        <ArrowButton label={nextLabel} disabled={edges.atEnd} onClick={() => step(1)} direction="next" />
+      <div className={styles.controls}>
+        <bdi dir="ltr" className={styles.counter}>
+          {position.count ? <><span>{position.first}</span><span className={styles.separator}>/</span><span>{position.count}</span></> : "\u00a0"}
+        </bdi>
+        <div className={styles.progress} aria-hidden="true">
+          <span className={styles.progressFill} style={{ transform: `scaleX(${position.count ? position.last / position.count : 0})` }} />
+        </div>
+        <div className={styles.arrows}>
+          <ArrowButton label={prevLabel} disabled={position.atStart} onClick={() => step(-1)} direction="prev" />
+          <ArrowButton label={nextLabel} disabled={position.atEnd} onClick={() => step(1)} direction="next" />
+        </div>
       </div>
     </div>
   );
@@ -97,7 +144,7 @@ function ArrowButton({
       aria-label={label}
       disabled={disabled}
       onClick={onClick}
-      className="grid h-11 w-11 place-items-center rounded-full border border-line bg-surface text-brand-700 transition-colors hover:border-brand-300 hover:text-brand-800 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-line"
+      className={styles.arrow}
     >
       <svg
         viewBox="0 0 24 24"

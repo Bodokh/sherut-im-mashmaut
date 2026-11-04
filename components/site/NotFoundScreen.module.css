@@ -1,0 +1,70 @@
+.page {
+  --header-h: 5.5rem;
+  --font-sans: var(--font-body, Arial), sans-serif;
+  --font-display: var(--font-body, Arial), sans-serif;
+  position: relative;
+  isolation: isolate;
+  min-height: 100dvh;
+  overflow: clip;
+  background: #102d40;
+  color: #fff;
+  font-family: var(--font-sans);
+}
+
+.main {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr);
+  align-items: center;
+  min-height: 100dvh;
+  gap: clamp(3rem, 7vw, 7rem);
+  max-width: 88rem;
+  padding-block: calc(var(--header-h) + 4rem) 4rem;
+}
+
+.content { position: relative; z-index: 1; }
+.content h1 { max-width: 13ch; color: #fff; font-size: clamp(3.2rem, 6.7vw, 6.4rem); font-weight: 400; line-height: 1.18; letter-spacing: 0; }
+.lead { max-width: 42ch; margin-block-start: 2rem; font-size: clamp(1.05rem, 1.4vw, 1.2rem); line-height: 1.85; color: #d7e5eb; }
+.actions { display: flex; align-items: center; flex-wrap: wrap; gap: 1rem; margin-block-start: 2.25rem; }
+.actions .homeButton { background: #b8d0bc; color: #102d40; box-shadow: none; }
+.continue { margin-block-start: clamp(3rem, 5vw, 5rem); }
+.continue > p { margin-block-end: .75rem; font-size: .875rem; color: #c3d6df; }
+.continue ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .25rem 2rem; max-width: 30rem; }
+.continue a { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 3.25rem; border-bottom: 1px solid #ffffff30; font-size: 1rem; color: #fff; }
+.continue svg { flex: none; width: 1.25rem; height: 1.25rem; transition: transform 180ms ease; }
+:global([dir="rtl"]) .continue svg { transform: scaleX(-1); }
+
+.art { position: relative; align-self: stretch; min-height: 36rem; isolation: isolate; }
+.road { position: absolute; inset: -6% -10%; width: 120%; height: 112%; opacity: .8; }
+.roadShape { transform-origin: center; }
+.code { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-size: clamp(8rem, 17vw, 17rem); font-weight: 300; line-height: 1; letter-spacing: .02em; text-shadow: 0 .1em .2em #102d4080; }
+
+@media (hover: hover) and (pointer: fine) {
+  .actions .homeButton:hover { background: #e0ece2; }
+  .continue a:hover { border-color: #b8d0bc; color: #dceadf; }
+  .continue a:hover svg { transform: translateX(3px); }
+  :global([dir="rtl"]) .continue a:hover svg { transform: translateX(-3px) scaleX(-1); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .roadShape { animation: settleRoad 1.2s cubic-bezier(.16, 1, .3, 1) both; }
+  @keyframes settleRoad { from { opacity: .45; transform: translateY(2rem); } to { opacity: 1; transform: none; } }
+}
+
+@media (max-width: 760px) {
+  .page { --header-h: 4.5rem; }
+  .main { grid-template-columns: minmax(0, 1fr); align-items: start; gap: 0; padding-block: calc(var(--header-h) + 2.75rem) 3rem; }
+  .content h1 { font-size: clamp(2.8rem, 11vw, 4.5rem); }
+  .lead { margin-block-start: 1.5rem; font-size: 1rem; }
+  .actions { margin-block-start: 1.75rem; }
+  .continue { margin-block-start: 2.5rem; }
+  .art { min-height: 16rem; margin-block-start: 1rem; }
+  .road { inset: -5% 5%; width: 90%; height: 110%; }
+  .code { font-size: clamp(8rem, 34vw, 13rem); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .continue svg { transition: none; }
+  .continue a:hover svg { transform: none; }
+  :global([dir="rtl"]) .continue a:hover svg { transform: scaleX(-1); }
+}

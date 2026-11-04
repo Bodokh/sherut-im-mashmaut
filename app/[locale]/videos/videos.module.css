@@ -1,0 +1,41 @@
+.main { padding-block-start: var(--header-h); }
+.cinema { overflow: clip; padding-block: 2rem clamp(4rem, 7vw, 7rem); background: #102d40; color: #fff; }
+.breadcrumbs { color: #c7d9e2; }
+.breadcrumbs nav { margin-bottom: 0; color: inherit; }
+.breadcrumbs a { color: inherit; }
+.breadcrumbs [aria-current] { color: #fff; }
+.introduction { display: flex; align-items: end; justify-content: space-between; gap: 3rem; padding-block: clamp(3rem, 6vw, 5rem) clamp(3rem, 5vw, 4.5rem); }
+.introduction h1 { max-width: 16ch; color: #fff; font-size: clamp(3.25rem, 7vw, 7rem); font-weight: 400; line-height: 1.16; letter-spacing: 0; }
+.lead { max-width: 55ch; margin-block-start: 1.5rem; color: #d5e3ea; font-size: clamp(1.05rem, 1.4vw, 1.2rem); line-height: 1.85; }
+.subscribe { display: inline-flex; flex: none; min-height: 3rem; align-items: center; gap: 2rem; padding-block: .6rem; border-bottom: 1px solid #9eb8c5; color: #e7eff2; font-size: .95rem; }
+.subscribe svg { width: 1.25rem; height: 1.25rem; }
+.featuredLabel { margin-block-end: 1.25rem; color: #b8d0bc; font-size: .9rem; }
+.featuredDetails { display: grid; grid-template-columns: 1.1fr .9fr; gap: clamp(2rem, 7vw, 7rem); margin-block-start: 2.25rem; }
+.featuredDetails h2 { max-width: 30ch; color: #fff; font-size: clamp(1.9rem, 3.2vw, 3.25rem); font-weight: 400; line-height: 1.3; }
+.featuredDetails time { display: block; margin-block-start: 1.1rem; color: #b7cdd8; font-size: .875rem; }
+.featuredDescription p { display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; color: #d5e3ea; font-size: 1rem; line-height: 1.9; }
+.youtubeLink { display: inline-flex; align-items: center; min-height: 2.75rem; margin-block-start: 1.25rem; color: #e8f0f4; font-size: .9rem; text-decoration: underline; text-decoration-color: #8aa4b2; text-underline-offset: .4em; }
+.empty { display: flex; flex-direction: column; align-items: center; max-width: 40rem; margin-inline: auto; padding-block: 2rem 3rem; text-align: center; }
+.empty > svg { width: 5rem; height: 5rem; margin-bottom: 2rem; stroke: #b8d0bc; stroke-width: 1; }
+.empty h2 { color: #fff; font-size: clamp(2rem, 4vw, 3rem); font-weight: 400; }
+.empty p { margin-block: 1.5rem 2rem; color: #d5e3ea; font-size: 1.1rem; line-height: 1.85; }
+.library { padding-block: clamp(4rem, 7vw, 7rem); background: #fff; }
+.libraryHeading { display: flex; align-items: baseline; justify-content: space-between; gap: 2rem; margin-block-end: 2.75rem; }
+.libraryHeading h2 { color: #173547; font-size: clamp(2.25rem, 4.5vw, 4rem); font-weight: 400; }
+.libraryHeading p { flex: none; color: #5a7180; font-size: .9rem; }
+.invitation { padding-block: clamp(4rem, 7vw, 7rem); background: #edf3f5; }
+.invitationInner { display: flex; align-items: center; justify-content: space-between; gap: 3rem; padding-block-end: 4rem; }
+.invitationInner h2 { max-width: 25ch; color: #173547; font-size: clamp(2rem, 4vw, 3.5rem); font-weight: 400; line-height: 1.25; }
+.invitationInner p { max-width: 50ch; margin-block-start: 1.25rem; color: #526a77; font-size: 1.05rem; line-height: 1.85; }
+.invitationInner > a { flex: none; }
+@media (hover: hover) and (pointer: fine) { .subscribe:hover { border-color: #fff; color: #fff; } .youtubeLink:hover { text-decoration-color: #fff; } }
+@media (max-width: 760px) {
+  .cinema { padding-block-start: 1.5rem; }
+  .introduction { flex-direction: column; align-items: start; gap: 1.75rem; padding-block: 3rem; }
+  .introduction h1 { font-size: clamp(2.8rem, 10.5vw, 4.5rem); }
+  .lead { font-size: 1rem; }
+  .featuredDetails { grid-template-columns: minmax(0, 1fr); gap: 1.75rem; margin-block-start: 1.75rem; }
+  .featuredDetails h2 { font-size: clamp(1.7rem, 6.5vw, 2.5rem); }
+  .libraryHeading { align-items: start; flex-direction: column; gap: .8rem; margin-block-end: 2rem; }
+  .invitationInner { align-items: start; flex-direction: column; gap: 2rem; }
+}

@@ -7,6 +7,11 @@ const photo = (id: string, w = 1280) =>
   `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=80`;
 
 export const media = {
+  homeFilmPoster: "/media/home-film/poster-hires.593a3bada205.webp",
+  // Dedicated full-screen masters keep the existing, smaller page images intact.
+  choiceFullscreen: "/media/fullscreen/choice.c05e5f894977.webp",
+  meaningFullscreen: "/media/fullscreen/meaning.2b2449ec567f.webp",
+  supportFullscreen: "/media/fullscreen/support.d53ef65fa304.webp",
   // Dusk mountain ranges — cinematic, techelet-harmonious film poster.
   heroPoster: "/images/hero-poster.webp",
 

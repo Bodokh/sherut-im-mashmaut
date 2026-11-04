@@ -1,0 +1,196 @@
+.support {
+  background: #fff;
+  color: #173547;
+  overflow: clip;
+}
+
+.imageStage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2.1;
+  max-height: 37rem;
+  overflow: hidden;
+  background: #273d3d;
+}
+
+.photo {
+  object-fit: cover;
+  object-position: 55% 60%;
+}
+
+.invitation {
+  position: relative;
+  display: grid;
+  grid-template-columns: .85fr 1.15fr;
+  gap: clamp(2rem, 5vw, 5rem);
+  width: calc(100% - clamp(2rem, 6vw, 6rem));
+  margin-block-start: -3.5rem;
+  margin-inline-start: auto;
+  padding: clamp(2rem, 4vw, 3.75rem);
+  background: #102d40;
+  color: #fff;
+}
+
+.kicker {
+  margin-block-end: 1.25rem;
+  color: #c7d8de;
+  font-size: .875rem;
+}
+
+.heading h2 {
+  color: #fff;
+  font-size: clamp(2.6rem, 4.4vw, 4.5rem);
+  line-height: 1.12;
+  text-wrap: balance;
+}
+
+.invitationBody > p {
+  max-width: 45ch;
+  color: #dce6ea;
+  font-size: 1.05rem;
+  line-height: 1.85;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.75rem;
+  margin-block-start: 1.75rem;
+}
+
+.primary {
+  display: inline-flex;
+  min-height: 3.4rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.75rem;
+  padding: .85rem 1.3rem;
+  background: #dceadf;
+  color: #173a36;
+  font-size: .95rem;
+  font-weight: 600;
+  transition: background-color 180ms ease-out, transform 180ms ease-out;
+}
+
+.primary svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: none;
+}
+
+:global([dir="rtl"]) .primary svg { transform: scaleX(-1); }
+.primary:active { transform: scale(.98); }
+
+.hotline {
+  display: inline-flex;
+  min-height: 3.4rem;
+  align-items: center;
+  gap: .8rem;
+  color: #fff;
+}
+
+.hotline > svg {
+  width: 1.4rem;
+  height: 1.4rem;
+  flex: none;
+}
+
+.hotline > span {
+  display: grid;
+  gap: .15rem;
+}
+
+.hotline > span > span {
+  color: #c7d8de;
+  font-size: .75rem;
+}
+
+.hotline bdi {
+  font-size: 1.05rem;
+  font-weight: 500;
+  letter-spacing: .025em;
+}
+
+.programs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(1.5rem, 4vw, 4rem);
+  margin-block-start: 3.75rem;
+}
+
+.programs li {
+  padding-block-start: 1.5rem;
+  border-block-start: 1px solid #bfcfd5;
+}
+
+.programs li > svg {
+  width: 2.75rem;
+  height: 2.75rem;
+  margin-block-end: 1.5rem;
+  color: #4e786c;
+}
+
+.programs h3 {
+  color: #173547;
+  font-size: 1.4rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.programs p {
+  max-width: 35ch;
+  margin-block-start: .8rem;
+  color: #52606a;
+  font-size: 1rem;
+  line-height: 1.85;
+}
+
+.community { margin-block-start: 2.5rem; }
+.community a { display: inline-flex; min-height: 2.75rem; align-items: center; gap: .6rem; color: #245e4d; font-size: .95rem; text-decoration: underline; text-decoration-color: #b2c8bf; text-underline-offset: .35em; }
+.community svg { width: 1.2rem; height: 1.2rem; flex: none; }
+
+@media (hover: hover) and (pointer: fine) {
+  .primary:hover { background: #fff; }
+  .hotline:hover bdi { text-decoration: underline; text-underline-offset: .3em; }
+  .community a:hover { text-decoration-color: currentColor; }
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .photo {
+      animation: settle linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 45%;
+    }
+  }
+}
+
+@keyframes settle { from { transform: scale(1.06); } to { transform: scale(1); } }
+
+@media (max-width: 1000px) {
+  .invitation { gap: 2rem; padding: 2rem; }
+  .actions { column-gap: 1.1rem; }
+}
+
+@media (max-width: 760px) {
+  .imageStage { width: calc(100% + 2 * var(--gutter)); margin-inline: calc(-1 * var(--gutter)); aspect-ratio: 1.45; }
+  .photo { object-position: 56% 58%; }
+  .invitation { grid-template-columns: minmax(0, 1fr); width: 100%; gap: 1.25rem; margin-block-start: -1.5rem; padding: 1.75rem 1.5rem; }
+  .kicker { margin-block-end: .75rem; }
+  .heading h2 { font-size: clamp(2.5rem, 8vw, 3.6rem); max-width: 17ch; }
+  .invitationBody > p { font-size: 1rem; }
+  .actions { margin-block-start: 1.5rem; gap: 1rem 1.25rem; }
+  .primary { padding-inline: 1rem; gap: 1.1rem; }
+  .programs { grid-template-columns: minmax(0, 1fr); gap: 1.5rem; margin-block-start: 2.5rem; }
+  .programs li { display: grid; grid-template-columns: 2.75rem minmax(0, 1fr); column-gap: 1.25rem; align-items: start; }
+  .programs li > svg { grid-row: span 2; margin-block-end: 0; }
+  .programs h3 { font-size: 1.25rem; }
+  .programs p { margin-block-start: .5rem; max-width: none; font-size: .95rem; }
+  .community { margin-block-start: 2rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .primary { transition: none; }
+  .primary:active { transform: none; }
+}

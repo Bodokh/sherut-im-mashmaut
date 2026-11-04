@@ -1,0 +1,42 @@
+.carousel { margin-block-start: 3rem; }
+.controls {
+  display: grid;
+  grid-template-columns: auto minmax(3rem, 1fr) auto;
+  align-items: center;
+  gap: clamp(1rem, 2.5vw, 2.5rem);
+  margin-block-start: 1rem;
+}
+.counter {
+  display: flex;
+  align-items: baseline;
+  gap: .65rem;
+  min-width: 4.5rem;
+  color: #173547;
+  font-size: .85rem;
+  font-variant-numeric: tabular-nums;
+}
+.separator { color: #7a919b; }
+.progress { position: relative; height: 1px; background: #cad8dd; }
+.progressFill {
+  position: absolute;
+  inset: 0;
+  background: #497365;
+  transform-origin: left center;
+  transition: transform 220ms ease-out;
+}
+:global([dir="rtl"]) .progressFill { transform-origin: right center; }
+.arrows { display: flex; gap: .4rem; }
+.arrow {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  place-items: center;
+  border-block-end: 1px solid #a6bac3;
+  color: #173547;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 180ms ease-out, color 180ms ease-out;
+}
+.arrow:disabled { opacity: .35; cursor: default; }
+@media (hover: hover) and (pointer: fine) { .arrow:not(:disabled):hover { background: #dfe9ed; color: #102d40; } }
+@media (prefers-reduced-motion: reduce) { .progressFill, .arrow { transition: none; } }

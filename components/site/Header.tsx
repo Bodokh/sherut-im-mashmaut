@@ -2,11 +2,13 @@ import Link from "next/link";
 import { Logo } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
 import { LangToggle } from "./LangToggle";
+import { MobileMenu } from "./MobileMenu";
 import { UserWayAccessibilityTrigger } from "./UserWayAccessibilityTrigger";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { donationLink } from "@/lib/contact";
 import { localizedPath, type SiteRouteKey } from "@/lib/routes";
+import styles from "./Header.module.css";
 
 const PRIMARY_ROUTES = ["lectures", "guidance", "videos", "getInvolved", "faq", "contact"] as const;
 
@@ -105,7 +107,7 @@ export function Header({
   const about = aboutLinks(locale, copy.nav);
 
   return (
-    <header className="fixed inset-x-0 top-0 z-[200] border-b border-line/80 bg-paper/90 shadow-soft backdrop-blur-md">
+    <header className={`fixed inset-x-0 top-0 z-[200] border-b border-line/80 bg-paper/90 shadow-soft backdrop-blur-md ${styles.home}`}>
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:inset-inline-start-4 focus:top-3 focus:z-[300] focus:rounded-full focus:bg-brand-700 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
@@ -181,80 +183,53 @@ export function Header({
             </Button>
           </div>
 
-          <a
-            href="#mobile-menu"
-            aria-label={copy.a11y.openMenu}
-            className="grid h-11 w-11 place-items-center rounded-full text-ink-900 transition-colors hover:bg-brand-50 xl:hidden"
+          <MobileMenu
+            openLabel={copy.a11y.openMenu}
+            closeLabel={copy.a11y.closeMenu}
+            menuLabel={copy.a11y.menu}
           >
-            <span className="relative block h-4 w-5" aria-hidden="true">
-              <span className="absolute inset-x-0 top-0 h-0.5 rounded-full bg-current" />
-              <span className="absolute inset-x-0 top-[7px] h-0.5 rounded-full bg-current" />
-              <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-current" />
-            </span>
-          </a>
-        </div>
-      </div>
+            <p className="border-b border-line/70 py-4 font-display text-2xl font-bold text-ink-900">
+              {copy.nav.about}
+            </p>
+            <ul className="border-b border-line/70 pb-4 pt-1">
+              {about.map((link) => (
+                <li key={link.id}>
+                  <Link
+                    href={link.href}
+                    aria-current={link.route === currentRoute ? "page" : undefined}
+                    className="block py-2.5 ps-4 text-lg font-semibold text-ink-700 transition-colors hover:text-brand-700"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
 
-      <div
-        id="mobile-menu"
-        role="dialog"
-        aria-modal="true"
-        aria-label={copy.a11y.menu}
-        className="pointer-events-none invisible fixed inset-x-0 top-[var(--header-h)] z-[190] h-[calc(100dvh-var(--header-h))] origin-top -translate-y-2 bg-paper opacity-0 backdrop-blur-md transition-[opacity,transform,visibility] duration-300 ease-out-quart target:pointer-events-auto target:visible target:translate-y-0 target:opacity-100 xl:hidden"
-      >
-        <nav className="shell flex h-[calc(100dvh-var(--header-h))] flex-col gap-1 overflow-y-auto py-8">
-          <a
-            href="#close-menu"
-            aria-label={copy.a11y.closeMenu}
-            className="mb-3 ms-auto grid h-11 w-11 place-items-center rounded-full text-ink-900 transition-colors hover:bg-brand-50"
-          >
-            <span className="relative block h-5 w-5" aria-hidden="true">
-              <span className="absolute inset-x-0 top-1/2 h-0.5 -translate-y-1/2 rotate-45 rounded-full bg-current" />
-              <span className="absolute inset-x-0 top-1/2 h-0.5 -translate-y-1/2 -rotate-45 rounded-full bg-current" />
-            </span>
-          </a>
-
-          <p className="border-b border-line/70 py-4 font-display text-2xl font-bold text-ink-900">
-            {copy.nav.about}
-          </p>
-          <ul className="border-b border-line/70 pb-4 pt-1">
-            {about.map((link) => (
-              <li key={link.id}>
-                <Link
-                  href={link.href}
-                  aria-current={link.route === currentRoute ? "page" : undefined}
-                  className="block py-2.5 ps-4 text-lg font-semibold text-ink-700 transition-colors hover:text-brand-700"
-                >
-                  {link.label}
-                </Link>
-              </li>
+            {links.map((link, index) => (
+              <Link
+                key={link.id}
+                href={link.href}
+                aria-current={currentRoute === link.id ? "page" : undefined}
+                style={{ transitionDelay: `${60 + index * 35}ms` }}
+                className="border-b border-line/70 py-4 font-display text-2xl font-bold text-ink-900 transition-colors duration-300 hover:text-brand-700"
+              >
+                {link.label}
+              </Link>
             ))}
-          </ul>
-
-          {links.map((link, index) => (
-            <Link
-              key={link.id}
-              href={link.href}
-              aria-current={currentRoute === link.id ? "page" : undefined}
-              style={{ transitionDelay: `${60 + index * 35}ms` }}
-              className="border-b border-line/70 py-4 font-display text-2xl font-bold text-ink-900 transition-colors duration-300 hover:text-brand-700"
-            >
-              {link.label}
-            </Link>
-          ))}
-          <div className="mt-6 flex items-center gap-3">
-            <Button href={donationLink} external variant="give" size="lg" arrow className="flex-1">
-              {copy.nav.donate}
-            </Button>
-            <LangToggle
-              locale={locale}
-              label={copy.langName}
-              a11yLabel={copy.a11y.langSwitch}
-              currentRoute={currentRoute}
-              className="min-h-12 border border-line text-ink-800"
-            />
-          </div>
-        </nav>
+            <div className="mt-6 flex items-center gap-3">
+              <Button href={donationLink} external variant="give" size="lg" arrow className="flex-1">
+                {copy.nav.donate}
+              </Button>
+              <LangToggle
+                locale={locale}
+                label={copy.langName}
+                a11yLabel={copy.a11y.langSwitch}
+                currentRoute={currentRoute}
+                className="min-h-12 border border-line text-ink-800"
+              />
+            </div>
+          </MobileMenu>
+        </div>
       </div>
     </header>
   );

@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
+import localFont from "next/font/local";
+import publicStyles from "./public.module.css";
 import "../globals.css";
 import { locales, isLocale, defaultLocale, dir } from "@/i18n/config";
 import { SITE_ORIGIN } from "@/lib/routes";
@@ -8,6 +10,14 @@ import {
   USERWAY_TRIGGER_ID,
   USERWAY_WIDGET_SRC,
 } from "@/lib/userway";
+
+const bodyFont = localFont({
+  src: "./fonts/Heebo-public.woff2",
+  variable: "--font-body",
+  weight: "100 900",
+  display: "swap",
+  fallback: ["Arial"],
+});
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -48,9 +58,10 @@ export default async function LocaleLayout({
     <html
       lang={locale}
       dir={dir(locale)}
+      className={bodyFont.variable}
       suppressHydrationWarning
     >
-      <body className="min-h-dvh">
+      <body className={`min-h-dvh ${publicStyles.site}`}>
         {children}
         {USERWAY_ACCOUNT_ID ? (
           <Script

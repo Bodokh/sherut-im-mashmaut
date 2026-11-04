@@ -1,0 +1,26 @@
+.site {
+  --font-sans: var(--font-body), Arial, sans-serif;
+  --font-display: var(--font-body), Arial, sans-serif;
+  --header-h: 5.5rem;
+  --color-paper: #fff;
+  --color-surface: #edf3f5;
+  --color-surface-2: #e3edf0;
+  --color-line: #d3e0e5;
+  --color-ink-950: #173547;
+  --color-brand-950: #102d40;
+  font-family: var(--font-sans);
+  background: #fff;
+}
+.site :global(.shell) { max-width: 88rem; }
+.site :global(h1), .site :global(h2) { font-weight: 400; line-height: 1.15; letter-spacing: 0; }
+.site :global([data-reveal]) { animation: none; }
+.site :global([data-site-button]) { border-radius: .4rem; font-weight: 500; box-shadow: none; }
+.site :global([data-site-button="primary"]) { background: #102d40; color: #fff; }
+.site :global([data-site-button="outline"]) { border-color: #9ab0bc; background: transparent; color: #173547; }
+.site :global([data-site-button="white"]) { background: #fff; color: #173547; }
+@media (hover: hover) and (pointer: fine) {
+  .site :global([data-site-button="primary"]:hover) { background: #284c60; }
+  .site :global([data-site-button="outline"]:hover) { background: #edf3f5; border-color: #173547; }
+  .site :global([data-site-button="white"]:hover) { background: #dceadf; }
+}
+@media (max-width: 760px) { .site { --header-h: 4.5rem; } }

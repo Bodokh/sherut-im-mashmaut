@@ -1,8 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PlayerFrame, type PlayableVideo } from "./YouTubePlayer";
+import styles from "./VideoGrid.module.css";
 
 export type GridVideo = PlayableVideo & {
   publishedLabel: string;
@@ -29,8 +30,51 @@ export function VideoGrid({
   closeLabel: string;
   watchOnYoutubeLabel: string;
 }) {
+  const gridRef = useRef<HTMLUListElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [active, setActive] = useState<GridVideo | null>(null);
+  const [loadedThumbnails, setLoadedThumbnails] = useState<Set<string>>(() => new Set());
+
+  useEffect(() => {
+    const grid = gridRef.current;
+    if (!grid) return;
+
+    const reveal = (ids: string[]) => {
+      setLoadedThumbnails((previous) => {
+        const additions = ids.filter((id) => !previous.has(id));
+        return additions.length ? new Set([...previous, ...additions]) : previous;
+      });
+    };
+
+    // Native image lazy loading can fetch more than a viewport ahead. Keep
+    // the gallery's real images out of the initial request queue instead.
+    // Initial server and client markup both reserve the same empty frames.
+    if (typeof IntersectionObserver === "undefined") {
+      reveal(videos.map((video) => video.id));
+      return;
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      const ids: string[] = [];
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        const id = entry.target.getAttribute("data-video-id");
+        if (id) ids.push(id);
+        observer.unobserve(entry.target);
+      }
+      if (ids.length) reveal(ids);
+    }, { rootMargin: "280px 0px", threshold: 0 });
+
+    grid.querySelectorAll("[data-video-id]").forEach((item) => observer.observe(item));
+    return () => observer.disconnect();
+  }, [videos]);
+
+  useEffect(() => {
+    if (!active) return;
+    const previousOverflow = document.documentElement.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    return () => { document.documentElement.style.overflow = previousOverflow; };
+  }, [active]);
 
   const open = (video: GridVideo) => {
     setActive(video);
@@ -40,34 +84,42 @@ export function VideoGrid({
 
   return (
     <>
-      <ul className="grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
-        {videos.map((video) => (
-          <li key={video.id}>
+      <ul ref={gridRef} className={styles.grid}>
+        {videos.map((video, index) => (
+          <li key={video.id} data-video-id={video.id}>
             <button
               type="button"
               onClick={() => open(video)}
-              aria-label={`${playLabel}: ${video.title}`}
-              className="group block w-full text-start focus-visible:outline-offset-4"
+              className={styles.trigger}
             >
-              <span className="relative block aspect-video overflow-hidden rounded-2xl bg-brand-100 ring-1 ring-brand-950/5">
-                <Image
+              <span className="sr-only">{playLabel}: </span>
+              <span className={styles.thumbnail}>
+                {loadedThumbnails.has(video.id) ? <Image
                   src={video.thumbnail}
                   alt=""
                   fill
-                  sizes="(max-width: 640px) 92vw, (max-width: 1024px) 46vw, 380px"
-                  className="object-cover transition-transform duration-700 ease-out-quart group-hover:scale-[1.04]"
-                />
-                <span aria-hidden className="absolute inset-0 bg-brand-950/0 transition-colors duration-300 group-hover:bg-brand-950/20" />
+                  loading="eager"
+                  fetchPriority="low"
+                  sizes={index === 0
+                    ? "(max-width: 639px) 90vw, (max-width: 1023px) 44vw, (max-width: 1408px) 60vw, 820px"
+                    : "(max-width: 639px) 90vw, (max-width: 1023px) 44vw, 390px"}
+                  className={styles.poster}
+                /> : null}
+                <span aria-hidden className={styles.play}>
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="m9 5 11 7-11 7V5Z" /></svg>
+                </span>
                 {video.duration ? (
-                  <span className="absolute bottom-3 end-3 rounded-full bg-brand-950/75 px-2.5 py-0.5 text-xs font-semibold tabular-nums text-white backdrop-blur-sm" dir="ltr">
+                  <span className={styles.duration} dir="ltr">
                     {video.duration}
                   </span>
                 ) : null}
               </span>
-              <span className="mt-4 line-clamp-2 block text-lg font-bold leading-snug text-ink-950 transition-colors group-hover:text-brand-700">
+              {" "}
+              <span className={styles.title}>
                 {video.title}
               </span>
-              <time dateTime={video.publishedAt} className="mt-1.5 block text-sm text-ink-600">
+              {" "}
+              <time dateTime={video.publishedAt} className={styles.date}>
                 {video.publishedLabel}
               </time>
             </button>
@@ -78,35 +130,36 @@ export function VideoGrid({
       <dialog
         ref={dialogRef}
         aria-label={active?.title}
+        data-theme="dark"
         onClose={() => setActive(null)}
         onClick={(event) => {
           // A click on the backdrop lands on the dialog element itself.
           if (event.target === event.currentTarget) close();
         }}
-        className="video-dialog m-auto w-[min(72rem,calc(100vw-2rem))] max-w-none overflow-visible bg-transparent p-0 text-white backdrop:bg-brand-950/85 backdrop:backdrop-blur-sm"
+        className={styles.dialog}
       >
         {active ? (
-          <div>
-            <div className="mb-3 flex items-center justify-between gap-4">
-              <h2 className="line-clamp-1 text-base font-bold text-white sm:text-lg">{active.title}</h2>
+          <div className={styles.dialogPanel}>
+            <div className={styles.toolbar}>
+              <h2>{active.title}</h2>
               <button
                 type="button"
                 onClick={close}
                 aria-label={closeLabel}
                 autoFocus
-                className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/10 transition-colors hover:bg-white/20"
+                className={styles.close}
               >
                 <CloseIcon />
               </button>
             </div>
-            <div className="relative aspect-video overflow-hidden rounded-2xl bg-black shadow-lift">
+            <div className={styles.modalStage}>
               <PlayerFrame video={active} />
             </div>
             <a
               href={active.watchUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-brand-200 underline-offset-4 hover:text-white hover:underline"
+              className={styles.watchLink}
             >
               {watchOnYoutubeLabel}
             </a>

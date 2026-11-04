@@ -1,0 +1,121 @@
+.comments {
+  border-block-start: 1px solid #dce6ea;
+  background: #edf3f5;
+  color: #173547;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  align-items: start;
+  gap: clamp(3rem, 8vw, 8rem);
+}
+
+.introduction {
+  position: sticky;
+  top: calc(var(--header-h) + 2rem);
+}
+
+.label {
+  margin-block-end: 1.5rem;
+  color: #526a77;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.introduction h2 {
+  max-width: 12ch;
+  color: #173547;
+  font-size: clamp(2.8rem, 4.6vw, 4.75rem);
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+.lead {
+  max-width: 34ch;
+  margin-block-start: 1.5rem;
+  color: #52606a;
+  font-size: 1.05rem;
+  line-height: 1.9;
+}
+
+.form > form {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.form input:not([type="hidden"]),
+.form textarea {
+  border-radius: 0.2rem;
+  background: #fff;
+  color: #173547;
+  padding: 0.9rem 1rem;
+  box-shadow: none;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.form input:focus,
+.form textarea:focus {
+  border-color: #497365;
+  box-shadow: 0 0 0 3px #b8d0bc66;
+}
+
+.form input[aria-invalid="true"],
+.form textarea[aria-invalid="true"] {
+  border-color: var(--color-danger);
+}
+
+.form input[aria-invalid="true"]:focus,
+.form textarea[aria-invalid="true"]:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger) 18%, transparent);
+}
+
+.form label {
+  margin-block-end: 0.6rem;
+  color: #173547;
+  font-weight: 500;
+}
+
+.form button {
+  min-height: 3.4rem;
+  border-radius: 0.2rem;
+  box-shadow: none;
+  transition: background-color 180ms ease, transform 180ms ease;
+}
+
+.form button[type="submit"] {
+  min-width: 12rem;
+  background: #102d40;
+  color: #fff;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .form button[type="submit"]:hover {
+    background: #254e61;
+  }
+}
+
+@media (max-width: 760px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2.5rem;
+  }
+
+  .introduction {
+    position: static;
+  }
+
+  .lead {
+    max-width: 44ch;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .form input,
+  .form textarea,
+  .form button {
+    transition: none;
+  }
+}

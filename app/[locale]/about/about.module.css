@@ -1,0 +1,102 @@
+.page { background: #fff; color: #173547; }
+.hero { position: relative; overflow: clip; background: #102d40; color: #fff; }
+.heroInner { padding-block: 2rem clamp(3.5rem, 6vw, 6rem); }
+.breadcrumbs { margin-block-end: clamp(2.5rem, 5vw, 5rem); color: #c6d8e0; }
+.breadcrumbs nav { margin-bottom: 0; color: inherit; }
+.breadcrumbs a { color: inherit; }
+.breadcrumbs [aria-current] { color: #fff; }
+.heroGrid { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr); align-items: center; gap: clamp(3rem, 6vw, 6rem); }
+.kicker { margin-block-end: 1.5rem; color: #d1e1e8; font-size: .9rem; }
+.heroCopy h1 { max-width: 14ch; color: #fff; font-family: var(--font-sans); font-size: clamp(3rem, 5.2vw, 5.2rem); font-weight: 400; line-height: 1.2; letter-spacing: 0; }
+.lead { max-width: 54ch; margin-block-start: 2rem; color: #dce7ec; font-size: clamp(1rem, 1.2vw, 1.125rem); line-height: 1.9; }
+.portraits { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .88fr); align-items: start; gap: clamp(1rem, 2vw, 2rem); }
+.portraits li:nth-child(2) { padding-block-start: 5rem; }
+.person { display: block; }
+.portrait { position: relative; display: block; aspect-ratio: 3 / 4; overflow: hidden; background: #254352; }
+.portraitImage { object-fit: cover; object-position: 50% 35%; transition: transform 500ms cubic-bezier(.2,.7,.2,1); }
+.personName { display: block; margin-block-start: 1rem; color: #e4edf1; font-size: .9rem; line-height: 1.6; }
+.mission { background: #fff; }
+.missionGrid { display: grid; grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr); gap: clamp(3rem, 8vw, 8rem); align-items: start; }
+.mission h2, .programOpening h2, .officialOpening h2, .identity h2, .invitation h2 { color: #173547; font-family: var(--font-sans); font-size: clamp(2.3rem, 3.8vw, 3.75rem); font-weight: 400; line-height: 1.25; }
+.missionGrid > p { max-width: 59ch; color: #3d5969; font-size: clamp(1.15rem, 1.5vw, 1.4rem); line-height: 1.95; }
+.programSection { background: #edf3f5; }
+.programOpening { max-width: 42rem; margin-block-end: clamp(2.75rem, 5vw, 5rem); }
+.programs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3.5rem clamp(3rem, 7vw, 7rem); }
+.programs li { display: grid; grid-template-columns: 2.5rem minmax(0, 1fr); gap: 1.5rem; }
+.programs svg { width: 2.5rem; height: 2.5rem; color: #4b796e; margin-block-start: .15rem; }
+.programs h3 { color: #173547; font-family: var(--font-sans); font-size: clamp(1.3rem, 1.8vw, 1.6rem); font-weight: 500; line-height: 1.5; }
+.programs h3 a { display: inline-block; text-decoration: underline; text-decoration-color: #a7bcc4; text-underline-offset: .35em; text-decoration-thickness: 1px; }
+.programs p { max-width: 47ch; margin-block-start: 1.15rem; color: #4c6573; font-size: 1rem; line-height: 1.9; }
+.official { background: #fff; }
+.officialOpening { max-width: 49rem; margin-block-end: clamp(2.5rem, 5vw, 4.5rem); }
+.officialOpening h2 { max-width: 22ch; }
+.officialOpening > p { max-width: 65ch; margin-block-start: 1.5rem; color: #617580; font-size: .95rem; line-height: 1.85; }
+.officialGrid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(19rem, .75fr); align-items: start; gap: clamp(3rem, 6vw, 6rem); }
+.purposes { padding-inline-start: 1.6rem; list-style: decimal; }
+.purposes li { padding-inline-start: 1rem; margin-block-end: 1.8rem; color: #426172; }
+.purposes li:last-child { margin-block-end: 0; }
+.purposes li::marker { font-size: .85rem; font-weight: 500; color: #567f73; }
+.purposes p { max-width: 65ch; color: #4c6573; line-height: 1.95; }
+.details { position: sticky; top: calc(var(--header-h) + 2rem); }
+.details > div { border: 0; border-radius: 0; box-shadow: none; background: #edf3f5; padding: clamp(1.5rem, 3vw, 2.5rem); }
+.details h2 { color: #173547; font-family: var(--font-sans); font-size: 1.5rem; font-weight: 500; line-height: 1.5; }
+.details dt { color: #526d7c; font-size: .8rem; font-weight: 400; }
+.details dd { font-size: .95rem; font-weight: 500; line-height: 1.6; overflow-wrap: anywhere; }
+.details dl > div { padding-block: 1rem; }
+.details :global(.rounded-full) { border-radius: .25rem; }
+.details :global(.shadow-soft) { box-shadow: none; }
+.identity { background: #edf3f5; }
+.identityGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: clamp(3rem, 8vw, 8rem); }
+.identity h2 { max-width: 16ch; font-size: clamp(2rem, 3vw, 3rem); }
+.identity p { max-width: 53ch; margin-block-start: 1.7rem; color: #4c6573; line-height: 1.95; overflow-wrap: anywhere; }
+.domain { padding-block-start: 2rem; }
+.teamCta { margin-block-start: 2rem; border-radius: .25rem; box-shadow: none; }
+.invitation { background: #102d40; }
+.invitationGrid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: center; gap: clamp(3rem, 8vw, 8rem); }
+.invitation h2 { max-width: 16ch; color: #fff; font-size: clamp(2.6rem, 4.5vw, 4.5rem); }
+.invitation p { max-width: 45ch; color: #dce7ec; font-size: 1.15rem; line-height: 1.9; }
+.contactCta { margin-block-start: 2rem; min-width: 12rem; justify-content: space-between; border-radius: .25rem; box-shadow: none; }
+.related { padding-block: 3.5rem; }
+
+@media (hover: hover) and (pointer: fine) {
+  .person:hover .portraitImage { transform: scale(1.035); }
+  .person:hover .personName { text-decoration: underline; text-underline-offset: .3em; }
+  .programs h3 a:hover { color: #33705f; text-decoration-color: currentColor; }
+}
+
+@media (max-width: 1100px) {
+  .heroGrid { gap: 2.5rem; }
+  .portraits li:nth-child(2) { padding-block-start: 3rem; }
+  .heroCopy h1 { font-size: clamp(2.8rem, 5vw, 4rem); }
+  .officialGrid { grid-template-columns: minmax(0, 1.1fr) minmax(18rem, .9fr); gap: 3rem; }
+}
+
+@media (max-width: 760px) {
+  .heroInner { padding-block-start: 1.5rem; }
+  .breadcrumbs { margin-block-end: 2.5rem; }
+  .heroGrid, .missionGrid, .officialGrid, .identityGrid, .invitationGrid { grid-template-columns: minmax(0, 1fr); }
+  .heroGrid { gap: 2.5rem; }
+  .heroCopy h1 { max-width: 16ch; font-size: clamp(2.75rem, 9.6vw, 4.25rem); }
+  .lead { margin-block-start: 1.5rem; font-size: 1rem; }
+  .portraits { max-width: 35rem; gap: 1.25rem; }
+  .personName { font-size: .8rem; }
+  .missionGrid { gap: 2rem; }
+  .missionGrid > p { font-size: 1.1rem; line-height: 1.9; }
+  .programs { gap: 2.5rem; grid-template-columns: minmax(0, 1fr); }
+  .programs li { gap: 1.2rem; }
+  .programs h3 { font-size: 1.3rem; }
+  .programs p { font-size: .95rem; }
+  .officialGrid { gap: 3.5rem; }
+  .purposes li { padding-inline-start: .65rem; }
+  .purposes p { font-size: .95rem; }
+  .details { position: static; }
+  .identityGrid { gap: 3rem; }
+  .domain { padding-block-start: 0; }
+  .invitationGrid { gap: 2rem; }
+  .invitation p { font-size: 1.05rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portraitImage { transition: none; }
+  .person:hover .portraitImage { transform: none; }
+}

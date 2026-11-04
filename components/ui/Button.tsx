@@ -81,6 +81,7 @@ export function Button(props: AsButton | AsLink) {
     );
     return (
       <a
+        data-site-button={variant}
         href={href}
         target={external ? "_blank" : undefined}
         rel={external ? "noopener noreferrer" : undefined}
@@ -94,7 +95,7 @@ export function Button(props: AsButton | AsLink) {
 
   const rest = buttonAttrs(props as AsButton);
   return (
-    <button className={classes} {...rest}>
+    <button data-site-button={variant} className={classes} {...rest}>
       <span>{children}</span>
       {arrow ? <Arrow /> : null}
     </button>

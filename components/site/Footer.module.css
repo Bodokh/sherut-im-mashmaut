@@ -1,0 +1,6 @@
+.footer { background: #102d40; border-block-start: 1px solid #ffffff20; }
+.footer h2 { color: #b8d0bc; font-size: .95rem; font-weight: 500; line-height: 1.5; letter-spacing: 0; }
+.footer nav a { text-decoration-thickness: 1px; text-underline-offset: .3em; }
+.footer p, .footer address { color: #c2d4de; }
+.footer :global(.hr-brand) { background: #ffffff45; }
+@media (hover: hover) and (pointer: fine) { .footer nav a:hover { text-decoration-line: underline; } }

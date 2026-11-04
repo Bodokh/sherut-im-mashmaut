@@ -59,8 +59,8 @@
   --color-warning: oklch(0.760 0.150 75);
 
   /* ---- Type families ---- */
-  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
-  --font-display: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  --font-sans: var(--font-body, system-ui), -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  --font-display: var(--font-body, system-ui), Arial, sans-serif;
 
   /* ---- Easing (exponential ease-out family) ---- */
   --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
@@ -119,6 +119,8 @@
   }
 
   p { text-wrap: pretty; }
+
+  h3, h4 { font-family: var(--font-sans); }
 
   /* Hebrew sits better without the tighter Latin tracking on display type */
   :lang(he) h1, :lang(he) h2, :lang(he) h3, :lang(he) h4 { letter-spacing: 0; }

@@ -1,57 +1,87 @@
 import Link from "next/link";
-import { Section, Eyebrow } from "@/components/ui/Section";
+import Image from "next/image";
+import { Section } from "@/components/ui/Section";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { organization } from "@/lib/organization";
 import { localizedPath } from "@/lib/routes";
+import { media } from "@/lib/media";
+import styles from "./About.module.css";
+
+function LinkArrow() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+      <path d="M5 12h14m-6-6 6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 export function About({ locale, dict }: { locale: Locale; dict: Dictionary }) {
   const t = dict.about;
   const org = dict.organization;
+  const programPaths = [
+    localizedPath(locale, "lectures"),
+    localizedPath(locale, "guidance"),
+    localizedPath(locale, "guidance"),
+    "#contact",
+  ];
 
   return (
-    <Section id="about">
-      <div className="grid gap-12 lg:grid-cols-12 lg:items-start lg:gap-16">
-        <div className="lg:col-span-6" data-reveal="move">
-          <Eyebrow>{t.kicker}</Eyebrow>
-          <h2 className="mt-4 text-[clamp(2rem,3.6vw,3.25rem)] font-bold text-balance">{t.title}</h2>
-          <p className="mt-5 text-lg leading-relaxed text-ink-700">{t.lead}</p>
+    <Section id="about" className={styles.about}>
+      <div className={styles.introduction}>
+        <div className={styles.introCopy}>
+          <p className={styles.sectionName}>{t.kicker}</p>
+          <h2 className={styles.aboutTitle}>{t.title}</h2>
+          <p className={styles.aboutLead}>{t.lead}</p>
         </div>
 
-        <div
-          className="rounded-3xl border border-brand-200 bg-surface p-7 shadow-soft sm:p-9 lg:col-span-6"
-          data-reveal
-        >
-          <h3 className="font-display text-2xl font-bold text-ink-950">{t.missionTitle}</h3>
-          <p className="mt-3 leading-relaxed text-ink-700">{t.mission}</p>
-          <ul className="mt-5 grid gap-2.5 sm:grid-cols-2">
-            {t.programs.map((program) => (
-              <li key={program} className="flex items-center gap-2.5 font-semibold text-ink-800">
-                <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-green-500" />
-                {program}
-              </li>
-            ))}
-          </ul>
+        <ul className={styles.lecturers} aria-label={dict.nav.team}>
+          {dict.teamPage.members.slice(0, media.team.length).map((member, index) => (
+            <li key={member.name}>
+              <Link href={localizedPath(locale, "team")} className={styles.lecturer}>
+                <span className={styles.portrait}>
+                  <Image
+                    src={media.team[index]}
+                    alt=""
+                    fill
+                    sizes="(max-width: 767px) 42vw, (max-width: 1100px) 23vw, 280px"
+                    className={styles.lecturerImage}
+                  />
+                </span>
+                <span className={styles.lecturerName}>{member.name}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
 
-          <div className="mt-6 border-t border-line pt-5 text-sm text-ink-600">
-            <p>
-              <span className="font-semibold text-ink-900">{org.displayName}</span>
-              {" · "}
-              {org.labels.registrationNumberShort} <bdi dir="ltr">{organization.registrationNumber}</bdi>
-              {" · "}
-              {org.address.city}
-            </p>
-            <Link
-              href={localizedPath(locale, "about")}
-              className="mt-2 inline-flex items-center gap-1.5 font-semibold text-brand-700 transition-colors hover:text-brand-900"
-            >
-              {org.detailsCta}
-              <svg viewBox="0 0 24 24" className="h-4 w-4 rtl:-scale-x-100" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                <path d="M5 12h14m0 0-5-5m5 5-5 5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </Link>
-          </div>
+      <div className={styles.missionGrid}>
+        <div className={styles.mission}>
+          <h3>{t.missionTitle}</h3>
+          <p>{t.mission}</p>
         </div>
+        <ul className={styles.programs}>
+          {t.programs.map((program, index) => (
+            <li key={program}>
+              <Link href={programPaths[index] ?? "#contact"}>
+                <span>{program}</span>
+                <LinkArrow />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className={styles.registration}>
+        <p>
+          <strong>{org.displayName}</strong>
+          <span>{org.labels.registrationNumberShort} <bdi dir="ltr">{organization.registrationNumber}</bdi></span>
+          <span>{org.address.city}</span>
+        </p>
+        <Link href={localizedPath(locale, "about")}>
+          {org.detailsCta}
+          <LinkArrow />
+        </Link>
       </div>
     </Section>
   );

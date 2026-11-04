@@ -1,11 +1,11 @@
 import type { CSSProperties } from "react";
 import Image from "next/image";
 
-import { Eyebrow, Section } from "@/components/ui/Section";
+import { Section } from "@/components/ui/Section";
+import { PinnedSceneFit } from "@/components/ui/PinnedSceneFit";
 import type { Dictionary } from "@/i18n/dictionaries";
 
 import styles from "./ReachMap.module.css";
-import { ReachMapMotion } from "./ReachMapMotion";
 
 type MapPoint = {
   x: number;
@@ -30,28 +30,30 @@ const mapPoints: readonly MapPoint[] = [
 const routePath =
   "M250 92C222 148 165 170 139 220c-21 41-18 78 30 115 26 20-6 68-70 104-22 44-16 87 0 129 17 44 11 107 25 165";
 
+function pointRange(order: number): CSSProperties {
+  return {
+    "--point-start": `contain ${order * 10}%`,
+    "--point-end": `contain ${order * 10 + 9}%`,
+  } as CSSProperties;
+}
+
 export function ReachMap({ dict }: { dict: Dictionary }) {
   const t = dict.reach;
 
   return (
-    <Section id="reach" tone="navy" className="overflow-hidden">
-      <div aria-hidden className="weave pointer-events-none absolute inset-0 opacity-60" />
-      <div aria-hidden className="aurora-techelet pointer-events-none absolute inset-0 opacity-40" />
-
-      <div className="relative grid items-center gap-14 lg:grid-cols-[minmax(0,0.85fr)_minmax(26rem,1.15fr)] lg:gap-20">
-        <div className="max-w-xl" data-reveal>
-          <Eyebrow tone="dark">{t.kicker}</Eyebrow>
-          <h2 className="mt-5 text-[clamp(2.35rem,5vw,4.9rem)] font-black leading-[0.98] text-white">
+    <Section id="reach" tone="navy" className={styles.reach} shell={false}>
+      <PinnedSceneFit />
+      <div className={`shell ${styles.composition}`}>
+        <div className={styles.content} data-pinned-content="">
+          <p className={styles.sectionName}>{t.kicker}</p>
+          <h2 className={styles.title}>
             {t.title}
           </h2>
-          <p className="mt-6 max-w-[48ch] text-lg leading-relaxed text-brand-100">{t.lead}</p>
+          <p className={styles.lead}>{t.lead}</p>
 
-          <ul className="mt-8 flex flex-wrap gap-2" aria-label={t.mapLabel}>
-            {t.cities.map((city) => (
-              <li
-                key={city}
-                className="rounded-full border border-white/15 bg-white/8 px-3.5 py-1.5 text-sm font-medium text-brand-50 backdrop-blur-sm"
-              >
+          <ul className={styles.cityIndex} aria-label={t.mapLabel}>
+            {t.cities.map((city, index) => (
+              <li key={city} style={pointRange(mapPoints[index]?.revealOrder ?? index)}>
                 {city}
               </li>
             ))}
@@ -60,16 +62,11 @@ export function ReachMap({ dict }: { dict: Dictionary }) {
 
         <div
           id="reach-map-visual"
-          className={`relative mx-auto aspect-[4/5] w-full max-w-[35rem] ${styles.mapStage}`}
+          className={styles.mapStage}
         >
-          <div
-            aria-hidden
-            className={`absolute inset-[4%_7%] rounded-[3rem] border border-white/10 bg-white/[0.035] shadow-glow ${styles.stageFrame}`}
-          />
           <div
             className={`absolute left-1/2 top-1/2 h-[94%] aspect-[294.62534/792.60406] -translate-x-1/2 -translate-y-1/2 ${styles.mapBody}`}
           >
-            <div aria-hidden className={styles.mapHalo} />
             <Image
               aria-hidden="true"
               alt=""
@@ -78,7 +75,7 @@ export function ReachMap({ dict }: { dict: Dictionary }) {
               height={6341}
               sizes="(max-width: 640px) 45vw, 18rem"
               unoptimized
-              className={`absolute inset-0 h-full w-full drop-shadow-[0_28px_50px_rgba(4,20,55,0.42)] ${styles.mapSilhouette}`}
+              className="absolute inset-0 h-full w-full"
             />
 
             <svg
@@ -88,30 +85,29 @@ export function ReachMap({ dict }: { dict: Dictionary }) {
             >
               <defs>
                 <linearGradient id="israel-route-line" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0" stopColor="var(--color-green-300)" />
-                  <stop offset="1" stopColor="var(--color-brand-50)" />
+                  <stop offset="0" stopColor="#b8d0bc" />
+                  <stop offset="1" stopColor="#d7e6e9" />
                 </linearGradient>
               </defs>
               <path
-                className={styles.routeTrail}
                 d={routePath}
                 fill="none"
                 stroke="url(#israel-route-line)"
                 strokeDasharray="4 11"
                 strokeLinecap="round"
-                strokeWidth="2.5"
-                opacity="0.72"
+                strokeWidth="2"
+                opacity="0.48"
               />
               <path
                 className={styles.routeDraw}
                 d={routePath}
                 fill="none"
                 pathLength="1"
-                stroke="var(--color-brand-50)"
+                stroke="#d7e6df"
                 strokeDasharray="1"
-                strokeDashoffset="1"
+                strokeDashoffset="0"
                 strokeLinecap="round"
-                strokeWidth="3.25"
+                strokeWidth="2.5"
               />
             </svg>
 
@@ -124,17 +120,17 @@ export function ReachMap({ dict }: { dict: Dictionary }) {
                     {
                       left: `${point.x}%`,
                       top: `${point.y}%`,
-                      "--point-delay": `${620 + point.revealOrder * 95}ms`,
+                      ...pointRange(point.revealOrder),
                     } as CSSProperties
                   }
                 >
+                  <span className={styles.pointMarker} />
+                  <svg viewBox="0 -24 28 48" className={styles.pointLeader} data-side={point.side} fill="none">
+                    <path d={`M0 0H12L28 ${point.labelOffset ?? 0}`} />
+                  </svg>
                   <span
-                    className={`relative block h-3.5 w-3.5 rounded-full border-[3px] border-brand-950 bg-green-300 shadow-[0_0_0_5px_rgba(255,255,255,0.18),0_0_24px_rgba(123,224,167,0.75)] ${styles.pointMarker}`}
-                  />
-                  <span
-                    className={`absolute top-1/2 hidden -translate-y-1/2 whitespace-nowrap rounded-full border border-white/10 bg-brand-950/80 px-2.5 py-1 text-xs font-semibold text-white shadow-soft backdrop-blur-sm sm:block ${
-                      point.side === "right" ? "left-5" : "right-5"
-                    }`}
+                    className={styles.mapLabel}
+                    data-side={point.side}
                     style={{ marginTop: point.labelOffset }}
                   >
                     {t.cities[index]}
@@ -145,7 +141,6 @@ export function ReachMap({ dict }: { dict: Dictionary }) {
           </div>
         </div>
       </div>
-      <ReachMapMotion />
     </Section>
   );
 }

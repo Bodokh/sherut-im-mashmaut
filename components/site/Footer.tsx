@@ -9,6 +9,7 @@ import { formatPostalAddress, organization } from "@/lib/organization";
 import { legalRouteKeys, localizedPath, type SiteRouteKey } from "@/lib/routes";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
+import styles from "./Footer.module.css";
 
 const FOOTER_LINKS = [
   "home",
@@ -24,9 +25,7 @@ const FOOTER_LINKS = [
 
 export function Footer({ locale, dict }: { locale: Locale; dict: Dictionary }) {
   return (
-    <footer id="site-footer" className="relative overflow-hidden bg-brand-950 text-brand-100" data-theme="dark">
-      <div aria-hidden className="weave absolute inset-0 opacity-50" />
-      <div className="absolute inset-0 -z-0 bg-gradient-to-b from-brand-950 to-brand-900/60" aria-hidden />
+    <footer id="site-footer" className={`relative overflow-hidden bg-brand-950 text-brand-100 ${styles.footer}`} data-theme="dark">
 
       <div className="shell relative py-16 sm:py-20">
         <div className="grid gap-12 lg:grid-cols-12">
@@ -43,7 +42,7 @@ export function Footer({ locale, dict }: { locale: Locale; dict: Dictionary }) {
           </div>
 
           <nav className="lg:col-span-3" aria-label={dict.footer.navTitle}>
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-brand-300">
+            <h2 className="text-sm font-semibold text-brand-300">
               {dict.footer.navTitle}
             </h2>
             <ul className="mt-4 space-y-2.5">
@@ -61,7 +60,7 @@ export function Footer({ locale, dict }: { locale: Locale; dict: Dictionary }) {
           </nav>
 
           <div className="lg:col-span-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-brand-300">
+            <h2 className="text-sm font-semibold text-brand-300">
               {dict.footer.contactTitle}
             </h2>
             <ul className="mt-4 space-y-2.5 text-brand-100">
@@ -76,7 +75,7 @@ export function Footer({ locale, dict }: { locale: Locale; dict: Dictionary }) {
               <li className="text-brand-200">{dict.contact.details.hours}</li>
             </ul>
 
-            <h2 className="mt-7 text-sm font-semibold uppercase tracking-wider text-brand-300">
+            <h2 className="mt-7 text-sm font-semibold text-brand-300">
               {dict.footer.followTitle}
             </h2>
             <div className="mt-4">

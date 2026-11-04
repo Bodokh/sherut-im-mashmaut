@@ -1,184 +1,221 @@
+.reach {
+  overflow: clip;
+  padding-block: 0;
+  background: #102d40;
+}
+
+.composition {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  align-items: center;
+  gap: clamp(2rem, 5vw, 5rem);
+}
+
+.content {
+  position: relative;
+  z-index: 2;
+  padding-block: clamp(4rem, 7vw, 7rem);
+}
+
+.sectionName {
+  color: #b8cdd7;
+  font-size: 0.9rem;
+  font-weight: 400;
+}
+
+.title {
+  max-width: 10ch;
+  margin-block-start: 1.6rem;
+  color: #fff;
+  font-size: clamp(3.5rem, 7.4vw, 7rem);
+  font-weight: 400;
+  line-height: 1.03;
+  letter-spacing: -0.05em;
+}
+
+.lead {
+  max-width: 38ch;
+  margin-block-start: 2rem;
+  color: #ccdde5;
+  font-size: 1.05rem;
+  line-height: 1.85;
+}
+
+.cityIndex {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem 1.5rem;
+  max-width: 25rem;
+  margin-block-start: 2.5rem;
+}
+
+.cityIndex > li {
+  color: #b8cdd7;
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+
 .mapStage {
+  position: relative;
+  width: 100%;
+  height: clamp(48rem, 100svh, 65rem);
   isolation: isolate;
 }
 
 .mapBody {
+  height: 112%;
   isolation: isolate;
 }
 
-.mapHalo {
-  position: absolute;
-  z-index: -1;
-  inset: 8% -95%;
-  background: radial-gradient(
-    ellipse at center,
-    oklch(0.748 0.138 150 / 0.2) 0%,
-    oklch(0.622 0.16 248 / 0.14) 34%,
-    transparent 70%
-  );
-  pointer-events: none;
-}
-
+/* Coordinates and leader directions stay physical, in both reading directions. */
 .mapPoint {
+  width: 0.625rem;
+  height: 0.625rem;
   transform: translate(-50%, -50%);
 }
 
-.pointMarker::after {
-  content: "";
-  position: absolute;
-  inset: -0.7rem;
-  border: 1px solid oklch(0.822 0.112 150 / 0.78);
-  border-radius: inherit;
-  opacity: 0;
-  transform: scale(0.45);
+.pointMarker {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 2px solid #102d40;
+  border-radius: 50%;
+  background: #b8d0bc;
+  box-shadow: 0 0 0 1px #b8d0bc70;
 }
 
-.mapStage[data-map-debug]::after {
-  content: attr(data-map-debug);
+.pointLeader,
+.mapLabel {
   position: absolute;
-  z-index: 30;
-  top: 6%;
-  left: 50%;
-  direction: ltr;
-  transform: translateX(-50%);
-  border: 1px solid oklch(1 0 0 / 0.25);
-  border-radius: 999px;
-  background: oklch(0.224 0.072 262 / 0.92);
-  padding: 0.35rem 0.7rem;
-  color: white;
-  font: 600 0.72rem/1 system-ui, sans-serif;
-  letter-spacing: 0.02em;
+  display: none;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.pointLeader {
+  width: 1.75rem;
+  height: 3rem;
+  stroke: #77939e;
+  stroke-width: 0.75;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.pointLeader[data-side="right"] { left: 100%; }
+.pointLeader[data-side="left"] { right: 100%; transform: translateY(-50%) scaleX(-1); }
+
+.mapLabel {
+  padding: 0.1rem 0.25rem;
+  background: #102d40;
+  color: #e1eaee;
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.5;
   white-space: nowrap;
 }
 
-.mapStage[data-map-motion="armed"] .stageFrame {
-    opacity: 0;
-    transform: scale(0.955);
-  }
+.mapLabel[data-side="right"] { left: calc(100% + 1.75rem); }
+.mapLabel[data-side="left"] { right: calc(100% + 1.75rem); }
 
-  .mapStage[data-map-motion="armed"] .mapHalo {
-    opacity: 0;
-    transform: scale(0.55);
-  }
+.routeDraw { opacity: 0.55; }
 
-  .mapStage[data-map-motion="armed"] .mapSilhouette {
-    opacity: 0;
-    transform: translateY(2.75rem) scale(0.9);
-  }
-
-  .mapStage[data-map-motion="armed"] .routeTrail,
-  .mapStage[data-map-motion="armed"] .routeDraw,
-  .mapStage[data-map-motion="armed"] .mapPoint {
-    opacity: 0;
-  }
-
-  .mapStage[data-map-motion="armed"] .mapPoint {
-    transform: translate(-50%, -50%) scale(0.25);
-  }
-
-  .mapStage[data-map-motion="visible"] .stageFrame {
-    animation: frameArrive 0.8s var(--ease-out-expo) both;
-  }
-
-  .mapStage[data-map-motion="visible"] .mapHalo {
-    animation: haloArrive 0.95s 80ms var(--ease-out-quint) both;
-  }
-
-  .mapStage[data-map-motion="visible"] .mapSilhouette {
-    animation: landArrive 0.9s 80ms var(--ease-out-expo) both;
-    transform-origin: 50% 58%;
-  }
-
-  .mapStage[data-map-motion="visible"] .routeTrail {
-    animation: routeAppear 0.45s 420ms ease-out both;
-  }
-
-  .mapStage[data-map-motion="visible"] .routeDraw {
-    animation: drawRoute 1.05s 430ms linear both;
-  }
-
-  .mapStage[data-map-motion="visible"] .mapPoint {
-    animation: pointPop 0.52s var(--point-delay) var(--ease-out-expo) both;
-  }
-
-.mapStage[data-map-motion="visible"] .pointMarker::after {
-    animation: pointRipple 0.58s var(--point-delay) ease-out both;
+@media (min-width: 640px) {
+  .pointLeader,
+  .mapLabel { display: block; }
 }
 
-@keyframes frameArrive {
-  from {
-    opacity: 0;
-    transform: scale(0.955);
+@media (max-width: 999px) {
+  .composition {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
   }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+
+  .content { padding-block-end: 2rem; }
+  .title { max-width: 12ch; font-size: clamp(3.5rem, 8.5vw, 5.5rem); }
+  .lead { max-width: 44ch; }
+  .cityIndex { max-width: 30rem; }
+  .mapStage { max-width: 44rem; height: clamp(29rem, 120vw, 48rem); margin-inline: auto; }
+  .mapBody { height: 105%; }
 }
 
-@keyframes haloArrive {
-  from {
-    opacity: 0;
-    transform: scale(0.55);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+@media (max-width: 480px) {
+  .content { padding-block-start: 4rem; }
+  .title { font-size: clamp(3.2rem, 13.5vw, 4rem); }
+  .lead { font-size: 1rem; }
+  .cityIndex { margin-block-start: 2rem; gap: 0.6rem 1rem; }
 }
 
-@keyframes landArrive {
-  from {
-    opacity: 0;
-    transform: translateY(2.75rem) scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: none;
+/* Pin only when the text fits. All names remain in document flow with enlarged
+   text, mobile, short screens, reduced motion or unsupported timelines. */
+@supports (animation-timeline: view()) {
+  @media (min-width: 1000px) and (min-height: 760px) and (prefers-reduced-motion: no-preference) {
+    /* Candidate typography also applies in the fallback so fit is stable. */
+    .content { padding-block: 2rem; }
+    .title { font-size: clamp(3.3rem, 5.9vw, 6rem); }
+    .lead { margin-block-start: 1.5rem; font-size: 1rem; line-height: 1.75; }
+    .cityIndex { margin-block-start: 1.75rem; gap: 0.55rem 1.5rem; }
+    .cityIndex > li { font-size: 0.85rem; }
+
+    .reach[data-pinned-fit="true"] {
+      min-height: 260svh;
+      view-timeline-name: --community;
+      view-timeline-axis: block;
+    }
+
+    .reach[data-pinned-fit="true"] .composition {
+      position: sticky;
+      top: var(--header-h);
+      height: calc(100svh - var(--header-h));
+      min-height: 0;
+    }
+
+    .reach[data-pinned-fit="true"] .mapStage { height: 100%; }
+
+    .reach[data-pinned-fit="true"] .mapBody {
+      animation: communityDrift linear both;
+      animation-timeline: --community;
+      animation-range: contain 0% contain 100%;
+      transform-origin: 50% 50%;
+    }
+
+    .reach[data-pinned-fit="true"] .routeDraw {
+      animation: drawRoute linear both;
+      animation-timeline: --community;
+      animation-range: contain 0% contain 90%;
+    }
+
+    .reach[data-pinned-fit="true"] .mapPoint {
+      animation: scrollPoint linear both;
+      animation-timeline: --community;
+      animation-range: var(--point-start) var(--point-end);
+    }
+
+    .reach[data-pinned-fit="true"] .cityIndex > li {
+      animation: cityProgress linear both;
+      animation-timeline: --community;
+      animation-range: var(--point-start) var(--point-end);
+    }
   }
 }
 
-@keyframes routeAppear {
-  from { opacity: 0; }
-  to { opacity: 0.72; }
+@keyframes communityDrift {
+  from { transform: translateY(0.75rem) scale(0.98); }
+  to { transform: translateY(-0.75rem) scale(1.015); }
 }
 
 @keyframes drawRoute {
-  from {
-    opacity: 0.9;
-    stroke-dashoffset: 1;
-  }
-  to {
-    opacity: 0.18;
-    stroke-dashoffset: 0;
-  }
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
 }
 
-@keyframes pointPop {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.25);
-  }
-  65% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1.28);
-  }
-  100% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-  }
+@keyframes scrollPoint {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
-@keyframes pointRipple {
-  0% {
-    opacity: 0;
-    transform: scale(0.45);
-  }
-  38% {
-    opacity: 0.82;
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1.75);
-  }
+@keyframes cityProgress {
+  from { color: #a9c2cf; }
+  to { color: #fff; }
 }

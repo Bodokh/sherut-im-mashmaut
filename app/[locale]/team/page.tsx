@@ -8,12 +8,13 @@ import { Footer } from "@/components/site/Footer";
 import { Breadcrumbs } from "@/components/site/Breadcrumbs";
 import { RelatedLinks } from "@/components/site/RelatedLinks";
 import { JsonLd } from "@/components/seo/JsonLd";
-import { Section, Eyebrow } from "@/components/ui/Section";
+import { Section } from "@/components/ui/Section";
 import { Button } from "@/components/ui/Button";
 import { media } from "@/lib/media";
 import { localizedPath } from "@/lib/routes";
 import { resolvePageMetadata } from "@/lib/seo";
 import { teamPageGraph } from "@/lib/structured-data";
+import styles from "./team.module.css";
 
 const BIO_LINK_CLASS =
   "font-semibold text-brand-700 underline decoration-brand-300 underline-offset-4 transition-colors hover:text-brand-900";
@@ -116,94 +117,96 @@ export default async function TeamPage({
     },
   ];
 
+  const portraitMembers = members
+    .map((person, index) => ({ ...person, index }))
+    .filter((person) => person.image);
+
   return (
     <>
       <Header locale={locale} currentRoute="team" copy={buildHeaderCopy(dict)} />
       <JsonLd data={teamPageGraph(locale, dict)} />
       <main id="main" className="pt-[var(--header-h)]">
-        <Section id="leadership" className="overflow-hidden">
-          <div aria-hidden className="aurora-techelet pointer-events-none absolute inset-0 -z-10 opacity-60" />
-          <Breadcrumbs locale={locale} route="team" dict={dict} />
-          <div className="max-w-2xl">
-            <Eyebrow>{t.kicker}</Eyebrow>
-            <h1 className="mt-4 text-[clamp(2.2rem,4.2vw,3.6rem)] font-black leading-[1.06] text-ink-950">
-              {t.title}
-            </h1>
-            <p className="mt-5 max-w-[52ch] text-lg leading-relaxed text-ink-700">{t.lead}</p>
+        <section id="leadership" className={styles.hero} data-theme="dark">
+          <div className={`shell ${styles.heroInner}`}>
+            <div className={styles.breadcrumbs}>
+              <Breadcrumbs locale={locale} route="team" dict={dict} />
+            </div>
+            <div className={styles.heroComposition}>
+              <div className={styles.heroCopy}>
+                <p className={styles.kicker}>{t.kicker}</p>
+                <h1>{t.title}</h1>
+                <p className={styles.lead}>{t.lead}</p>
+              </div>
+              <ul className={styles.portraitWall} aria-label={dict.routeLabels.team}>
+                {portraitMembers.map(({ member, image, index }, portraitIndex) => (
+                  <li key={member.name}>
+                    <a href={`#team-member-${index + 1}`} className={styles.portraitLink}>
+                      <span className={styles.heroPortrait}>
+                        <Image
+                          src={image!}
+                          alt=""
+                          fill
+                          preload={portraitIndex === 0}
+                          sizes="(max-width: 767px) 45vw, (max-width: 1100px) 13vw, 160px"
+                          className={styles.portraitImage}
+                        />
+                      </span>
+                      <span className={styles.portraitName}>{member.name}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
+        </section>
 
-          <ul className="mt-14 grid gap-8 md:grid-cols-2">
-            {members.map(({ member: m, image, anonymousAvatar, imagePosition }, i) => (
+        <Section className={styles.profiles}>
+          <ul className={styles.memberList}>
+            {members.map(({ member: member, image, anonymousAvatar, imagePosition }, index) => (
               <li
-                key={m.name}
-                id={`team-member-${i + 1}`}
-                data-reveal={i === 0 ? undefined : ""}
-                style={{ ["--reveal-delay" as string]: `${(i % 2) * 90}ms` }}
-                className={`grid gap-5 rounded-3xl border border-line bg-surface p-5 sm:h-[15.5rem] sm:p-6 ${
-                  image || anonymousAvatar ? "sm:grid-cols-[11rem_1fr]" : "content-center"
-                }`}
+                key={member.name}
+                id={`team-member-${index + 1}`}
+                className={`${styles.profile} ${image ? styles.photographed : styles.textProfile} ${anonymousAvatar ? styles.anonymous : ""} ${index === 1 || index === 6 ? styles.reversed : ""} ${index === 2 || index === 3 ? styles.paired : ""}`}
               >
                 {image ? (
-                  <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-brand-100 sm:aspect-auto sm:min-h-44">
+                  <div className={styles.profilePortrait}>
                     <Image
                       src={image}
-                      alt={m.name}
+                      alt={member.name}
                       fill
-                      loading={i === 0 ? "eager" : "lazy"}
-                      fetchPriority={i === 0 ? "high" : "auto"}
-                      sizes="(max-width: 640px) 92vw, 176px"
-                      className={
-                        imagePosition === "center"
-                          ? "object-cover object-[center_30%]"
-                          : "object-cover object-top"
-                      }
+                      sizes="(max-width: 767px) 90vw, (max-width: 1100px) 38vw, 400px"
+                      className={styles.profileImage}
+                      style={{ objectPosition: imagePosition === "center" ? "50% 30%" : "top" }}
                     />
                   </div>
                 ) : anonymousAvatar ? (
-                  <div
-                    aria-hidden="true"
-                    className="relative flex aspect-[4/5] items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-brand-100 to-brand-200 text-brand-700 sm:aspect-auto sm:min-h-44"
-                  >
-                    <svg viewBox="0 0 96 96" className="h-28 w-28" fill="none">
-                      <circle cx="48" cy="35" r="18" fill="currentColor" opacity="0.78" />
-                      <path
-                        d="M16 88c2.8-19.6 15.1-29.4 32-29.4S77.2 68.4 80 88"
-                        fill="currentColor"
-                        opacity="0.78"
-                      />
-                    </svg>
-                  </div>
+                  <svg viewBox="0 0 96 96" className={styles.anonymousMark} fill="none" aria-hidden="true">
+                    <circle cx="48" cy="33" r="17" stroke="currentColor" strokeWidth="1.2" />
+                    <path d="M14 86c3-20 15-30 34-30s31 10 34 30" stroke="currentColor" strokeWidth="1.2" />
+                  </svg>
                 ) : null}
-                <div className={image || anonymousAvatar ? undefined : "self-center sm:px-4"}>
-                  <h2 className="font-display text-2xl font-bold text-ink-950">{m.name}</h2>
-                  <p className="mt-1 text-sm font-semibold text-brand-700">{m.role}</p>
-                  <p className="mt-3 leading-relaxed text-ink-600">{m.bio}</p>
+                <div className={styles.profileCopy}>
+                  <h2>{member.name}</h2>
+                  <p className={styles.role}>{member.role}</p>
+                  <p className={styles.bio}>{member.bio}</p>
                 </div>
               </li>
             ))}
           </ul>
-
-          <p className="mx-auto mt-12 max-w-2xl text-center text-lg leading-relaxed text-ink-700">
-            {t.volunteersNote}
-          </p>
+          <div className={styles.volunteers}>
+            <p>{t.volunteersNote}</p>
+          </div>
         </Section>
 
-        {/* CTA */}
-        <Section tone="navy" className="overflow-hidden">
-          <div aria-hidden className="aurora-techelet pointer-events-none absolute inset-0 -z-0 opacity-40" />
-          <div aria-hidden className="weave pointer-events-none absolute inset-0 -z-0 opacity-50" />
-          <div className="relative mx-auto max-w-2xl text-center">
-            <h2 className="text-balance text-[clamp(1.85rem,3.4vw,2.9rem)] font-bold text-white" data-reveal>
-              {t.ctaTitle}
-            </h2>
-            <p className="mt-4 text-lg leading-relaxed text-brand-100" data-reveal>
-              {t.ctaText}
-            </p>
-            <div className="mt-8" data-reveal>
-              <Button href={localizedPath(locale, "contact")} variant="white" size="lg" arrow>
-                {t.cta}
-              </Button>
+        <Section className={styles.invitation}>
+          <div className={styles.invitationInner}>
+            <div>
+              <h2>{t.ctaTitle}</h2>
+              <p>{t.ctaText}</p>
             </div>
+            <Button href={localizedPath(locale, "contact")} size="lg" arrow>
+              {t.cta}
+            </Button>
           </div>
         </Section>
 

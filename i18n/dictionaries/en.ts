@@ -1,13 +1,13 @@
 import type { Partner, Testimonial } from "../dictionaries";
 import type { Dictionary } from "./he";
 
-// English — secondary language. Mirrors the Hebrew dictionary shape.
+// English, secondary language. Mirrors the Hebrew dictionary shape.
 export const en: Dictionary = {
   meta: {
     title: "Service with Meaning | Values, Identity & Calling",
     description:
-      "Service with Meaning accompanies young women across Israel toward meaningful service — through words from the heart, real stories from the field, and personal guidance connecting values, identity and calling.",
-    ogAlt: "Service with Meaning — dawn light over an Israeli landscape",
+      "Service with Meaning accompanies young women across Israel toward meaningful service through words from the heart, real stories from the field, and personal guidance connecting values, identity and calling.",
+    ogAlt: "Service with Meaning: dawn light over an Israeli landscape",
   },
 
   seo: {
@@ -127,9 +127,9 @@ export const en: Dictionary = {
   langName: "עברית",
 
   hero: {
-    kicker: "Service with Meaning — a nonprofit",
+    kicker: "Service with Meaning, a nonprofit",
     title: "A generation choosing\nto serve with meaning",
-    lead: "Through words that come from the heart — real stories from the field and personal guidance — we help young women across Israel find their own contribution to the people of Israel, and seek a calling rooted in identity: the kind that makes service meaningful.",
+    lead: "Through words that come from the heart, real stories from the field and personal guidance, we help young women across Israel find their own contribution to the people of Israel, and seek a calling rooted in identity: the kind that makes service meaningful.",
     ctaPrimary: "Invite a lecture",
     ctaSecondary: "Our story",
     watch: "Watch the film",
@@ -149,8 +149,8 @@ export const en: Dictionary = {
 
   about: {
     kicker: "Who we are",
-    title: "Lecturers who speak from the heart — and the field",
-    lead: "Behind Service with Meaning stands a group of women lecturers, mentors and activists who have walked the path themselves. They don't speak in theory — they bring personal story, honesty and simplicity, and create a conversation that reaches every woman in the room.",
+    title: "Lecturers who speak from the heart and the field",
+    lead: "Behind Service with Meaning stands a group of women lecturers, mentors and activists who have walked the path themselves. They don't speak in theory. They bring personal story, honesty and simplicity, and create a conversation that reaches every woman in the room.",
     missionTitle: "Our mission",
     mission: "A registered nonprofit working to advance, empower and develop young women in Israel, personally, educationally, ethically and as leaders, in the period between finishing school and enlisting in the IDF, national service or civilian service.",
     programs: ["Lectures and gatherings", "Personal guidance", "Support for families", "Community and hotline"],
@@ -159,7 +159,7 @@ export const en: Dictionary = {
   reach: {
     kicker: "A nationwide community",
     title: "With you all the way",
-    lead: "Our community of service alumnae stretches from north to south — continuing to guide, connect and support at every point along the way.",
+    lead: "Our community of service alumnae stretches from north to south, continuing to guide, connect and support at every point along the way.",
     mapLabel: "Map of Israel showing service alumnae community locations",
     cities: [
       "Jerusalem",
@@ -177,7 +177,7 @@ export const en: Dictionary = {
   manifesto: {
     kicker: "What we believe",
     lines: ["Service is not only a duty.", "It is a chance for a life of meaning."],
-    body: "We believe in the strength of women and in their contribution to the people of Israel — by raising the nation's future, anchoring its values, and securing blessing for society. We believe that through a considered choice, a young woman in Israel can lead her life toward a life of meaning.",
+    body: "We believe in the strength of women and in their contribution to the people of Israel by raising the nation's future, anchoring its values, and securing blessing for society. We believe that through a considered choice, a young woman in Israel can lead her life toward a life of meaning.",
     pillars: [
       { title: "Choice", text: "Everything begins with an honest, considered choice." },
       { title: "Meaning", text: "To look at the whole, and at our national story." },
@@ -188,7 +188,7 @@ export const en: Dictionary = {
   stories: {
     kicker: "Films & Stories",
     title: "Real stories.\nReal people.",
-    lead: "Moments from the lectures, the gatherings and the field. Each film is a small reminder of what we do — and why it matters.",
+    lead: "Moments from the lectures, the gatherings and the field. Each film is a small reminder of what we do and why it matters.",
     cta: "All films",
     soon: "This film will be here soon. In the meantime, we'd love to talk and share.",
     items: [
@@ -216,14 +216,14 @@ export const en: Dictionary = {
   support: {
     kicker: "Guidance & Support",
     title: "You're not alone on the path",
-    lead: "Beyond the lectures, we're here to accompany you personally — at decision points, in complex moments, and throughout the service.",
+    lead: "Beyond the lectures, we're here to accompany you personally, at decision points, in complex moments, and throughout the service.",
     cta: "Reach out personally",
     girlsBlogCta: "Join the girls' blog WhatsApp group",
     hotlineCta: "Hotline",
     items: [
       {
         title: "Personal mentoring",
-        text: "A one-on-one conversation with a mentor who knows the path and truly listens — real, face-to-face accompaniment, all the way.",
+        text: "A one-on-one conversation with a mentor who knows the path and truly listens, with real, face-to-face accompaniment, all the way.",
       },
       {
         title: "Support for families",
@@ -239,7 +239,7 @@ export const en: Dictionary = {
   partners: {
     kicker: "Partnerships",
     title: "Partnerships",
-    lead: "Institutions and organizations we work with — together helping us reach another hall, another base, another community.",
+    lead: "Institutions and organizations we work with, together helping us reach another hall, another base, another community.",
     cta: "Become a partner",
     note: "The names of our partner institutions and organizations will be added here soon.",
     slotLabel: "Partner name coming soon",
@@ -322,8 +322,8 @@ export const en: Dictionary = {
   donate: {
     kicker: "Donate",
     title: "Every gift is another\nyoung woman finding meaning",
-    lead: "Your donation lets us reach another hall, another base, another young woman — and turn her service into a way of life. Every amount, every gesture, counts.",
-    amountsNote: "Amounts in multiples of Chai (18) — the symbol of life",
+    lead: "Your donation lets us reach another hall, another base, another young woman and turn her service into a way of life. Every amount, every gesture, counts.",
+    amountsNote: "Amounts in multiples of Chai (18), the symbol of life",
     amounts: ["36", "180", "360", "1,800"],
     currency: "₪",
     cta: "Donate now",
@@ -334,7 +334,7 @@ export const en: Dictionary = {
   contact: {
     kicker: "Contact",
     title: "Talk to us",
-    lead: "The simplest way — a WhatsApp message or a phone call. We're here for any question.",
+    lead: "The simplest way: a WhatsApp message or a phone call. We're here for any question.",
     whatsappCta: "Message us on WhatsApp",
     callCta: "Give us a call",
     hotlineCta: "Hotline",
@@ -384,8 +384,8 @@ export const en: Dictionary = {
 
   contactPage: {
     kicker: "Contact",
-    title: "Invite a lecture, a talk —\nor simply reach out",
-    lead: "Fill in the details and we'll get back to you soon. You can also write to us directly by email, WhatsApp or phone — whatever works for you.",
+    title: "Invite a lecture, a talk\nor simply reach out",
+    lead: "Fill in the details and we'll get back to you soon. You can also write to us directly by email, WhatsApp or phone, whatever works for you.",
     formTitle: "Tell us how we can help",
     detailsTitle: "Ways to contact us",
     backHome: "Back to home",
@@ -399,7 +399,7 @@ export const en: Dictionary = {
   lecturesPage: {
     kicker: "A gathering that starts a conversation",
     title: "Lectures for meaningful service",
-    lead: "Service with Meaning lectures connect real stories from the field with questions of identity, values, responsibility and calling — in a direct, human and respectful voice.",
+    lead: "Service with Meaning lectures connect real stories from the field with questions of identity, values, responsibility and calling in a direct, human and respectful voice.",
     answerTitle: "What does a lecture offer?",
     answer: "A gathering tailored to its audience, offering a practical and personal perspective on meaningful service, making room for questions and strengthening the connection between choice, identity and contribution.",
     sections: [
@@ -460,7 +460,7 @@ export const en: Dictionary = {
   guidancePage: {
     kicker: "You are not alone on the path",
     title: "Guidance on the path to meaningful service",
-    lead: "We offer young women and families a space for listening, direction and community — before service, at decision points and during complex moments along the way.",
+    lead: "We offer young women and families a space for listening, direction and community before service, at decision points and during complex moments along the way.",
     answerTitle: "What does our guidance include?",
     answer: "Human, needs-based support: a personal conversation, help for a family or a connection to community. The goal is to create clarity, identify strengths and choose the next step through values and meaning.",
     sections: [
@@ -708,7 +708,7 @@ export const en: Dictionary = {
   teamPage: {
     kicker: "Who we are",
     title: "Our leadership, lecturers and mentors",
-    lead: "The team behind Service with Meaning — leadership, lecturers and mentors bringing personal story, honesty and simplicity to every gathering.",
+    lead: "The team behind Service with Meaning: leadership, lecturers and mentors bringing personal story, honesty and simplicity to every gathering.",
     members: [
       {
         name: "Adv. Odelia Kadmi",
@@ -761,7 +761,7 @@ export const en: Dictionary = {
     },
     volunteersNote: "About 30 young women volunteer under an umbrella of answering questions and personal accompaniment.",
     ctaTitle: "Want to bring us to you?",
-    ctaText: "A lecture, a talk or a gathering — for your institution, community or unit.",
+    ctaText: "A lecture, a talk or a gathering for your institution, community or unit.",
     cta: "Invite a lecture",
   },
 
@@ -820,7 +820,7 @@ export const en: Dictionary = {
 
   footer: {
     legalTitle: "Legal information and accessibility",
-    blurb: "An Israeli nonprofit accompanying young women toward meaningful service — through values, identity and calling.",
+    blurb: "An Israeli nonprofit accompanying young women toward meaningful service through values, identity and calling.",
     navTitle: "Navigate",
     contactTitle: "Get in touch",
     followTitle: "Social",

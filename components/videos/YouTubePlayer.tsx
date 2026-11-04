@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import { cn } from "@/lib/cn";
+import styles from "./YouTubePlayer.module.css";
 
 export type PlayableVideo = {
   id: string;
@@ -49,32 +50,31 @@ export function YouTubePlayer({
   const [playing, setPlaying] = useState(false);
 
   return (
-    <div className="relative aspect-video w-full overflow-hidden rounded-[1.75rem] bg-brand-950 shadow-glow ring-1 ring-white/10">
+    <div className={styles.player}>
       {playing ? (
         <PlayerFrame video={video} />
       ) : (
         <button
           type="button"
           onClick={() => setPlaying(true)}
-          aria-label={`${playLabel}: ${video.title}`}
-          className="group absolute inset-0 flex items-center justify-center focus-visible:outline-offset-[-6px]"
+          className={styles.trigger}
         >
+          <span className="sr-only">{playLabel}: {video.title}{" "}</span>
           <Image
             src={video.thumbnail}
             alt=""
             fill
-            preload={priority}
+            loading={priority ? "eager" : "lazy"}
             fetchPriority={priority ? "high" : undefined}
-            sizes="(max-width: 1024px) 92vw, 760px"
-            className="object-cover transition-transform duration-[1.2s] ease-out-quart group-hover:scale-[1.03]"
+            sizes="(max-width: 760px) 90vw, (max-width: 1408px) 90vw, 1280px"
+            className={styles.poster}
           />
-          <span aria-hidden className="absolute inset-0 bg-gradient-to-t from-brand-950/60 via-transparent to-brand-950/10" />
-          <span className="relative inline-flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full bg-white/95 text-brand-800 shadow-lift transition duration-300 group-hover:scale-105 group-hover:bg-white sm:h-20 sm:w-20">
-            <span aria-hidden className="absolute inset-0 rounded-full ring-8 ring-white/20 transition-[box-shadow] group-hover:ring-[12px]" />
+          <span aria-hidden className={styles.shade} />
+          <span className={styles.play}>
             <PlayIcon />
           </span>
           {video.duration ? (
-            <span className="absolute bottom-4 end-4 rounded-full bg-brand-950/75 px-3 py-1 text-sm font-semibold tabular-nums text-white backdrop-blur-sm" dir="ltr">
+            <span className={styles.duration} dir="ltr">
               {video.duration}
             </span>
           ) : null}

@@ -1,0 +1,19 @@
+.home {
+  --font-sans: var(--font-body), Arial, sans-serif;
+  --font-display: var(--font-body), Arial, sans-serif;
+  --header-h: 5.5rem;
+  --color-paper: #fff;
+  --color-surface: #edf3f5;
+  --color-ink-950: #173547;
+  --color-brand-950: #102d40;
+  font-family: var(--font-sans);
+  background: #fff;
+  overflow: clip;
+}
+.home :global(.shell) { max-width: 88rem; }
+.home :global(h1), .home :global(h2) { font-weight: 400; letter-spacing: 0; line-height: 1.15; }
+.home :global(header .font-display) { font-family: var(--font-sans); }
+.home :global([data-reveal]) { animation: none; }
+.home :global(#reach) { background: #102d40; }
+.home :global(footer) { background: #102d40; }
+@media (max-width: 760px) { .home { --header-h: 4.5rem; } }

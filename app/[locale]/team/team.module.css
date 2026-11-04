@@ -1,0 +1,126 @@
+.hero {
+  overflow: clip;
+  background: #102d40;
+  color: #fff;
+}
+
+.heroInner { padding-block: 2rem clamp(4.5rem, 8vw, 8rem); }
+.breadcrumbs { color: #c6d8e0; }
+.breadcrumbs nav { color: inherit; margin-bottom: 0; }
+.breadcrumbs a { color: inherit; }
+.breadcrumbs [aria-current] { color: #fff; }
+
+.heroComposition {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  align-items: center;
+  gap: clamp(3rem, 6vw, 6rem);
+  margin-block-start: clamp(3rem, 6vw, 6rem);
+}
+
+.kicker { margin-block-end: 1.5rem; color: #c6d8e0; font-size: .9rem; }
+.heroCopy h1 {
+  max-width: 13ch;
+  color: #fff;
+  font-size: clamp(3rem, 5.4vw, 5.5rem);
+  font-weight: 400;
+  line-height: 1.18;
+  letter-spacing: 0;
+}
+.lead { max-width: 42ch; margin-block-start: 2rem; color: #dce7ec; font-size: 1.1rem; line-height: 1.9; }
+
+.portraitWall {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(.75rem, 1.3vw, 1.25rem);
+  align-items: start;
+}
+.portraitWall li:nth-child(even) { padding-block-start: 4rem; }
+.portraitLink { display: block; }
+.heroPortrait { display: block; position: relative; aspect-ratio: .55; overflow: hidden; background: #203d50; }
+.portraitImage { object-fit: cover; object-position: 50% 25%; transform: scale(var(--portrait-scale, 1)); transition: transform 400ms cubic-bezier(.2,.7,.2,1); }
+.portraitName { display: block; margin-block-start: 1rem; color: #dce7ec; font-size: .78rem; line-height: 1.6; }
+
+.profiles { background: #fff; padding-block: clamp(4rem, 8vw, 8rem); }
+.memberList { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(2rem, 5vw, 5rem); }
+.profile { position: relative; min-width: 0; scroll-margin-top: calc(var(--header-h) + 2rem); }
+.photographed {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, .75fr) minmax(0, 1.25fr);
+  align-items: center;
+  gap: clamp(3rem, 7vw, 7rem);
+}
+.profilePortrait { position: relative; aspect-ratio: .9; max-height: 32rem; overflow: hidden; background: #edf3f5; }
+.profileImage { object-fit: cover; }
+.profileCopy h2 { color: #173547; font-size: clamp(2rem, 3.4vw, 3.5rem); font-weight: 400; line-height: 1.2; }
+.role { margin-block-start: 1rem; color: #4b6b67; font-size: .95rem; line-height: 1.7; }
+.bio { max-width: 60ch; margin-block-start: 1.5rem; color: #526773; font-size: 1.05rem; line-height: 1.95; }
+.reversed { grid-template-columns: minmax(0, 1.25fr) minmax(0, .75fr); }
+.reversed .profilePortrait { order: 2; }
+.reversed .profileCopy { order: 1; }
+.textProfile { grid-column: 1 / -1; padding: clamp(2rem, 4vw, 4rem); background: #edf3f5; }
+.textProfile .profileCopy { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: .5rem 3rem; align-items: start; }
+.textProfile .profileCopy h2 { grid-column: 1; }
+.textProfile .role { grid-column: 1; margin-block-start: 0; }
+.textProfile .bio { grid-column: 2; grid-row: 1 / 3; margin-block-start: 0; }
+.paired { grid-column: auto; }
+.paired .profileCopy { display: block; }
+.paired .role { margin-block-start: 1rem; }
+.paired .bio { margin-block-start: 1.5rem; }
+.anonymous { overflow: hidden; background: #102d40; }
+.anonymous .profileCopy { position: relative; z-index: 1; }
+.anonymous .profileCopy h2 { color: #fff; }
+.anonymous .role { color: #b8d0bc; }
+.anonymous .bio { color: #dce7ec; }
+.anonymousMark { position: absolute; top: 1.5rem; inset-inline-end: 1.5rem; width: 5rem; height: 5rem; color: #6a8d9d; opacity: .25; }
+.volunteers { display: flex; justify-content: center; padding-block-start: clamp(3rem, 6vw, 6rem); }
+.volunteers p { max-width: 54ch; color: #526773; font-size: clamp(1.1rem, 1.8vw, 1.5rem); line-height: 1.8; text-align: center; }
+
+.invitation { background: #edf3f5; padding-block: clamp(4rem, 6vw, 6rem); }
+.invitationInner { display: flex; justify-content: space-between; align-items: center; gap: 3rem; }
+.invitation h2 { color: #173547; font-size: clamp(2rem, 4vw, 3.75rem); font-weight: 400; }
+.invitation p { margin-block-start: 1.25rem; color: #526773; font-size: 1.1rem; line-height: 1.8; }
+.invitation a { flex-shrink: 0; }
+
+@media (hover: hover) and (pointer: fine) {
+  .portraitLink:hover .portraitImage { transform: scale(calc(var(--portrait-scale, 1) * 1.04)); }
+  .portraitLink:hover .portraitName { color: #fff; text-decoration: underline; text-underline-offset: .25em; }
+}
+
+@media (max-width: 1100px) {
+  .heroComposition { gap: 2.5rem; }
+  .heroCopy h1 { font-size: clamp(3rem, 5vw, 4.25rem); }
+  .portraitWall { gap: .65rem; }
+  .portraitWall li:nth-child(even) { padding-block-start: 2.5rem; }
+  .portraitName { font-size: .72rem; }
+  .photographed, .reversed { gap: 3rem; }
+  .profileCopy h2 { font-size: clamp(2rem, 3.6vw, 3rem); }
+}
+
+@media (max-width: 767px) {
+  .heroInner { padding-block-start: 1.5rem; }
+  .heroComposition { grid-template-columns: minmax(0, 1fr); margin-block-start: 3rem; gap: 3rem; }
+  .heroCopy h1 { max-width: 15ch; font-size: clamp(2.7rem, 10vw, 4rem); }
+  .lead { max-width: 46ch; margin-block-start: 1.5rem; font-size: 1rem; }
+  .portraitWall { max-width: 36rem; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.75rem 1rem; }
+  .portraitWall li:nth-child(even) { padding-block-start: 0; }
+  .heroPortrait { aspect-ratio: .85; }
+  .portraitWall li:nth-child(2) .portraitImage { --portrait-scale: 1.35; transform-origin: 50% 28%; }
+  .portraitWall li:nth-child(4) .portraitImage { --portrait-scale: 1.06; transform-origin: 50% 28%; }
+  .portraitName { margin-block-start: .75rem; font-size: .9375rem; line-height: 1.55; }
+  .memberList { grid-template-columns: minmax(0, 1fr); gap: 3.5rem; }
+  .photographed, .reversed { display: flex; flex-direction: column; align-items: stretch; gap: 2rem; }
+  .profilePortrait { order: 0 !important; width: 100%; max-width: 30rem; aspect-ratio: 1; max-height: none; }
+  .profileCopy { order: 1 !important; }
+  .profileCopy h2 { font-size: 2.15rem; }
+  .role { margin-block-start: .75rem; }
+  .bio { margin-block-start: 1.1rem; font-size: 1rem; line-height: 1.9; }
+  .textProfile, .paired { grid-column: 1; padding: 2rem; }
+  .textProfile .profileCopy { display: block; }
+  .textProfile .role { margin-block-start: .75rem; }
+  .textProfile .bio { margin-block-start: 1.1rem; }
+  .invitationInner { flex-direction: column; align-items: start; gap: 2rem; }
+}
+
+@media (prefers-reduced-motion: reduce) { .portraitImage { transition: none; } .portraitLink:hover .portraitImage { transform: scale(var(--portrait-scale, 1)); } }

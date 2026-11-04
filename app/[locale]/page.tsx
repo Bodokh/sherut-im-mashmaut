@@ -17,6 +17,7 @@ import { Comments } from "@/components/sections/Comments";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { resolvePageMetadata } from "@/lib/seo";
 import { homeGraph } from "@/lib/structured-data";
+import styles from "./home.module.css";
 
 export async function generateMetadata({
   params,
@@ -33,7 +34,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   const dict = getDictionary(locale);
 
   return (
-    <>
+    <div className={styles.home}>
       <Header locale={locale} currentRoute="home" copy={buildHeaderCopy(dict)} />
       <JsonLd data={homeGraph(locale, dict)} />
       <main id="main">
@@ -49,6 +50,6 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
         <Comments dict={dict} locale={locale} />
       </main>
       <Footer locale={locale} dict={dict} />
-    </>
+    </div>
   );
 }

@@ -1,0 +1,13 @@
+.home { background: #102d40; color: #fff; box-shadow: none; border-color: #ffffff20; backdrop-filter: none; }
+.home > div:first-of-type { max-width: 94rem; }
+.home > div:first-of-type > nav a { font-size: .875rem; }
+.home > div:first-of-type > nav > a,
+.home > div:first-of-type > nav > div > a,
+.home > div:first-of-type > a,
+.home > div:first-of-type > div > a,
+.home > div:first-of-type > div > div > a { color: #fff; }
+.home > div:first-of-type > nav > a:hover,
+.home > div:first-of-type > nav > div > a:hover,
+.home > div:first-of-type > div > a:hover,
+.home > div:first-of-type > div > div > a:hover { background: #ffffff15; }
+@media (min-width: 1280px) and (max-width: 1439px) { .home > div:first-of-type > nav > a, .home > div:first-of-type > nav > div > a { padding-inline: .7rem; } }

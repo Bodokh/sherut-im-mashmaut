@@ -7,6 +7,7 @@ import type { Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
 import { cn } from "@/lib/cn";
 import { localizedPath, type SiteRouteKey } from "@/lib/routes";
+import styles from "./NotFoundScreen.module.css";
 
 const CONTINUE_ROUTES = ["lectures", "guidance", "videos", "faq"] as const satisfies readonly SiteRouteKey[];
 
@@ -23,6 +24,64 @@ export function NotFoundScreen({
   const copy = dict.notFound;
   const staff = context === "staff";
   const homeHref = staff ? "/staff" : localizedPath(locale, "home");
+
+  if (!staff) {
+    return (
+      <div className={styles.page} data-theme="dark">
+        <Header locale={locale} currentRoute="home" copy={buildHeaderCopy(dict)} />
+        <main id="main" className={`shell ${styles.main}`}>
+          <div className={styles.content}>
+            <h1><span className="sr-only">404. </span>{copy.title}</h1>
+            <p className={styles.lead}>{copy.lead}</p>
+            <div className={styles.actions}>
+              <Button href={localizedPath(locale, "home")} variant="white" size="lg" arrow className={styles.homeButton}>
+                {copy.home}
+              </Button>
+              <Button href={localizedPath(locale, "contact")} variant="outlineLight" size="lg">
+                {copy.contact}
+              </Button>
+            </div>
+            <nav aria-label={copy.continue} className={styles.continue}>
+              <p>{copy.continue}</p>
+              <ul>
+                {CONTINUE_ROUTES.map((route) => (
+                  <li key={route}>
+                    <Link href={localizedPath(locale, route)}>
+                      {dict.routeLabels[route]}
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+                        <path d="M4 12h16m-6-6 6 6-6 6" />
+                      </svg>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          </div>
+          <div className={styles.art} aria-hidden="true">
+            <svg className={styles.road} viewBox="0 0 600 800" fill="none">
+              <defs>
+                <linearGradient id="recovery-road-blue" x1="90" y1="710" x2="370" y2="70" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#3b758e" />
+                  <stop offset=".45" stopColor="#a3c8d5" />
+                  <stop offset="1" stopColor="#37657a" />
+                </linearGradient>
+                <linearGradient id="recovery-road-sage" x1="160" y1="700" x2="360" y2="160" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#819f9b" />
+                  <stop offset=".5" stopColor="#e0ece8" />
+                  <stop offset="1" stopColor="#92b1ae" />
+                </linearGradient>
+              </defs>
+              <g className={styles.roadShape}>
+                <path d="M345-25c-28 97 11 149-17 209-26 61-169 75-159 134 9 57 150 73 147 150-3 83-192 133-191 212 0 64 126 108 263 131C167 803 17 770 27 684c10-94 200-150 204-219 5-56-137-78-146-139-15-92 211-95 225-155 14-58-15-109 35-196Z" fill="url(#recovery-road-blue)" />
+                <path d="M364-25c-30 96 5 148-22 210-24 65-132 82-116 139 16 56 188 68 185 150-4 88-166 143-153 218 13 68 149 106 266 126-176-13-345-42-353-118-10-89 154-153 161-228 7-59-149-87-161-144-17-72 144-87 157-148 14-59-13-109 36-205Z" fill="url(#recovery-road-sage)" />
+              </g>
+            </svg>
+            <span className={styles.code} dir="ltr">404</span>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex min-h-dvh flex-col">
