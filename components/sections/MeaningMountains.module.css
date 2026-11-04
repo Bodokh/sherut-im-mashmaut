@@ -43,7 +43,7 @@
    throughout its rise. Nearer terrain only advances upward, hiding old contours
    rather than revealing missing imagery behind the photograph. */
 @supports (animation-timeline: view()) and (width: 1cqw) {
-  @media (min-width: 1000px) and (min-height: 760px) and (prefers-reduced-motion: no-preference) {
+  @media (prefers-reduced-motion: no-preference) {
     :global([data-pinned-fit="true"]) .canvas {
       inset: auto;
       left: 50%;
@@ -64,6 +64,18 @@
       animation: atmosphereReveal linear both;
       animation-timeline: --manifesto-chapters;
       animation-range: contain 43% contain 78%;
+    }
+  }
+}
+
+@supports (animation-timeline: view()) and (width: 1cqw) {
+  @media (max-width: 767px) and (prefers-reduced-motion: no-preference) {
+    :global([data-pinned-fit="true"]) .canvas {
+      /* 20% overscan and a lower center retain foreground coverage with a
+         smaller raster surface on portrait screens. */
+      top: 55%;
+      width: max(125cqw, 213.3334cqh);
+      height: max(120cqh, 70.3125cqw);
     }
   }
 }

@@ -78,10 +78,10 @@ function terrainMask(points: readonly (readonly [number, number])[]) {
   return `polygon(${points.map(([x, y]) => `${(x / 14.4).toFixed(3)}% ${(y / 8.1).toFixed(3)}%`).join(", ")}, 100% 100%, 0% 100%)`;
 }
 
-// Account for the real 16:9 cover width on tall screens and the desktop
-// 1.5x overscan plus the near plane's forward scale. Every copy requests
-// one identical browser-cache resource.
-const terrainSizes = "(max-width: 999px) max(100vw, 136svh), max(162vw, calc(287svh - 16rem))";
+// Include the largest plane's forward scale in the shared cover width:
+// 1.2x vertical / 1.25x horizontal overscan on phones, 1.5x elsewhere.
+// Every copy requests one identical browser-cache resource.
+const terrainSizes = "(max-width: 767px) max(135vw, calc(230svh - 10rem)), max(162vw, calc(287svh - 12rem))";
 
 function TerrainPhoto() {
   return <Image src={media.meaningFullscreen} alt="" fill quality={85} sizes={terrainSizes} loading="lazy" className={styles.photo} />;

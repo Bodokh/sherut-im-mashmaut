@@ -38,5 +38,11 @@
   transition: background-color 180ms ease-out, color 180ms ease-out;
 }
 .arrow:disabled { opacity: .35; cursor: default; }
+@media (max-width: 480px) {
+  .controls { grid-template-columns: auto minmax(1rem, 1fr) auto; gap: .65rem; }
+  .counter { min-width: 3.5rem; }
+  .arrows { gap: .2rem; }
+  .arrow { width: 2.75rem; }
+}
 @media (hover: hover) and (pointer: fine) { .arrow:not(:disabled):hover { background: #dfe9ed; color: #102d40; } }
 @media (prefers-reduced-motion: reduce) { .progressFill, .arrow { transition: none; } }

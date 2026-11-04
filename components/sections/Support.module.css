@@ -15,7 +15,7 @@
 
 .photo {
   object-fit: cover;
-  object-position: 55% 60%;
+  object-position: 50% 75%;
 }
 
 .invitation {
@@ -174,8 +174,9 @@
 }
 
 @media (max-width: 760px) {
+  .support { padding-block-start: 0; }
   .imageStage { width: calc(100% + 2 * var(--gutter)); margin-inline: calc(-1 * var(--gutter)); aspect-ratio: 1.45; }
-  .photo { object-position: 56% 58%; }
+  .photo { object-position: 50% 75%; }
   .invitation { grid-template-columns: minmax(0, 1fr); width: 100%; gap: 1.25rem; margin-block-start: -1.5rem; padding: 1.75rem 1.5rem; }
   .kicker { margin-block-end: .75rem; }
   .heading h2 { font-size: clamp(2.5rem, 8vw, 3.6rem); max-width: 17ch; }

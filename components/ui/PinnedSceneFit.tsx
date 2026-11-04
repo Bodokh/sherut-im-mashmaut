@@ -15,7 +15,7 @@ function hashDestination() {
   return { hash, target, destination: Math.min(maxScroll, Math.max(0, destination)) };
 }
 
-/** Enables native pinning only while every text panel fits below the header. */
+/** Enables native pinning only while the complete scene fits below the header. */
 export function PinnedSceneFit() {
   const probeRef = useRef<HTMLSpanElement>(null);
 
@@ -25,7 +25,7 @@ export function PinnedSceneFit() {
     if (!probe || !section || !window.ResizeObserver || !CSS.supports("animation-timeline", "view()")) return;
 
     const panels = Array.from(section.querySelectorAll<HTMLElement>("[data-pinned-content]"));
-    const eligible = window.matchMedia("(min-width: 1000px) and (min-height: 760px) and (prefers-reduced-motion: no-preference)");
+    const eligible = window.matchMedia("(prefers-reduced-motion: no-preference)");
     let active = true;
     const initialAnchor = eligible.matches ? hashDestination() : null;
     let initialLayoutChanged = false;
@@ -63,7 +63,9 @@ export function PinnedSceneFit() {
     function measure() {
       if (!active || !probe || !section) return;
       const availableHeight = probe.getBoundingClientRect().height;
-      const fits = eligible.matches && availableHeight > 0 && panels.length > 0 && panels.every((panel) => panel.scrollHeight <= availableHeight - 2);
+      // scrollHeight is rounded to whole CSS pixels; accept an exact viewport
+      // fit while rejecting any content that would extend beyond that space.
+      const fits = eligible.matches && availableHeight > 0 && panels.length > 0 && panels.every((panel) => panel.scrollHeight <= Math.ceil(availableHeight));
       const changed = fits !== (section.dataset.pinnedFit === "true");
       if (changed) initialLayoutChanged = true;
       if (fits) section.dataset.pinnedFit = "true";
@@ -107,5 +109,5 @@ export function PinnedSceneFit() {
     };
   }, []);
 
-  return <span ref={probeRef} aria-hidden="true" data-pinned-fit-probe="" style={{ position: "absolute", width: 0, height: "calc(100svh - var(--header-h))", visibility: "hidden", pointerEvents: "none" }} />;
+  return <span ref={probeRef} aria-hidden="true" data-pinned-fit-probe="" style={{ position: "absolute", width: 0, height: "calc(100svh - var(--header-h) - var(--pinned-reserve, 0px))", visibility: "hidden", pointerEvents: "none" }} />;
 }

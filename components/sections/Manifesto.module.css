@@ -161,12 +161,17 @@
   display: none;
 }
 
-/* Pinning also requires a measured text fit. Enlarged text, unsupported
-   browsers, mobile and reduced-motion readers receive stacked chapters. */
+/* Pinning requires measured text fit, including space for the chapter rail.
+   Enlarged text, unsupported browsers and reduced motion retain readable flow. */
 @supports (animation-timeline: view()) {
-  @media (min-width: 1000px) and (min-height: 760px) and (prefers-reduced-motion: no-preference) {
+  @media (prefers-reduced-motion: no-preference) {
     /* Keep measurement and pinned typography identical to avoid fit loops. */
+    .manifesto { --pinned-reserve: 4.5rem; }
     .introContent { padding-block: 3rem; }
+    /* Bring the outer chapters inward without losing their high/low rhythm.
+       Padding remains part of the measured candidate text panel. */
+    .choice .chapterContent { padding-block-end: clamp(8rem, 18svh, 12rem); }
+    .womanhood .chapterContent { padding-block-start: clamp(8rem, 18svh, 12rem); }
 
     .manifesto[data-pinned-fit="true"] {
       min-height: 350svh;
@@ -338,6 +343,22 @@
   .chapterContent p { font-size: 1.1rem; }
   .choice .photo { object-position: 48% center; }
   .womanhood .photo { object-position: 62% center; }
+}
+
+
+@supports (animation-timeline: view()) {
+  @media (max-width: 767px) and (prefers-reduced-motion: no-preference) {
+    .manifesto { --pinned-reserve: 3.75rem; }
+    .introContent { padding-block: 1.25rem; }
+    .kicker { margin-block-end: 1.25rem; }
+    .introContent h2 { font-size: clamp(1.875rem, 7.5vw, 3.5rem); }
+    .body { margin-block-start: 1.25rem; line-height: 1.75; }
+    .chapterContent { padding-block: 2.5rem 4rem; }
+    .choice .chapterContent { padding-block-end: clamp(7rem, 19svh, 10rem); }
+    .womanhood .chapterContent { padding-block-start: clamp(6rem, 16svh, 9rem); }
+    .manifesto[data-pinned-fit="true"] .progress { bottom: 1.25rem; gap: 0.75rem; }
+    .manifesto[data-pinned-fit="true"] .progress > div { font-size: 0.7rem; }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

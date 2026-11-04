@@ -43,13 +43,15 @@ export function ReachMap({ dict }: { dict: Dictionary }) {
   return (
     <Section id="reach" tone="navy" className={styles.reach} shell={false}>
       <PinnedSceneFit />
-      <div className={`shell ${styles.composition}`}>
-        <div className={styles.content} data-pinned-content="">
-          <p className={styles.sectionName}>{t.kicker}</p>
-          <h2 className={styles.title}>
-            {t.title}
-          </h2>
-          <p className={styles.lead}>{t.lead}</p>
+      <div className={`shell ${styles.composition}`} data-pinned-content="">
+        <div className={styles.content}>
+          <div className={styles.copy}>
+            <p className={styles.sectionName}>{t.kicker}</p>
+            <h2 className={styles.title}>
+              {t.title}
+            </h2>
+            <p className={styles.lead}>{t.lead}</p>
+          </div>
 
           <ul className={styles.cityIndex} aria-label={t.mapLabel}>
             {t.cities.map((city, index) => (

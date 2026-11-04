@@ -34,7 +34,7 @@ export function Testimonials({ dict }: { dict: Dictionary }) {
         ) : null}
       </div>
 
-      <TestimonialsCarousel label={t.title} prevLabel={t.prev} nextLabel={t.next}>
+      <TestimonialsCarousel label={t.title} prevLabel={t.prev} nextLabel={t.next} playLabel={dict.hero.player.play} pauseLabel={dict.hero.player.pause}>
         <ul className={styles.quoteTrack}>
           {t.items.map((item, i) => (
             <li
