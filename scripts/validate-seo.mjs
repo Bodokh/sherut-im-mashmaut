@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 const baseUrl = process.env.SEO_BASE_URL ?? "http://127.0.0.1:3100";
 const origin = "https://www.imashmaut.co.il";
 const locales = ["he", "en"];
@@ -100,6 +102,7 @@ function expectedSchema(path) {
 
 const titles = new Set();
 const descriptions = new Set();
+const imageAlts = new Set();
 
 for (const { locale, route, path, slug } of pages) {
   const response = await fetch(`${baseUrl}${path}`);
@@ -130,8 +133,12 @@ for (const { locale, route, path, slug } of pages) {
   assert(metaProperty(html, "og:title") === title, `${path}: incorrect Open Graph title`);
   assert(metaProperty(html, "og:description") === description, `${path}: incorrect Open Graph description`);
   assert(metaProperty(html, "og:url") === canonical, `${path}: incorrect Open Graph URL`);
-  const socialImage = `${origin}/og?locale=${locale}&route=${route}`;
+  const socialImage = `${origin}/og?locale=${locale}&route=${route}&v=2`;
   assert(metaProperty(html, "og:image") === socialImage, `${path}: incorrect Open Graph image`);
+  const imageAlt = metaProperty(html, "og:image:alt");
+  assert(imageAlt && !imageAlts.has(imageAlt), `${path}: missing or duplicate social image alt text`);
+  assert(metaContent(html, "twitter:image:alt") === imageAlt, `${path}: inconsistent social image alt text`);
+  imageAlts.add(imageAlt);
   assert(metaContent(html, "twitter:card") === "summary_large_image", `${path}: missing Twitter card`);
   assert(metaContent(html, "twitter:image") === socialImage, `${path}: incorrect Twitter image`);
   assert(metaContent(html, "robots")?.includes("index, follow"), `${path}: incorrect robots meta`);
@@ -227,10 +234,18 @@ for (const [resource, contentType] of [
   assert(response.headers.get("content-type")?.includes(contentType), `${resource}: incorrect content type`);
 }
 
+const imageDigests = new Set();
 for (const { locale, route } of pages) {
-  const response = await fetch(`${baseUrl}/og?locale=${locale}&route=${route}`);
+  const response = await fetch(`${baseUrl}/og?locale=${locale}&route=${route}&v=2`);
   assert(response.status === 200, `/og?locale=${locale}&route=${route}: expected 200`);
   assert(response.headers.get("content-type")?.includes("image/png"), `/og?locale=${locale}&route=${route}: incorrect content type`);
+  const png = Buffer.from(await response.arrayBuffer());
+  assert(png.subarray(0, 8).toString("hex") === "89504e470d0a1a0a", `${locale}/${route}: invalid PNG`);
+  assert(png.readUInt32BE(16) === 1200 && png.readUInt32BE(20) === 630, `${locale}/${route}: incorrect image dimensions`);
+  assert(png.length < 1_500_000, `${locale}/${route}: social image exceeds 1.5 MB`);
+  const digest = createHash("sha256").update(png).digest("hex");
+  assert(!imageDigests.has(digest), `${locale}/${route}: duplicate social image`);
+  imageDigests.add(digest);
 }
 
 for (const slug of slugs) {

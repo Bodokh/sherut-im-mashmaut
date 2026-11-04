@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  outputFileTracingIncludes: {
+    "/og": ["./assets/og/artwork/*.jpg", "./assets/og/*.ttf", "./public/images/logo-mark.png"],
+  },
   experimental: {
     globalNotFound: true,
   },

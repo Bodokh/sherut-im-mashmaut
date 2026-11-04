@@ -12,7 +12,8 @@ export function buildPageMetadata(
   const canonical = absoluteUrl(locale, route);
   const hebrewUrl = absoluteUrl("he", route);
   const englishUrl = absoluteUrl("en", route);
-  const imageUrl = `${SITE_ORIGIN}/og?locale=${locale}&route=${route}`;
+  const imageUrl = `${SITE_ORIGIN}/og?locale=${locale}&route=${route}&v=2`;
+  const imageAlt = `${dict.routeLabels[route]} | ${dict.brand.name}`;
 
   return {
     title: copy.title,
@@ -38,7 +39,7 @@ export function buildPageMetadata(
           url: imageUrl,
           width: 1200,
           height: 630,
-          alt: dict.meta.ogAlt,
+          alt: imageAlt,
         },
       ],
     },
@@ -46,7 +47,7 @@ export function buildPageMetadata(
       card: "summary_large_image",
       title: copy.title,
       description: copy.description,
-      images: [{ url: imageUrl, alt: dict.meta.ogAlt }],
+      images: [{ url: imageUrl, alt: imageAlt }],
     },
     robots: {
       index: true,
