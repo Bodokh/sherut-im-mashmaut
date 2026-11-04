@@ -216,6 +216,7 @@ export const en: Dictionary = {
   support: {
     kicker: "Guidance & Support",
     title: "You're not alone on the path",
+    imageAlt: "A speaker addressing a full hall of girls at a Sherut Im Mashmaut talk",
     lead: "Beyond the lectures, we're here to accompany you personally, at decision points, in complex moments, and throughout the service.",
     disclaimer: "The organization does not provide legal advice and is not responsible for decisions made by anyone who contacts it.",
     cta: "Reach out personally",

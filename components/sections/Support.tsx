@@ -37,7 +37,7 @@ export function Support({ dict }: { dict: Dictionary }) {
       <div className={styles.imageStage}>
         <Image
           src={media.supportCommunity}
-          alt={t.title}
+          alt={t.imageAlt}
           fill
           sizes="(max-width: 767px) 100vw, (max-width: 1400px) 90vw, 1280px"
           className={styles.photo}
