@@ -2,6 +2,25 @@ import type { Locale } from "./config";
 import { he, type Dictionary } from "./dictionaries/he";
 import { en } from "./dictionaries/en";
 
+/**
+ * A quote on the home page. Caption = `name` (else `caption`, else the default
+ * fallback), followed by `, location` when `location` is set.
+ */
+export type Testimonial = { quote: string; name?: string; location?: string; caption?: string };
+
+/**
+ * A collaborating institution or organisation. `logo` is a path under /public;
+ * `logoWidth` / `logoHeight` are its intrinsic pixel size (used for the aspect ratio).
+ * `url` is an optional external link.
+ */
+export type Partner = {
+  name: string;
+  logo?: string;
+  logoWidth?: number;
+  logoHeight?: number;
+  url?: string;
+};
+
 const dictionaries: Record<Locale, Dictionary> = { he, en };
 
 export function getDictionary(locale: Locale): Dictionary {

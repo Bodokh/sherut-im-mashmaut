@@ -16,6 +16,8 @@ export const metadata: Metadata = {
   title: { default: "סביבת הליווי | שירות עם משמעות", template: "%s | סביבת הליווי" },
   description: "סביבת העבודה של צוות הליווי בשירות עם משמעות.",
   robots: { index: false, follow: false },
+  manifest: "/staff/manifest.webmanifest",
+  appleWebApp: { capable: true, title: "ליווי", statusBarStyle: "default" },
 };
 
 export default function StaffRootLayout({ children }: { children: ReactNode }) {

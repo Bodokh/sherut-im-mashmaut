@@ -3,6 +3,7 @@ import { type NextFetchEvent, NextRequest, NextResponse } from "next/server";
 import { defaultLocale } from "@/i18n/config";
 import { PATHNAME_HEADER } from "@/lib/pathname-locale";
 
+const staffManifestPath = "/staff/manifest.webmanifest";
 const staffAuthPaths = new Set(["/staff/login", "/staff/signup", "/staff/logout", "/staff/setup"]);
 const useDevelopmentProxy = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.startsWith("pk_test_") === true;
 
@@ -12,7 +13,8 @@ const staffProxy = clerkMiddleware(async (auth, request) => {
   const isAuthPage = [...staffAuthPaths].some((path) => pathname === path || pathname.startsWith(`${path}/`));
 
   // APIs validate identity and staff membership themselves and return JSON 401/403.
-  if (!isApi && !isAuthPage && pathname !== "/staff/offline") {
+  const isPublicStaffAsset = pathname === "/staff/offline" || pathname === staffManifestPath;
+  if (!isApi && !isAuthPage && !isPublicStaffAsset) {
     const session = await auth();
     if (!session.isAuthenticated) {
       return NextResponse.redirect(new URL("/staff/login", request.url));
