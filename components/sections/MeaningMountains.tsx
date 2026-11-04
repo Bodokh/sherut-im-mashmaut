@@ -1,124 +1,114 @@
+import Image from "next/image";
 import type { CSSProperties } from "react";
+import { media } from "@/lib/media";
 import styles from "./MeaningMountains.module.css";
 
-const WIDTH = 1800;
-const HEIGHT = 1100;
+// Every depth plane uses the same photograph, crop and responsive image URL.
+// These masks follow its real ridgelines in normalized source coordinates.
+const terrainPlanes = [
+  {
+    name: "far",
+    ridge: [
+      [0, 371], [8, 367], [24, 368], [32, 366], [64, 374], [104, 377], [112, 375], [128, 386],
+      [152, 385], [168, 375], [184, 382], [192, 381], [208, 373], [224, 376], [240, 369], [248, 370],
+      [256, 377], [264, 376], [272, 378], [280, 371], [288, 368], [296, 369], [304, 374], [328, 375],
+      [352, 380], [376, 382], [392, 391], [456, 382], [488, 394], [504, 393], [512, 397], [544, 393],
+      [552, 393], [560, 396], [576, 391], [608, 387], [656, 383], [664, 384], [672, 380], [680, 378],
+      [688, 380], [704, 374], [712, 374], [720, 377], [728, 385], [736, 380], [744, 384], [752, 377],
+      [760, 377], [784, 370], [792, 376], [800, 375], [808, 378], [824, 369], [840, 373], [848, 370],
+      [864, 372], [872, 369], [888, 369], [912, 357], [928, 357], [952, 353], [992, 361], [1008, 369],
+      [1064, 385], [1088, 369], [1104, 365], [1112, 360], [1120, 365], [1136, 369], [1152, 361], [1160, 362],
+      [1168, 366], [1184, 365], [1192, 367], [1216, 380], [1264, 411], [1280, 410], [1288, 414], [1296, 415],
+      [1328, 407], [1352, 398], [1368, 389], [1384, 395], [1408, 392], [1424, 394], [1432, 398], [1440, 398],
+    ],
+    travel: "-2.5%",
+    scale: 1.018,
+  },
+  {
+    name: "middle",
+    ridge: [
+      [0, 441], [8, 440], [32, 428], [72, 425], [88, 427], [152, 452], [176, 458], [184, 462],
+      [192, 462], [200, 460], [240, 440], [264, 432], [304, 437], [328, 448], [352, 449], [376, 455],
+      [384, 455], [416, 441], [432, 439], [456, 450], [480, 444], [496, 448], [512, 447], [536, 437],
+      [552, 437], [568, 449], [576, 448], [584, 444], [616, 443], [640, 437], [688, 458], [720, 462],
+      [760, 463], [784, 461], [792, 460], [800, 455], [816, 452], [840, 454], [864, 468], [888, 462],
+      [920, 475], [936, 479], [1008, 516], [1024, 521], [1032, 521], [1048, 513], [1056, 529], [1096, 521],
+      [1112, 523], [1152, 522], [1216, 506], [1272, 501], [1280, 503], [1296, 499], [1344, 501], [1360, 508],
+      [1368, 506], [1392, 516], [1408, 517], [1424, 521], [1440, 521],
+    ],
+    travel: "-6%",
+    scale: 1.035,
+  },
+  {
+    name: "forest",
+    ridge: [
+      [0, 571], [8, 562], [16, 561], [40, 565], [104, 592], [168, 613], [192, 618], [232, 631],
+      [304, 661], [312, 642], [320, 649], [336, 640], [344, 639], [352, 628], [360, 628], [424, 602],
+      [464, 596], [472, 597], [480, 601], [488, 601], [496, 605], [520, 606], [552, 592], [624, 580],
+      [640, 573], [656, 570], [696, 551], [720, 545], [760, 547], [776, 540], [784, 548], [808, 556],
+      [816, 555], [832, 562], [872, 566], [904, 574], [912, 579], [928, 576], [936, 581], [952, 576],
+      [992, 589], [1008, 586], [1032, 588], [1040, 585], [1048, 586], [1072, 583], [1088, 584], [1104, 589],
+      [1112, 594], [1120, 594], [1136, 582], [1144, 581], [1160, 587], [1200, 582], [1232, 581], [1240, 584],
+      [1248, 581], [1256, 587], [1264, 582], [1272, 587], [1280, 588], [1288, 586], [1296, 591], [1312, 591],
+      [1320, 587], [1344, 587], [1360, 589], [1376, 596], [1392, 596], [1432, 577], [1440, 577],
+    ],
+    travel: "-10%",
+    scale: 1.055,
+  },
+  {
+    name: "foreground",
+    ridge: [
+      [0, 571], [8, 562], [16, 560], [32, 562], [104, 592], [168, 613], [192, 618], [232, 631],
+      [320, 670], [328, 676], [376, 700], [400, 707], [408, 713], [416, 713], [440, 721], [488, 742],
+      [504, 753], [528, 760], [536, 767], [584, 779], [600, 788], [608, 789], [632, 783], [640, 783],
+      [648, 786], [680, 783], [712, 788], [744, 768], [760, 766], [776, 755], [832, 739], [848, 737],
+      [904, 738], [936, 733], [944, 734], [976, 752], [992, 754], [1048, 782], [1056, 782], [1072, 792],
+      [1096, 800], [1120, 801], [1136, 798], [1168, 796], [1170, 796], [1172, 784], [1174, 779], [1176, 777],
+      [1178, 767], [1180, 767], [1182, 768], [1184, 767], [1186, 770], [1188, 795], [1190, 794], [1192, 794],
+      [1194, 794], [1196, 794], [1198, 794], [1200, 795], [1202, 796], [1204, 797], [1206, 797], [1208, 798],
+      [1224, 810], [1288, 810], [1296, 806], [1304, 790], [1312, 784], [1328, 778], [1360, 775], [1376, 776],
+      [1408, 772], [1416, 773], [1440, 769],
+    ],
+    travel: "-14%",
+    scale: 1.075,
+  },
+] as const;
 
-type RidgeDefinition = {
-  heights: readonly number[];
-  seed: number;
-  roughness: number;
-  light: string;
-  shade: string;
-};
-
-// Unequal, overlapping horizons preserve the long, open valley in the original
-// photograph. Detail is deterministic server-rendered geometry, not a canvas.
-const ridges: readonly RidgeDefinition[] = [
-  { heights: [370, 318, 355, 300, 350, 316, 365, 328, 374], seed: 19, roughness: 24, light: "#bb9c99", shade: "#9f8793" },
-  { heights: [420, 378, 436, 390, 446, 366, 420, 385, 412], seed: 47, roughness: 30, light: "#ad8b94", shade: "#8b7c8e" },
-  { heights: [478, 431, 492, 455, 497, 430, 480, 446, 469], seed: 83, roughness: 34, light: "#947e91", shade: "#77768b" },
-  { heights: [525, 480, 551, 494, 563, 482, 541, 487, 537], seed: 113, roughness: 39, light: "#7c718b", shade: "#62687f" },
-  { heights: [609, 544, 589, 637, 579, 548, 622, 553, 596], seed: 167, roughness: 42, light: "#62677f", shade: "#48576d" },
-  { heights: [662, 612, 692, 666, 730, 636, 608, 662, 638], seed: 223, roughness: 48, light: "#4c596e", shade: "#35495d" },
-  { heights: [666, 710, 757, 730, 807, 716, 760, 698, 733], seed: 281, roughness: 46, light: "#344a5d", shade: "#233a4c" },
-  { heights: [652, 720, 810, 842, 908, 826, 769, 745, 806], seed: 347, roughness: 38, light: "#243e4b", shade: "#132b38" },
-  { heights: [744, 824, 880, 972, 1010, 952, 890, 818, 768], seed: 419, roughness: 34, light: "#18333d", shade: "#0b222b" },
-];
-
-function hash(position: number, seed: number) {
-  let value = Math.imul(position ^ seed, 0x45d9f3b);
-  value = Math.imul(value ^ (value >>> 16), 0x45d9f3b);
-  return ((value ^ (value >>> 16)) >>> 0) / 4294967295;
+function terrainMask(points: readonly (readonly [number, number])[]) {
+  return `polygon(${points.map(([x, y]) => `${(x / 14.4).toFixed(3)}% ${(y / 8.1).toFixed(3)}%`).join(", ")}, 100% 100%, 0% 100%)`;
 }
 
-function noise(position: number, seed: number) {
-  const floor = Math.floor(position);
-  const fraction = position - floor;
-  const blend = fraction * fraction * (3 - 2 * fraction);
-  return hash(floor, seed) * (1 - blend) + hash(floor + 1, seed) * blend;
+// Account for the real 16:9 cover width on tall screens and the desktop
+// 1.5x overscan plus the near plane's forward scale. Every copy requests
+// one identical browser-cache resource.
+const terrainSizes = "(max-width: 999px) max(100vw, 136svh), max(162vw, calc(287svh - 16rem))";
+
+function TerrainPhoto() {
+  return <Image src={media.meaningFullscreen} alt="" fill quality={85} sizes={terrainSizes} loading="lazy" className={styles.photo} />;
 }
 
-function ridgeHeight(x: number, ridge: RidgeDefinition) {
-  const position = (x / WIDTH) * (ridge.heights.length - 1);
-  const index = Math.min(Math.floor(position), ridge.heights.length - 2);
-  const fraction = position - index;
-  const blend = fraction * fraction * (3 - 2 * fraction);
-  const profile = ridge.heights[index] * (1 - blend) + ridge.heights[index + 1] * blend;
-  const detail =
-    (noise(x / 173, ridge.seed) - 0.5) * 1.1 +
-    (noise(x / 61, ridge.seed + 7) - 0.5) * 0.65 +
-    (noise(x / 23, ridge.seed + 17) - 0.5) * 0.34 +
-    (noise(x / 8, ridge.seed + 31) - 0.5) * 0.15;
-  return profile + detail * ridge.roughness;
-}
-
-function ridgeGeometry(ridge: RidgeDefinition, index: number) {
-  const points = Array.from({ length: WIDTH / 8 + 1 }, (_, step) => {
-    const x = step * 8;
-    return `${x},${ridgeHeight(x, ridge).toFixed(1)}`;
-  });
-  const outline = `M${points.join("L")}`;
-
-  // A few shallow facets catch the dusk light on the closest slopes. Their
-  // broad, irregular contours avoid an artificial low-poly triangulation.
-  const facets = index < 5 ? [] : Array.from({ length: 4 }, (_, facet) => {
-    const x = 170 + facet * 430 + hash(facet, ridge.seed) * 90;
-    const y = ridgeHeight(x, ridge);
-    const reach = 190 + hash(facet + 13, ridge.seed) * 150;
-    return `M${x.toFixed(1)},${(y + 1).toFixed(1)} C${(x - 20).toFixed(1)},${(y + 65).toFixed(1)} ${(x + 65).toFixed(1)},${(y + 120).toFixed(1)} ${(x + reach).toFixed(1)},${HEIGHT + 12} L${(x + reach + 95).toFixed(1)},${HEIGHT + 12} C${(x + 90).toFixed(1)},${(y + 136).toFixed(1)} ${(x + 51).toFixed(1)},${(y + 40).toFixed(1)} ${x.toFixed(1)},${(y + 1).toFixed(1)}Z`;
-  });
-
-  return { outline, fill: `${outline}L${WIDTH},${HEIGHT + 16}L0,${HEIGHT + 16}Z`, facets };
-}
-
-const mountainLayers = ridges.map((ridge, index) => ({
-  ...ridge,
-  ...ridgeGeometry(ridge, index),
-  style: {
-    "--mountain-from-x": `${(index % 2 ? -1 : 1) * index * 3}px`,
-    "--mountain-to-x": `${(index % 2 ? 1 : -1) * index * 3}px`,
-    "--mountain-from-y": `${index * 6}px`,
-    "--mountain-to-y": `${-index * 8}px`,
-  } as CSSProperties,
-}));
-
-/** An atmospheric mountain scene, drawn entirely with layered SVG geometry. */
+/** Photographic depth planes, with no animation runtime or synthetic terrain. */
 export function MeaningMountains() {
   return (
-    <div className={styles.landscape} aria-hidden="true">
-      <div className={styles.sky} />
-      <div className={styles.sunlight} />
-
-      {mountainLayers.map((ridge, index) => (
-        <div className={styles.layer} style={ridge.style} key={ridge.seed}>
-          <svg
-            viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-            preserveAspectRatio="xMidYMid slice"
-            fill="none"
-            focusable="false"
+    <div className={styles.landscape} aria-hidden="true" data-mountain-scene="photographic">
+      <div className={styles.canvas}>
+        <div className={styles.base}><TerrainPhoto /></div>
+        {terrainPlanes.map((plane) => (
+          <div
+            className={styles.plane}
+            key={plane.name}
+            data-terrain-plane={plane.name}
+            style={{
+              clipPath: terrainMask(plane.ridge),
+              "--terrain-travel": plane.travel,
+              "--terrain-scale": plane.scale,
+            } as CSSProperties}
           >
-            <defs>
-              <linearGradient id={`meaning-ridge-${index}`} x1="0" y1="300" x2="0" y2={HEIGHT} gradientUnits="userSpaceOnUse">
-                <stop stopColor={ridge.light} />
-                <stop offset="1" stopColor={ridge.shade} />
-              </linearGradient>
-              <linearGradient id={`meaning-mist-${index}`} x1="0" y1="320" x2="0" y2="1050" gradientUnits="userSpaceOnUse">
-                <stop stopColor="#eed6b9" stopOpacity={index < 5 ? 0.09 : 0.035} />
-                <stop offset="0.7" stopColor="#a9a1b6" stopOpacity="0" />
-              </linearGradient>
-            </defs>
-            <path d={ridge.fill} fill={`url(#meaning-ridge-${index})`} />
-            <path d={ridge.fill} fill={`url(#meaning-mist-${index})`} />
-            {index < 6 && <path d={ridge.outline} stroke="#f2d5bc" strokeOpacity={0.13 - index * 0.015} strokeWidth="1.1" />}
-            {ridge.facets.map((d, facet) => (
-              <path key={facet} d={d} fill={facet % 2 ? "#a0b8bc" : "#071b25"} opacity={facet % 2 ? 0.045 : 0.08} />
-            ))}
-          </svg>
-        </div>
-      ))}
-
-      <div className={styles.valleyHaze} />
+            <TerrainPhoto />
+          </div>
+        ))}
+      </div>
+      <div className={styles.atmosphere} />
       <div className={styles.vignette} />
     </div>
   );
