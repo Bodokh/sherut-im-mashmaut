@@ -1,0 +1,76 @@
+.landscape {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  isolation: isolate;
+  pointer-events: none;
+  background: #74758c;
+}
+
+.sky {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #d6c6a2 0%, #e6bf83 21%, #ccaa91 35%, #a48c9b 48%, #6b748d 68%, #344d65 100%);
+}
+
+.sunlight {
+  position: absolute;
+  inset: -10%;
+  background: radial-gradient(ellipse at 64% 27%, #fff0c573 0%, #f6d29a35 13%, #e9bc8800 39%);
+}
+
+.layer {
+  position: absolute;
+  inset: -10%;
+}
+
+.layer svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.valleyHaze {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 52% 62%, #c3a9b61f, #a39daf0d 26%, #a39daf00 60%);
+}
+
+.vignette {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #15304200 28%, #1431430a 60%, #0b24334a 100%);
+}
+
+/* The geometry stays still. Only its nine independent layers are composited
+   at different depths, and the existing chapter timeline owns their progress. */
+@supports (animation-timeline: view()) {
+  @media (min-width: 1000px) and (min-height: 760px) and (prefers-reduced-motion: no-preference) {
+    :global([data-pinned-fit="true"]) .layer {
+      animation: ridgeParallax linear both;
+      animation-timeline: --manifesto-chapters;
+      animation-range: contain 43% contain 78%;
+    }
+
+    :global([data-pinned-fit="true"]) .sunlight {
+      animation: lightParallax linear both;
+      animation-timeline: --manifesto-chapters;
+      animation-range: contain 43% contain 78%;
+    }
+  }
+}
+
+@keyframes ridgeParallax {
+  from { transform: translate3d(var(--mountain-from-x), var(--mountain-from-y), 0); }
+  to { transform: translate3d(var(--mountain-to-x), var(--mountain-to-y), 0); }
+}
+
+@keyframes lightParallax {
+  from { transform: translate3d(0, 0, 0); opacity: 0.8; }
+  to { transform: translate3d(-1.5%, -1%, 0); opacity: 1; }
+}
+
+@media (max-width: 767px) {
+  .sunlight { background-position: 12% 0; }
+  .vignette { background: linear-gradient(180deg, #15304200, #0b24334a); }
+}

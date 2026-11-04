@@ -2,6 +2,7 @@ import Image from "next/image";
 import type { CSSProperties } from "react";
 import { Section } from "@/components/ui/Section";
 import { PinnedSceneFit } from "@/components/ui/PinnedSceneFit";
+import { MeaningMountains } from "./MeaningMountains";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { media } from "@/lib/media";
 import styles from "./Manifesto.module.css";
@@ -27,8 +28,8 @@ const meaningPaths = Array.from({ length: 24 }, (_, index) => {
     d,
     lane,
     style: {
-      "--draw-from": `${84 + thread * 1.4 + lane * 1.8}%`,
-      "--draw-to": `${8 + thread * 0.85 + lane * 1.1}%`,
+      "--draw-from": `${34 + thread * 2 + lane * 2}%`,
+      "--draw-to": `${16 + thread * 0.2 + lane * 0.3}%`,
     } as CSSProperties,
   };
 });
@@ -116,15 +117,17 @@ export function Manifesto({ dict }: { dict: Dictionary }) {
           const chapter = chapters[index];
           return (
             <article key={pillar.title} className={`${styles.scene} ${chapter.className}`}>
-              <Image
-                src={chapter.image}
-                alt=""
-                fill
-                sizes={chapter.sizes}
-                quality={85}
-                loading="lazy"
-                className={styles.photo}
-              />
+              {index === 1 ? <MeaningMountains /> : (
+                <Image
+                  src={chapter.image}
+                  alt=""
+                  fill
+                  sizes={chapter.sizes}
+                  quality={85}
+                  loading="lazy"
+                  className={styles.photo}
+                />
+              )}
               <div className={styles.scrim} aria-hidden="true" />
               <div className={`${styles.content} ${styles.chapterContent}`} data-pinned-content="">
                 <h3>{pillar.title}</h3>
