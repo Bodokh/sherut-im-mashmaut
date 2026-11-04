@@ -80,6 +80,16 @@ test("the measured stage accepts integer scrollHeight rounding but rejects even 
   } finally { f.cleanup(); }
 });
 
+test("browser controls can retract and return without releasing a fitted scene", () => {
+  const f = fixture({ available: 700, panelHeights: [700] });
+  try {
+    for (const height of [716, 740, 756, 740, 716, 700]) {
+      f.resize(height, [height]);
+      assert.equal(f.section.dataset.pinnedFit, "true");
+    }
+  } finally { f.cleanup(); }
+});
+
 test("text enlargement and shorter viewports release pinning, and resizing back restores it", () => {
   const f = fixture({ available: 535, panelHeights: [500, 200, 220] });
   try {

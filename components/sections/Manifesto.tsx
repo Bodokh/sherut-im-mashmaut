@@ -7,10 +7,10 @@ import type { Dictionary } from "@/i18n/dictionaries";
 import { media } from "@/lib/media";
 import styles from "./Manifesto.module.css";
 
-// Cover scales landscape photos by the scene height on tall displays. Include
-// that hidden source width, plus the small desktop zoom, in responsive selection.
-const widePhotoSizes = "(max-width: 767px) max(100vw, 136svh), max(104vw, calc(184svh - 10rem))";
-const supportPhotoSizes = "(max-width: 767px) max(100vw, 114svh), max(104vw, calc(156svh - 8.5rem))";
+// Cover scales landscape photos by the scene height on tall displays. Budget
+// for the largest viewport, header and zoom before browser controls retract.
+const widePhotoSizes = "(max-width: 767px) max(104vw, calc(184lvh - 8rem)), max(104vw, calc(184lvh - 10rem))";
+const supportPhotoSizes = "(max-width: 767px) max(104vw, calc(156lvh - 7rem)), max(104vw, calc(156lvh - 8.5rem))";
 
 // The strands share three trajectories, but each has its own curvature and
 // scroll range. They are server-rendered geometry, not an animation runtime.

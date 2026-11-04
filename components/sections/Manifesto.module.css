@@ -182,7 +182,7 @@
     .manifesto[data-pinned-fit="true"] .stage {
       position: sticky;
       top: var(--header-h);
-      height: calc(100svh - var(--header-h));
+      height: calc(100dvh - var(--header-h));
       overflow: clip;
       background: #102d40;
     }

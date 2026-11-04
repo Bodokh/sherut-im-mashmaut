@@ -156,7 +156,7 @@
     /* Candidate geometry is identical before and after pinning, so resizing
        cannot oscillate the fit observer between two layouts. */
     .composition {
-      height: calc(100svh - var(--header-h));
+      height: calc(100dvh - var(--header-h));
       min-height: min-content;
     }
     .content { padding-block: 2rem; }
@@ -175,7 +175,7 @@
     .reach[data-pinned-fit="true"] .composition {
       position: sticky;
       top: var(--header-h);
-      height: calc(100svh - var(--header-h));
+      height: calc(100dvh - var(--header-h));
     }
 
     .reach[data-pinned-fit="true"] .mapBody {

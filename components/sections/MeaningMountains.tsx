@@ -80,8 +80,9 @@ function terrainMask(points: readonly (readonly [number, number])[]) {
 
 // Include the largest plane's forward scale in the shared cover width:
 // 1.2x vertical / 1.25x horizontal overscan on phones, 1.5x elsewhere.
+// Budget for collapsed browser controls so resizing does not request a new image.
 // Every copy requests one identical browser-cache resource.
-const terrainSizes = "(max-width: 767px) max(135vw, calc(230svh - 10rem)), max(162vw, calc(287svh - 12rem))";
+const terrainSizes = "(max-width: 767px) max(135vw, calc(230lvh - 10rem)), max(162vw, calc(287lvh - 12rem))";
 
 function TerrainPhoto() {
   return <Image src={media.meaningFullscreen} alt="" fill quality={85} sizes={terrainSizes} loading="lazy" className={styles.photo} />;

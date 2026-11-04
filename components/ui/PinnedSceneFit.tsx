@@ -109,5 +109,5 @@ export function PinnedSceneFit() {
     };
   }, []);
 
-  return <span ref={probeRef} aria-hidden="true" data-pinned-fit-probe="" style={{ position: "absolute", width: 0, height: "calc(100svh - var(--header-h) - var(--pinned-reserve, 0px))", visibility: "hidden", pointerEvents: "none" }} />;
+  return <span ref={probeRef} aria-hidden="true" data-pinned-fit-probe="" style={{ position: "absolute", width: 0, height: "calc(100dvh - var(--header-h) - var(--pinned-reserve, 0px))", visibility: "hidden", pointerEvents: "none" }} />;
 }
