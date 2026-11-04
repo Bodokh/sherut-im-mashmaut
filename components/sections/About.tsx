@@ -44,7 +44,7 @@ export function About({ locale, dict }: { locale: Locale; dict: Dictionary }) {
                     src={media.team[index]}
                     alt=""
                     fill
-                    sizes="(max-width: 767px) 42vw, (max-width: 1100px) 23vw, 280px"
+                    sizes="(max-width: 767px) 90vw, 320px"
                     className={styles.lecturerImage}
                   />
                 </span>

@@ -27,7 +27,6 @@ const TEAM_IMAGE_PATHS: Record<number, string> = {
   0: "/images/team/daniel-bodokh.webp",
   1: "/images/team/odelia-kadmi.jpg",
   4: "/images/team/eran-bodokh.jpg",
-  6: "/images/team/tzofnat-nordman.jpg",
 };
 
 function language(locale: Locale): string {
@@ -257,7 +256,7 @@ export function teamPageGraph(locale: Locale, dict: Dictionary): Graph {
     isPartOf: { "@id": WEBSITE_ID },
     about: { "@id": ORGANIZATION_ID },
   };
-  const [odelia, tzofnat, hillel, roi, eshed] = dict.teamPage.members;
+  const [odelia, hillel, roi, eshed] = dict.teamPage.members;
   const people = [
     { name: dict.teamPage.daniel.name, role: dict.teamPage.daniel.role, description: dict.teamPage.daniel.bio },
     { name: odelia.name, role: odelia.role, description: odelia.bio },
@@ -269,7 +268,6 @@ export function teamPageGraph(locale: Locale, dict: Dictionary): Graph {
       description: `${dict.teamPage.eran.bioExperience} ${dict.teamPage.eran.bioBeforeDevShift}${dict.teamPage.eran.devshiftName}${dict.teamPage.eran.bioBetweenCompanies}${dict.teamPage.eran.aiCraftersName}${dict.teamPage.eran.bioAfterCompanies}`,
     },
     { name: dict.teamPage.talia.name, role: dict.teamPage.talia.role, description: dict.teamPage.talia.bio },
-    { name: tzofnat.name, role: tzofnat.role, description: tzofnat.bio },
     { name: eshed.name, role: eshed.role, description: eshed.bio },
   ].map(
     ({ name, role, description }, index): Person => {

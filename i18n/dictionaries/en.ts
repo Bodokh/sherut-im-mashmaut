@@ -181,7 +181,7 @@ export const en: Dictionary = {
     pillars: [
       { title: "Choice", text: "Everything begins with an honest, considered choice." },
       { title: "Meaning", text: "To look at the whole, and at our national story." },
-      { title: "Womanhood", text: "Contributing to the people of Israel through the uniqueness in me." },
+      { title: "Path", text: "Contributing to the people of Israel through the uniqueness in me." },
     ],
   },
 
@@ -715,11 +715,6 @@ export const en: Dictionary = {
         name: "Adv. Odelia Kadmi",
         role: "Founder · Speaker and lecturer",
         bio: "Founder of Service with Meaning. Mother of four, lawyer, member of the Zikhron Ya'akov council, entrepreneur, and activist for women's rights and civilian self-defense. Former squad commander and combat soldier in the CBRN unit of the Combat Engineering Corps. She is a speaker and lecturer who leads talks.",
-      },
-      {
-        name: "Adv. Tzofnat Nordman",
-        role: "CEO, Liberty & Human Dignity Forum",
-        bio: "Tzofnat Nordman is an independent attorney and CEO of the Liberty & Human Dignity Forum. She specializes in administrative and civil litigation. In High Court petitions, she represents concerns for the health of women participating in trials in the IDF.",
       },
       {
         name: "Hillel Cohen",

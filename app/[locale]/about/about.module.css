@@ -11,6 +11,7 @@
 .lead { max-width: 54ch; margin-block-start: 2rem; color: #dce7ec; font-size: clamp(1rem, 1.2vw, 1.125rem); line-height: 1.9; }
 .portraits { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .88fr); align-items: start; gap: clamp(1rem, 2vw, 2rem); }
 .portraits li:nth-child(2) { padding-block-start: 5rem; }
+.portraits > li:only-child { grid-column: 1 / -1; width: min(100%, 22rem); justify-self: center; }
 .person { display: block; }
 .portrait { position: relative; display: block; aspect-ratio: 3 / 4; overflow: hidden; background: #254352; }
 .portraitImage { object-fit: cover; object-position: 50% 35%; transition: transform 500ms cubic-bezier(.2,.7,.2,1); }

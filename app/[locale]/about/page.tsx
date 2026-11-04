@@ -65,7 +65,7 @@ export default async function AboutPage({ params }: { params: Promise<{ locale: 
                     <Link href={localizedPath(locale, "team")} className={styles.person}>
                       <span className={styles.portrait}>
                         <Image src={media.team[index]} alt="" fill preload={index === 0}
-                          sizes="(max-width: 760px) 42vw, (max-width: 1100px) 23vw, 300px"
+                          sizes="(max-width: 760px) 90vw, 352px"
                           className={styles.portraitImage} />
                       </span>
                       <span className={styles.personName}>{member.name}</span>

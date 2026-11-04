@@ -37,7 +37,7 @@ export default async function TeamPage({
   if (!isLocale(locale)) notFound();
   const dict = getDictionary(locale);
   const t = dict.teamPage;
-  const [odelia, tzofnat, hillel, roi, eshed] = t.members;
+  const [odelia, hillel, roi, eshed] = t.members;
   const eranCard = {
     name: t.eran.name,
     role: t.eran.role,
@@ -104,12 +104,6 @@ export default async function TeamPage({
       imagePosition: "top" as const,
     },
     {
-      member: tzofnat,
-      image: media.team[1],
-      anonymousAvatar: false,
-      imagePosition: "top" as const,
-    },
-    {
       member: eshed,
       image: null,
       anonymousAvatar: anonymous(eshed),
@@ -147,7 +141,7 @@ export default async function TeamPage({
                           alt=""
                           fill
                           preload={portraitIndex === 0}
-                          sizes="(max-width: 767px) 45vw, (max-width: 1100px) 13vw, 160px"
+                          sizes="(max-width: 767px) 45vw, (max-width: 1100px) 16vw, 210px"
                           className={styles.portraitImage}
                         />
                       </span>
@@ -166,7 +160,7 @@ export default async function TeamPage({
               <li
                 key={member.name}
                 id={`team-member-${index + 1}`}
-                className={`${styles.profile} ${image ? styles.photographed : styles.textProfile} ${anonymousAvatar ? styles.anonymous : ""} ${index === 1 || index === 6 ? styles.reversed : ""} ${index === 2 || index === 3 ? styles.paired : ""}`}
+                className={`${styles.profile} ${image ? styles.photographed : styles.textProfile} ${anonymousAvatar ? styles.anonymous : ""} ${index === 1 ? styles.reversed : ""} ${index === 2 || index === 3 ? styles.paired : ""}`}
               >
                 {image ? (
                   <div className={styles.profilePortrait}>

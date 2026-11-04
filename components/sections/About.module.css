@@ -40,6 +40,7 @@
 }
 
 .lecturers li:nth-child(2) { padding-block-start: 4.75rem; }
+.lecturers > li:only-child { grid-column: 1 / -1; width: min(100%, 20rem); justify-self: center; }
 .lecturer { display: block; }
 .portrait { position: relative; display: block; aspect-ratio: 4 / 5; overflow: hidden; background: #eef2f3; }
 .lecturerImage { object-fit: cover; object-position: 50% 35%; transition: transform 450ms cubic-bezier(.2,.7,.2,1); }

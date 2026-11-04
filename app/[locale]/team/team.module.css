@@ -31,7 +31,7 @@
 
 .portraitWall {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: clamp(.75rem, 1.3vw, 1.25rem);
   align-items: start;
 }
@@ -107,7 +107,6 @@
   .portraitWall li:nth-child(even) { padding-block-start: 0; }
   .heroPortrait { aspect-ratio: .85; }
   .portraitWall li:nth-child(2) .portraitImage { --portrait-scale: 1.35; transform-origin: 50% 28%; }
-  .portraitWall li:nth-child(4) .portraitImage { --portrait-scale: 1.06; transform-origin: 50% 28%; }
   .portraitName { margin-block-start: .75rem; font-size: .9375rem; line-height: 1.55; }
   .memberList { grid-template-columns: minmax(0, 1fr); gap: 3.5rem; }
   .photographed, .reversed { display: flex; flex-direction: column; align-items: stretch; gap: 2rem; }

@@ -18,7 +18,6 @@ export const media = {
   // Team portraits — order matches the photographed entries in `teamPage.members`.
   team: [
     "/images/team/odelia-kadmi.jpg",
-    "/images/team/tzofnat-nordman.jpg",
   ],
   danielBodokh: "/images/team/daniel-bodokh.webp",
   eranBodokh: "/images/team/eran-bodokh.jpg",
