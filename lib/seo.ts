@@ -18,7 +18,7 @@ export function buildPageMetadata(
     ? process.env.VERCEL_BRANCH_URL || process.env.VERCEL_URL
     : undefined;
   const socialOrigin = previewHost ? `https://${previewHost}` : SITE_ORIGIN;
-  const imageUrl = `${socialOrigin}/og?locale=${locale}&route=${route}&v=2`;
+  const imageUrl = `${socialOrigin}/og?locale=${locale}&route=${route}&v=3`;
   const imageAlt = `${dict.routeLabels[route]} | ${dict.brand.name}`;
 
   return {

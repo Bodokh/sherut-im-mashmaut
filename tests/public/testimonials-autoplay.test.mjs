@@ -13,9 +13,9 @@ function fixture(reduced = false) {
   const carousel = Object.assign(new EventTarget(), { contains: (node) => node === carousel || node === track });
   const track = new EventTarget();
   const document = Object.assign(new EventTarget(), { hidden: false, activeElement: null });
-  let observation;
+  const observation = { current: null };
   class Observer {
-    constructor(callback) { this.callback = callback; observation = this; }
+    constructor(callback) { this.callback = callback; observation.current = this; }
     observe(node) { assert.equal(node, carousel); }
     disconnect() { this.disconnected = true; }
   }
@@ -45,7 +45,7 @@ function fixture(reduced = false) {
     controller, carousel, track, document, window, motion, dispatch, tick, timers,
     get advances() { return advances; },
     get enabled() { return enabled; },
-    visible(value) { observation.callback([{ isIntersecting: value, intersectionRatio: value ? 0.75 : 0 }]); },
+    visible(value) { observation.current.callback([{ isIntersecting: value, intersectionRatio: value ? 0.75 : 0 }]); },
     cleanup() {
       controller.cleanup();
       Object.assign(globalThis, { window: original.window, document: original.document, IntersectionObserver: original.observer });

@@ -38,7 +38,7 @@ test("preview sharing uses the branch's artwork and page identity instead of und
   }, () => {
     for (const [locale, route, slug] of [["he", "home", "/"], ["en", "about", "/en/about"]]) {
       const metadata = buildPageMetadata(locale, route, getDictionary(locale));
-      const image = `https://site-git-design.example.vercel.app/og?locale=${locale}&route=${route}&v=2`;
+      const image = `https://site-git-design.example.vercel.app/og?locale=${locale}&route=${route}&v=3`;
       assert.equal(metadata.openGraph.images[0].url, image);
       assert.equal(metadata.twitter.images[0].url, image);
       assert.equal(metadata.openGraph.url, `https://site-git-design.example.vercel.app${slug}`);
@@ -50,7 +50,7 @@ test("preview sharing uses the branch's artwork and page identity instead of und
 test("a preview without a branch alias uses its own deployment URL", () => {
   withDeploymentEnv({ VERCEL_ENV: "preview", VERCEL_URL: "site-build.example.vercel.app" }, () => {
     const metadata = buildPageMetadata("en", "privacy", getDictionary("en"));
-    assert.equal(metadata.openGraph.images[0].url, "https://site-build.example.vercel.app/og?locale=en&route=privacy&v=2");
+    assert.equal(metadata.openGraph.images[0].url, "https://site-build.example.vercel.app/og?locale=en&route=privacy&v=3");
     assert.equal(metadata.openGraph.url, "https://site-build.example.vercel.app/en/privacy");
   });
 });
@@ -59,7 +59,7 @@ test("production and local metadata retain the official domain even when preview
   for (const environment of ["production", "development"]) {
     withDeploymentEnv({ VERCEL_ENV: environment, VERCEL_BRANCH_URL: "site-git-design.example.vercel.app" }, () => {
       const metadata = buildPageMetadata("he", "team", getDictionary("he"));
-      assert.equal(metadata.openGraph.images[0].url, "https://www.imashmaut.co.il/og?locale=he&route=team&v=2");
+      assert.equal(metadata.openGraph.images[0].url, "https://www.imashmaut.co.il/og?locale=he&route=team&v=3");
       assert.equal(metadata.openGraph.url, "https://www.imashmaut.co.il/team");
       assert.equal(metadata.alternates.canonical, "https://www.imashmaut.co.il/team");
     });

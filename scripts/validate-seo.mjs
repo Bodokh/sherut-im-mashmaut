@@ -137,7 +137,7 @@ for (const { locale, route, path, slug } of pages) {
   assert(metaProperty(html, "og:description") === description, `${path}: incorrect Open Graph description`);
   const socialPageUrl = path === "/" ? socialOrigin : `${socialOrigin}${path}`;
   assert(metaProperty(html, "og:url") === socialPageUrl, `${path}: incorrect Open Graph URL`);
-  const socialImage = `${socialOrigin}/og?locale=${locale}&route=${route}&v=2`;
+  const socialImage = `${socialOrigin}/og?locale=${locale}&route=${route}&v=3`;
   assert(metaProperty(html, "og:image") === socialImage, `${path}: incorrect Open Graph image`);
   advertisedImages.push({ locale, route, url: metaProperty(html, "og:image") });
   const imageAlt = metaProperty(html, "og:image:alt");
