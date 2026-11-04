@@ -55,10 +55,14 @@ export default async function LocaleLayout({
   const locale = isLocale(requested) ? requested : defaultLocale;
 
   return (
+    // Next.js 16 keeps `scroll-behavior: smooth` during route changes unless
+    // this attribute is set. Without it, the page fragment's scrollIntoView()
+    // starts on the footer and the new page settles at the bottom.
     <html
       lang={locale}
       dir={dir(locale)}
       className={bodyFont.variable}
+      data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
       <body className={`min-h-dvh ${publicStyles.site}`}>

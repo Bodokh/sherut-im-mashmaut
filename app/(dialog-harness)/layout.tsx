@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 
 export default function DialogHarnessLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="he" dir="rtl" className={heebo.variable}>
+    <html lang="he" dir="rtl" className={heebo.variable} data-scroll-behavior="smooth">
       <body className="staff-app">
         <DirectionProvider direction="rtl">
           <TooltipProvider delay={350}>{children}</TooltipProvider>

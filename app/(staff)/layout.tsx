@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 
 export default function StaffRootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="he" dir="rtl" className={heebo.variable}>
+    <html lang="he" dir="rtl" className={heebo.variable} data-scroll-behavior="smooth">
       <body className="staff-app">
         <StaffAuthProvider>
           <StaffProviders>{children}</StaffProviders>

@@ -28,7 +28,7 @@ export default async function GlobalNotFound() {
   const { staff, locale } = await requestContext();
 
   return (
-    <html lang={locale} dir={dir(locale)} suppressHydrationWarning>
+    <html lang={locale} dir={dir(locale)} data-scroll-behavior="smooth" suppressHydrationWarning>
       <body className="min-h-dvh">
         <NotFoundScreen locale={locale} context={staff ? "staff" : "site"} />
         {USERWAY_ACCOUNT_ID ? (
