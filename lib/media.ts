@@ -31,8 +31,8 @@ export const media = {
 
   // Conversation in confidence — personal accompaniment & support.
   support: "/images/support.jpg",
-  // A distinct shared moment for the homepage invitation to personal support.
-  supportCommunity: "/media/fullscreen/community.369cac380e83.webp",
+  // Lecture hall photograph for the homepage invitation to personal support.
+  supportCommunity: "/media/fullscreen/lecture.d5fda8dfbadc.webp",
 
   // A rooted tree against blue sky — values, roots, growth.
   roots: photo("1502082553048-f009c37129b9", 1400),
