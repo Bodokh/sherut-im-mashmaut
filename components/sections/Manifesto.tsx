@@ -28,8 +28,8 @@ const meaningPaths = Array.from({ length: 24 }, (_, index) => {
     d,
     lane,
     style: {
-      "--draw-from": `${34 + thread * 2 + lane * 2}%`,
-      "--draw-to": `${16 + thread * 0.2 + lane * 0.3}%`,
+      "--draw-from": `${84 + thread * 1.4 + lane * 1.8}%`,
+      "--draw-to": `${8 + thread * 0.85 + lane * 1.1}%`,
     } as CSSProperties,
   };
 });
@@ -67,17 +67,6 @@ function MeaningPaths() {
         </mask>
       </defs>
       <g mask="url(#manifesto-path-mask)">
-        {/* Keep the full weave visible before its animated strokes arrive. */}
-        <g className={styles.pathGuides}>
-          {meaningPaths.map((path, index) => (
-            <path
-              key={index}
-              d={path.d}
-              stroke={`url(#${path.lane === 1 ? "manifesto-sage-path" : "manifesto-silver-path"})`}
-              vectorEffect="non-scaling-stroke"
-            />
-          ))}
-        </g>
         {meaningPaths.map((path, index) => (
           <path
             key={index}

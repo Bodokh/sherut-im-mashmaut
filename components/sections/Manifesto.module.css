@@ -95,13 +95,6 @@
   opacity: 0.62;
 }
 
-.pathGuides {
-  display: none;
-  stroke-width: 1.3;
-  stroke-linecap: round;
-  opacity: 0.32;
-}
-
 .sageStrand {
   stroke: url(#manifesto-sage-path);
   opacity: 0.66;
@@ -204,10 +197,8 @@
     .manifesto[data-pinned-fit="true"] .meaning { animation-name: meaningFrame; }
     .manifesto[data-pinned-fit="true"] .womanhood { animation-name: womanhoodFrame; }
 
-    .manifesto[data-pinned-fit="true"] .pathGuides { display: block; }
-
-    /* Spread drawing over the approach and introduction, so discrete wheel
-       steps produce smaller changes without adding delayed scroll inertia. */
+    /* Only these 24 lightweight strokes repaint. The drawing is bounded to
+       the introduction and fully reversible; no frame loop runs offscreen. */
     .manifesto[data-pinned-fit="true"] .strand {
       stroke-dasharray: 1;
       animation: pathDraw linear both;
@@ -218,15 +209,15 @@
     .manifesto[data-pinned-fit="true"] .pathGlint {
       animation: pathGlint linear both;
       animation-timeline: --manifesto-chapters;
-      animation-range: entry 20% contain 26%;
+      animation-range: entry 74% contain 20%;
     }
 
     .manifesto[data-pinned-fit="true"] .glint1 {
-      animation-range: entry 30% contain 25%;
+      animation-range: entry 88% contain 22%;
     }
 
     .manifesto[data-pinned-fit="true"] .glint2 {
-      animation-range: entry 45% contain 24%;
+      animation-range: contain 0% contain 24%;
     }
 
     .manifesto[data-pinned-fit="true"] .photo {
@@ -317,7 +308,7 @@
   0% { stroke-dashoffset: 0.035; opacity: 0; }
   12% { opacity: 0.95; }
   84% { opacity: 0.95; }
-  100% { stroke-dashoffset: -0.72; opacity: 0; }
+  100% { stroke-dashoffset: -1; opacity: 0; }
 }
 
 @keyframes photoTravel {
