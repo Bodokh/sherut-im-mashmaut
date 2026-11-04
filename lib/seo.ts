@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { defaultLocale, isLocale, type Locale } from "@/i18n/config";
 import { getDictionary, type Dictionary } from "@/i18n/dictionaries";
-import { absoluteUrl, SITE_ORIGIN, type SiteRouteKey } from "@/lib/routes";
+import { absoluteUrl, localizedPath, SITE_ORIGIN, type SiteRouteKey } from "@/lib/routes";
 
 export function buildPageMetadata(
   locale: Locale,
@@ -12,7 +12,13 @@ export function buildPageMetadata(
   const canonical = absoluteUrl(locale, route);
   const hebrewUrl = absoluteUrl("he", route);
   const englishUrl = absoluteUrl("en", route);
-  const imageUrl = `${SITE_ORIGIN}/og?locale=${locale}&route=${route}&v=2`;
+  // Preview shares must use that branch's artwork, which may not exist on
+  // production yet. Search canonicals and language alternates stay official.
+  const previewHost = process.env.VERCEL_ENV === "preview"
+    ? process.env.VERCEL_BRANCH_URL || process.env.VERCEL_URL
+    : undefined;
+  const socialOrigin = previewHost ? `https://${previewHost}` : SITE_ORIGIN;
+  const imageUrl = `${socialOrigin}/og?locale=${locale}&route=${route}&v=2`;
   const imageAlt = `${dict.routeLabels[route]} | ${dict.brand.name}`;
 
   return {
@@ -31,7 +37,7 @@ export function buildPageMetadata(
       siteName: dict.brand.name,
       title: copy.title,
       description: copy.description,
-      url: canonical,
+      url: `${socialOrigin}${localizedPath(locale, route)}`,
       locale: locale === "he" ? "he_IL" : "en_US",
       alternateLocale: locale === "he" ? ["en_US"] : ["he_IL"],
       images: [

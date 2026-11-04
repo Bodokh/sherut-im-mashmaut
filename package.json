@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:mentoring": "node scripts/mentoring/test-unit.mjs",
+    "test:seo": "node --experimental-strip-types --test tests/seo/*.test.mjs",
     "check:mentoring": "node scripts/mentoring/check.mjs",
     "db:mentoring:migrate": "node scripts/mentoring/migrate.mjs",
     "validate:seo": "node scripts/validate-seo.mjs",

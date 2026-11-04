@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 
 const baseUrl = process.env.SEO_BASE_URL ?? "http://127.0.0.1:3100";
 const origin = "https://www.imashmaut.co.il";
+const localValidation = ["localhost", "127.0.0.1", "[::1]"].includes(new URL(baseUrl).hostname);
+const socialOrigin = process.env.SEO_SOCIAL_ORIGIN ?? (localValidation ? origin : new URL(baseUrl).origin);
 const locales = ["he", "en"];
 const slugs = ["", "about", "lectures", "guidance", "team", "get-involved", "videos", "faq", "contact", "terms", "privacy", "accessibility"];
 const routeBySlug = {
@@ -103,6 +105,7 @@ function expectedSchema(path) {
 const titles = new Set();
 const descriptions = new Set();
 const imageAlts = new Set();
+const advertisedImages = [];
 
 for (const { locale, route, path, slug } of pages) {
   const response = await fetch(`${baseUrl}${path}`);
@@ -132,9 +135,11 @@ for (const { locale, route, path, slug } of pages) {
   assert(linkHref(html, "alternate", "x-default") === heUrl, `${path}: incorrect x-default`);
   assert(metaProperty(html, "og:title") === title, `${path}: incorrect Open Graph title`);
   assert(metaProperty(html, "og:description") === description, `${path}: incorrect Open Graph description`);
-  assert(metaProperty(html, "og:url") === canonical, `${path}: incorrect Open Graph URL`);
-  const socialImage = `${origin}/og?locale=${locale}&route=${route}&v=2`;
+  const socialPageUrl = path === "/" ? socialOrigin : `${socialOrigin}${path}`;
+  assert(metaProperty(html, "og:url") === socialPageUrl, `${path}: incorrect Open Graph URL`);
+  const socialImage = `${socialOrigin}/og?locale=${locale}&route=${route}&v=2`;
   assert(metaProperty(html, "og:image") === socialImage, `${path}: incorrect Open Graph image`);
+  advertisedImages.push({ locale, route, url: metaProperty(html, "og:image") });
   const imageAlt = metaProperty(html, "og:image:alt");
   assert(imageAlt && !imageAlts.has(imageAlt), `${path}: missing or duplicate social image alt text`);
   assert(metaContent(html, "twitter:image:alt") === imageAlt, `${path}: inconsistent social image alt text`);
@@ -235,8 +240,11 @@ for (const [resource, contentType] of [
 }
 
 const imageDigests = new Set();
-for (const { locale, route } of pages) {
-  const response = await fetch(`${baseUrl}/og?locale=${locale}&route=${route}&v=2`);
+for (const { locale, route, url } of advertisedImages) {
+  // Hosted validation follows exactly what a social crawler receives. Local
+  // validation substitutes only the origin so unpublished builds stay local.
+  const imageUrl = new URL(url);
+  const response = await fetch(localValidation ? `${baseUrl}${imageUrl.pathname}${imageUrl.search}` : imageUrl);
   assert(response.status === 200, `/og?locale=${locale}&route=${route}: expected 200`);
   assert(response.headers.get("content-type")?.includes("image/png"), `/og?locale=${locale}&route=${route}: incorrect content type`);
   const png = Buffer.from(await response.arrayBuffer());
