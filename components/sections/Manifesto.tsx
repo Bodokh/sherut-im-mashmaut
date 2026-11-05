@@ -72,6 +72,7 @@ function MeaningPaths() {
             key={index}
             d={path.d}
             pathLength="1"
+            stroke={path.lane === 1 ? "url(#manifesto-sage-path) #b3c6b5" : "url(#manifesto-silver-path) #b4c8c5"}
             vectorEffect="non-scaling-stroke"
             className={`${styles.strand} ${path.lane === 1 ? styles.sageStrand : ""} ${index % 8 === 0 ? styles.leadingStrand : ""}`}
             style={path.style}
