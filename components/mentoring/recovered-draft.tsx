@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { staffPublicPath } from "@/lib/staff-host";
 import { CheckCircle2Icon, LoaderCircleIcon } from "lucide-react";
 import {
   Alert,
@@ -37,8 +38,8 @@ export function RecoveredDraft({
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const href = participantId
-    ? `/staff/participants/${encodeURIComponent(participantId)}`
-    : "/staff/participants";
+    ? staffPublicPath(`/staff/participants/${encodeURIComponent(participantId)}`)
+    : staffPublicPath("/staff/participants");
   async function finish() {
     setBusy(true);
     setError(null);

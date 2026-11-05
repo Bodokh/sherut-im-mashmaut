@@ -8,6 +8,7 @@ import { AuthFrame } from "./auth-frame";
 import { AuthError } from "./auth-controls";
 import { Alert, AlertDescription, AlertTitle } from "@/components/staff/ui/alert";
 import { Button } from "@/components/staff/ui/button";
+import { staffPublicPath } from "@/lib/staff-host";
 import { Spinner } from "@/components/staff/ui/spinner";
 import { clearMentoringOfflineData, getMentoringPendingCount, lockMentoringOfflineData } from "@/lib/mentoring/offline";
 
@@ -55,11 +56,10 @@ export function SignOut() {
       }
       if (!client?.sessions.length) {
         // Reload the document after cleanup to discard the previous staff Router state.
-        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-        window.location.assign("/staff/login");
+        window.location.assign(staffPublicPath("/staff/login"));
         return;
       }
-      await signOut({ redirectUrl: "/staff/login" });
+      await signOut({ redirectUrl: staffPublicPath("/staff/login") });
     } catch {
       setMessage("היציאה לא הושלמה. יש לבדוק את החיבור ולנסות שוב.");
       setBusy(false);
@@ -71,7 +71,7 @@ export function SignOut() {
       <div className="flex flex-col gap-5">
         {signedOutWithLocalData ? <>
           <Alert variant="destructive"><AlertTriangle aria-hidden /><AlertTitle>החשבון נותק, אך ניקוי המידע המקומי נכשל</AlertTitle><AlertDescription>ייתכן שעדיין נשאר מידע מקומי במכשיר. יש לסגור את לשוניות המערכת ולפנות לתמיכה לניקוי האחסון לפני העברת המכשיר לאחרים.</AlertDescription></Alert>
-          <Button nativeButton={false} render={<Link href="/staff/login" />}>חזרה למסך הכניסה</Button>
+          <Button nativeButton={false} render={<Link href={staffPublicPath("/staff/login")} />}>חזרה למסך הכניסה</Button>
         </> : <>
         {pendingCount !== null && pendingCount > 0 && <Alert variant="destructive"><AlertTriangle aria-hidden /><AlertTitle>יש שינויים שעדיין נמצאים רק במכשיר</AlertTitle><AlertDescription>נמצאו {pendingCount} פריטים או טיוטות שלא הסתנכרנו. יציאה כעת תמחק אותם. כדי לשמור אותם, יש לחזור למערכת ולהשלים סנכרון.</AlertDescription></Alert>}
         {storageFailed && <Alert variant="destructive"><AlertTriangle aria-hidden /><AlertTitle>לא ניתן לגשת לאחסון במכשיר</AlertTitle><AlertDescription>יציאה בכל זאת תנסה לנקות את המידע המקומי ועלולה למחוק שינויים שלא הסתנכרנו. אם הניקוי ייכשל, החשבון ינותק ויוצג חיווי מפורש.</AlertDescription></Alert>}
@@ -80,7 +80,7 @@ export function SignOut() {
           <Button variant="outline" onClick={retryStorage} disabled={busy}>ניסיון נוסף לבדוק את המידע המקומי</Button>
           <Button variant="destructive" onClick={() => leave(true)} disabled={busy || !loaded}>ניקוי המידע המקומי ויציאה בכל זאת</Button>
         </> : <Button size="lg" variant={pendingCount ? "destructive" : "default"} onClick={() => leave()} disabled={busy || pendingCount === null || !loaded}>{busy ? <Spinner data-icon="inline-start" aria-label="יציאה מהחשבון" /> : <LogOut data-icon="inline-start" aria-hidden />}{pendingCount ? "מחיקת השינויים המקומיים ויציאה" : "יציאה מהחשבון"}</Button>}
-        <Button variant="outline" disabled={busy} nativeButton={false} render={<Link href="/staff" />}>חזרה למרחב הליווי</Button>
+        <Button variant="outline" disabled={busy} nativeButton={false} render={<Link href={staffPublicPath("/staff")} />}>חזרה למרחב הליווי</Button>
         </>}
       </div>
     </AuthFrame>

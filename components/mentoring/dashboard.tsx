@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { staffPublicPath } from "@/lib/staff-host";
 import {
   ArrowLeftIcon,
   CalendarDaysIcon,
@@ -160,7 +161,7 @@ export function DashboardView() {
               nativeButton={false}
               render={
                 <Link
-                  href={management ? "/staff/reviews" : "/staff/participants"}
+                  href={staffPublicPath(management ? "/staff/reviews" : "/staff/participants")}
                 />
               }
             >
@@ -194,7 +195,7 @@ export function DashboardView() {
                       <div className="flex min-w-0 flex-col gap-3">
                         <Link
                           className="rounded-md outline-offset-4 hover:underline"
-                          href={`/staff/participants/${encodeURIComponent(view.participant.id)}`}
+                          href={staffPublicPath(`/staff/participants/${encodeURIComponent(view.participant.id)}`)}
                         >
                           <ParticipantIdentity
                             name={view.participant.displayName}
@@ -241,7 +242,7 @@ export function DashboardView() {
             <Button
               variant="link"
               nativeButton={false}
-              render={<Link href="/staff/participants" />}
+              render={<Link href={staffPublicPath("/staff/participants")} />}
             >
               לכל כרטיסי החניכות
               <ArrowLeftIcon data-icon="inline-end" />
@@ -264,7 +265,7 @@ export function DashboardView() {
                     {index > 0 && <Separator />}
                     <Link
                       className="group flex min-h-14 items-center justify-between gap-3 rounded-md outline-offset-4"
-                      href={`/staff/participants/${encodeURIComponent(view.participant.id)}`}
+                      href={staffPublicPath(`/staff/participants/${encodeURIComponent(view.participant.id)}`)}
                     >
                       <div className="flex items-center gap-3">
                         <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-muted text-primary">

@@ -9,6 +9,7 @@ import { AuthError, CodeField, SignedInActions, SubmitButton, authErrorMessage, 
 import { authErrorFields, validateAuthInput, type AuthField, type AuthFieldErrors } from "./auth-validation";
 import { Alert, AlertDescription } from "@/components/staff/ui/alert";
 import { Button } from "@/components/staff/ui/button";
+import { staffPublicPath } from "@/lib/staff-host";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/staff/ui/field";
 import { Input } from "@/components/staff/ui/input";
 
@@ -58,7 +59,7 @@ export function SignUpForm() {
     const { error } = await signUp.finalize({
       navigate: ({ session, decorateUrl }) => {
         if (session?.currentTask) { setMessage("נדרשת השלמת הגדרה נוספת בחשבון. יש לפנות להנהלה."); return; }
-        window.location.assign(decorateUrl("/staff"));
+        window.location.assign(decorateUrl(staffPublicPath("/staff")));
       },
     });
     if (error) fail(error);
@@ -98,13 +99,13 @@ export function SignUpForm() {
   if (!isSignedIn && signUp.verifications.externalAccount.strategy === "oauth_google") {
     return (
       <AuthFrame title="השלמת ההרשמה עם Google" description="נשלים את פרטי החשבון. הגישה למרחב הליווי מחייבת אישור הצטרפות לצוות.">
-        <SignUp routing="hash" signInUrl="/staff/login" forceRedirectUrl="/staff" signInForceRedirectUrl="/staff" />
+        <SignUp routing="hash" signInUrl={staffPublicPath("/staff/login")} forceRedirectUrl={staffPublicPath("/staff")} signInForceRedirectUrl={staffPublicPath("/staff")} />
       </AuthFrame>
     );
   }
 
   return (
-    <AuthFrame title={verifying ? "נאמת את כתובת הדוא״ל" : "מצטרפים למרחב הליווי"} description={verifying ? "יש להזין את הקוד מהודעת הדוא״ל כדי ליצור את החשבון. אם ההודעה לא הגיעה, אפשר לבקש קוד חדש." : "יוצרים חשבון אישי עם כתובת הדוא״ל שאושרה על ידי ההנהלה."} footer={<p className="text-sm text-muted-foreground">כבר יש לך חשבון? <Link href="/staff/login" className="font-medium text-primary underline-offset-4 hover:underline">כניסה למערכת</Link></p>}>
+    <AuthFrame title={verifying ? "נאמת את כתובת הדוא״ל" : "מצטרפים למרחב הליווי"} description={verifying ? "יש להזין את הקוד מהודעת הדוא״ל כדי ליצור את החשבון. אם ההודעה לא הגיעה, אפשר לבקש קוד חדש." : "יוצרים חשבון אישי עם כתובת הדוא״ל שאושרה על ידי ההנהלה."} footer={<p className="text-sm text-muted-foreground">כבר יש לך חשבון? <Link href={staffPublicPath("/staff/login")} className="font-medium text-primary underline-offset-4 hover:underline">כניסה למערכת</Link></p>}>
       {isSignedIn ? <SignedInActions /> : <form onSubmit={submit} noValidate aria-busy={pending}>
         <FieldGroup>
           {!verifying && <>

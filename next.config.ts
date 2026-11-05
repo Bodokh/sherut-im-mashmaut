@@ -40,7 +40,6 @@ const nextConfig: NextConfig = {
       {
         source: "/staff-sw.js",
         headers: [
-          { key: "Service-Worker-Allowed", value: "/staff" },
           { key: "Cache-Control", value: "no-cache" },
         ],
       },

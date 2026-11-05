@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import localFont from "next/font/local";
 import { StaffAuthProvider } from "@/components/staff/auth/auth-provider";
 import { StaffProviders } from "@/components/staff/providers";
+import { staffPublicPath } from "@/lib/staff-host";
 import "../globals.css";
 
 const heebo = localFont({
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
   title: { default: "סביבת הליווי | שירות עם משמעות", template: "%s | סביבת הליווי" },
   description: "סביבת העבודה של צוות הליווי בשירות עם משמעות.",
   robots: { index: false, follow: false },
-  manifest: "/staff/manifest.webmanifest",
+  manifest: staffPublicPath("/staff/manifest.webmanifest"),
   appleWebApp: { capable: true, title: "ליווי", statusBarStyle: "default" },
 };
 

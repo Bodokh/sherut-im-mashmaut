@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { AlertCircle, ArrowLeft, ShieldCheck } from "lucide-react";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
 import { Button } from "@/components/staff/ui/button";
+import { staffPublicPath } from "@/lib/staff-host";
 import { Alert, AlertDescription } from "@/components/staff/ui/alert";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/staff/ui/field";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/staff/ui/input-otp";
@@ -47,8 +48,8 @@ export function SignedInActions() {
   return (
     <div className="flex flex-col gap-5">
       <Alert><ShieldCheck aria-hidden /><AlertDescription>החשבון מחובר. הגישה למידע נפתחת לאחר אישור הצטרפות לצוות.</AlertDescription></Alert>
-      <Button size="lg" nativeButton={false} render={<Link href="/staff" />}>המשך למרחב הליווי<ArrowLeft aria-hidden data-icon="inline-end" /></Button>
-      <Button variant="ghost" nativeButton={false} render={<Link href="/staff/logout" />}>יציאה מהחשבון</Button>
+      <Button size="lg" nativeButton={false} render={<Link href={staffPublicPath("/staff")} />}>המשך למרחב הליווי<ArrowLeft aria-hidden data-icon="inline-end" /></Button>
+      <Button variant="ghost" nativeButton={false} render={<Link href={staffPublicPath("/staff/logout")} />}>יציאה מהחשבון</Button>
     </div>
   );
 }

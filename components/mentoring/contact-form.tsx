@@ -2,6 +2,7 @@
 
 import { useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { staffPublicPath } from "@/lib/staff-host";
 import { useRouter } from "next/navigation";
 import {
   ArrowRightIcon,
@@ -145,7 +146,7 @@ export function ContactFormView({
                 <Button
                   variant="outline"
                   nativeButton={false}
-                  render={<Link href="/staff/participants" />}
+                  render={<Link href={staffPublicPath("/staff/participants")} />}
                 >
                   <ArrowRightIcon data-icon="inline-start" />
                   לרשימת החניכות
@@ -336,10 +337,9 @@ function ContactFields({ view }: { view: ParticipantView }) {
           : "הקשר תועד בכרטיס החניכה",
       );
       completed = true;
-      const href = `/staff/participants/${encodeURIComponent(view.participant.id)}`;
+      const href = staffPublicPath(`/staff/participants/${encodeURIComponent(view.participant.id)}`);
       if (result.acceptance === "queued") {
         // Offline queued saves cannot fetch the RSC payload required by router.push.
-        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
         window.location.assign(href);
       } else router.push(href);
     } catch {
@@ -735,7 +735,7 @@ function ContactFields({ view }: { view: ParticipantView }) {
               nativeButton={false}
               render={
                 <Link
-                  href={`/staff/participants/${encodeURIComponent(view.participant.id)}`}
+                  href={staffPublicPath(`/staff/participants/${encodeURIComponent(view.participant.id)}`)}
                 />
               }
             >

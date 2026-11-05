@@ -20,6 +20,7 @@ The product and design documents retain the agreed/proposed requirement contract
 | [Staff acceptance walkthrough](acceptance-checklist.md) | Facilitated role/offline/error checks and blank client sign-off; records exceptions without claiming acceptance. |
 | [Operations handoff](operations-handoff.md) | Account/incident ownership, configuration names, guarded migrations, restore/rollback preparation and production launch gates. |
 | [Deployment record](deployment-preview.md) | Existing-account Preview checkpoints, current integrated candidate and separate production preparation/acceptance limits. |
+| [Staff subdomain](staff-subdomain.md) | Manual DNS, Vercel, environment, Clerk, and Google steps for `staff.imashmaut.co.il`. |
 | [Remaining client questions](client-questions.he.md) | Short Hebrew questions for unresolved client decisions. |
 | [Micropay integration](micropay-integration.md) | Selected SMS provider, implementation/configuration and provider-verification boundaries; future WhatsApp is separate. |
 | [Visual design system](design-system.md) | Styling principles and initial token exploration to inform the real shadcn implementation; exact wireframe styling is not approved production design. |

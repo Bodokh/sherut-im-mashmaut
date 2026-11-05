@@ -1,17 +1,26 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import test from "node:test";
 import ts from "typescript";
 
+// Next's console patch calls AsyncLocalStorage.exit. Node does not expose that
+// constructor on globalThis, so Next substitutes a fake that throws when a
+// response body is read after the test's synchronous section.
+if (!globalThis.AsyncLocalStorage) globalThis.AsyncLocalStorage = AsyncLocalStorage;
+
+import * as staffHost from "../../../lib/staff-host.ts";
+
 const require = createRequire(import.meta.url);
 const { NextRequest } = require("next/server");
 const { unstable_doesMiddlewareMatch: doesProxyMatch } = require("next/experimental/testing/server");
 const localeConfig = require("../../../i18n/config.ts");
+const staffHostName = "staff.imashmaut.co.il";
 const developmentKey = `pk_test_${Buffer.from("clerk.example.test$").toString("base64")}`;
 const productionKey = `pk_live_${Buffer.from("clerk.example.test$").toString("base64")}`;
 
-function loadSource(relativePath, dependencies, publishableKey) {
+function loadSource(relativePath, dependencies, publishableKey, extraEnv = {}) {
   const source = readFileSync(new URL(relativePath, import.meta.url), "utf8");
   const compiled = ts.transpileModule(source, {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
@@ -20,13 +29,13 @@ function loadSource(relativePath, dependencies, publishableKey) {
   new Function("require", "module", "exports", "process", compiled)((specifier) => {
     if (Object.hasOwn(dependencies, specifier)) return dependencies[specifier];
     return require(specifier);
-  }, compiledModule, compiledModule.exports, { env: { NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: publishableKey } });
+  }, compiledModule, compiledModule.exports, { env: { NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: publishableKey, ...extraEnv } });
   return compiledModule.exports;
 }
 
 const pathnameConfig = loadSource("../../../lib/pathname-locale.ts", { "@/i18n/config": localeConfig });
 
-function loadProxy(publishableKey) {
+function loadProxy(publishableKey, extraEnv = {}) {
   const calls = [];
   const middlewareResponse = new Response(null, { status: 299 });
   let handler;
@@ -44,7 +53,8 @@ function loadProxy(publishableKey) {
     },
     "@/i18n/config": localeConfig,
     "@/lib/pathname-locale": pathnameConfig,
-  }, publishableKey);
+    "@/lib/staff-host": staffHost,
+  }, publishableKey, extraEnv);
   return { ...loaded, calls, handler, options, middlewareResponse };
 }
 
@@ -91,6 +101,7 @@ test("provider uses the proxy only for development keys and keeps anonymous stat
     const { StaffAuthProvider } = loadSource("../../../components/staff/auth/auth-provider.tsx", {
       "@clerk/nextjs": { ClerkProvider },
       "@clerk/localizations": { heIL: {} },
+      "@/lib/staff-host": staffHost,
     }, key);
     const element = StaffAuthProvider({ children: "public shell" });
     assert.equal(element.type, ClerkProvider);
@@ -101,6 +112,8 @@ test("provider uses the proxy only for development keys and keeps anonymous stat
     assert.equal(element.props.signInUrl, "/staff/login");
     assert.equal(element.props.signUpUrl, "/staff/signup");
     assert.equal(element.props.afterSignOutUrl, "/staff/login");
+    assert.equal(element.props.isSatellite, undefined);
+    assert.equal(element.props.allowedRedirectOrigins, undefined);
   }
 });
 
@@ -185,4 +198,129 @@ test("staff continuations forward the request pathname without weakening auth or
     if (!pathname.startsWith("/staff/participants/")) assert.equal(response.headers.get("cache-control"), "private, no-store");
   }
   assert.equal(authCalls, 1);
+});
+
+const staffEnv = { NEXT_PUBLIC_STAFF_HOST: staffHostName };
+const parties = ["https://www.imashmaut.co.il", "https://imashmaut.co.il", `https://${staffHostName}`];
+
+test("an unset staff host keeps /staff on the current host and does not restrict Clerk parties", () => {
+  const loaded = loadProxy(productionKey);
+  assert.equal(loaded.options.authorizedParties, undefined);
+  assert.equal(loaded.options.isSatellite, undefined);
+  const response = loaded.proxy(new NextRequest("https://www.imashmaut.co.il/staff/participants?tab=1"), {});
+  assert.equal(response, loaded.middlewareResponse);
+  assert.equal(loaded.proxy(new NextRequest("https://staff.imashmaut.co.il/"), {}).headers.get("x-middleware-next"), "1");
+});
+
+test("production redirects /staff to the configured staff host and rewrites that host onto the staff app", async () => {
+  const loaded = loadProxy(productionKey, staffEnv);
+  assert.deepEqual(loaded.options.authorizedParties, parties);
+  assert.equal(loaded.options.frontendApiProxy.enabled, false);
+  assert.equal(loaded.options.isSatellite, undefined);
+
+  for (const [from, to] of [
+    ["https://www.imashmaut.co.il/staff/participants?tab=1", `https://${staffHostName}/participants?tab=1`],
+    ["https://www.imashmaut.co.il/staff/", `https://${staffHostName}/`],
+    ["https://imashmaut.co.il/staff", `https://${staffHostName}/`],
+    [`https://${staffHostName}/staff/students?tab=1`, `https://${staffHostName}/students?tab=1`],
+  ]) {
+    const response = loaded.proxy(new NextRequest(from), {});
+    assert.equal(response.status, 308, from);
+    assert.equal(response.headers.get("location"), to, from);
+    assert.equal(response.headers.get("x-robots-tag"), "noindex, nofollow", from);
+  }
+
+  const home = new NextRequest(`https://${staffHostName}/`);
+  assert.equal(loaded.proxy(home, {}), loaded.middlewareResponse);
+  const students = new NextRequest(`https://${staffHostName}/students?tab=1`);
+  assert.equal(loaded.proxy(students, {}), loaded.middlewareResponse);
+  assert.equal(loaded.proxy(new NextRequest(`https://${staffHostName}/api/mentoring/workspace`), {}), loaded.middlewareResponse);
+
+  const auth = async () => ({ isAuthenticated: true });
+  const anonymous = async () => ({ isAuthenticated: false });
+  const rewritten = await loaded.handler(auth, students);
+  assert.equal(rewritten.headers.get("x-middleware-rewrite"), `https://${staffHostName}/staff/students?tab=1`);
+  assert.equal(rewritten.headers.get(`x-middleware-request-${pathnameConfig.PATHNAME_HEADER}`), "/staff/students");
+  assert.equal(rewritten.headers.get("x-robots-tag"), "noindex, nofollow");
+  const homeRewrite = await loaded.handler(auth, home);
+  assert.equal(homeRewrite.headers.get("x-middleware-rewrite"), `https://${staffHostName}/staff`);
+  const login = await loaded.handler(anonymous, new NextRequest(`https://${staffHostName}/participants`));
+  assert.equal(login.headers.get("location"), `https://${staffHostName}/login`);
+  const loginPage = await loaded.handler(anonymous, new NextRequest(`https://${staffHostName}/login/google-callback?state=test`));
+  assert.equal(loginPage.headers.get("x-middleware-rewrite"), `https://${staffHostName}/staff/login/google-callback?state=test`);
+  assert.equal(loginPage.headers.get("cache-control"), "private, no-store");
+
+  const about = await loaded.handler(auth, new NextRequest(`https://${staffHostName}/about`));
+  assert.equal(about.headers.get("x-middleware-rewrite"), `https://${staffHostName}/staff/about`);
+  const offline = await loaded.handler(anonymous, new NextRequest(`https://${staffHostName}/offline`));
+  assert.equal(offline.headers.get("x-middleware-rewrite"), `https://${staffHostName}/staff/offline`);
+  assert.equal(offline.headers.get("x-mentoring-shell"), "anonymous-v1");
+  assert.equal(offline.headers.get("cache-control"), "private, no-store");
+  assert.equal(loaded.proxy(new NextRequest(`https://${staffHostName}/he/about`), {}), loaded.middlewareResponse);
+  assert.equal(loaded.proxy(new NextRequest("https://www.imashmaut.co.il/about"), {}).headers.get("x-middleware-next"), "1");
+  const hebrew = loaded.proxy(new NextRequest("https://www.imashmaut.co.il/he/about?source=test"), {});
+  assert.equal(hebrew.status, 308);
+  assert.equal(hebrew.headers.get("location"), "https://www.imashmaut.co.il/about?source=test");
+});
+
+test("the staff host serves its own manifest, robots, and worker scope and hides the public site", async () => {
+  const loaded = loadProxy(productionKey, staffEnv);
+  const manifest = await loaded.proxy(new NextRequest(`https://${staffHostName}/manifest.webmanifest`), {}).json();
+  assert.equal(manifest.start_url, "/");
+  assert.equal(manifest.scope, "/");
+  assert.equal(manifest.id, "/");
+  assert.equal(manifest.short_name, "ליווי");
+  const mounted = await loaded.proxy(new NextRequest("https://www.example.test/staff/manifest.webmanifest"), {}).json();
+  assert.equal(mounted.start_url, "/staff");
+  assert.equal(mounted.scope, "/staff");
+  assert.equal(loaded.proxy(new NextRequest("https://www.imashmaut.co.il/manifest.webmanifest"), {}).headers.get("x-middleware-next"), "1");
+
+  const robots = loaded.proxy(new NextRequest(`https://${staffHostName}/robots.txt`), {});
+  assert.match(await robots.text(), /^User-agent: \*\nDisallow: \/\n$/);
+  assert.equal(robots.headers.get("x-robots-tag"), "noindex, nofollow");
+  assert.equal(loaded.proxy(new NextRequest("https://www.imashmaut.co.il/robots.txt"), {}).headers.get("x-middleware-next"), "1");
+  assert.equal(loaded.proxy(new NextRequest("https://www.imashmaut.co.il/sitemap.xml"), {}).headers.get("x-middleware-next"), "1");
+
+  for (const path of ["/sitemap.xml", "/api/contact", "/api/revalidate-videos"]) {
+    const response = loaded.proxy(new NextRequest(`https://${staffHostName}${path}`), {});
+    assert.equal(response.status, 404, path);
+    assert.equal(response.headers.get("x-robots-tag"), "noindex, nofollow", path);
+    assert.equal(loaded.calls.length, 0, path);
+  }
+  assert.equal(loaded.proxy(new NextRequest("https://www.imashmaut.co.il/api/contact"), {}).headers.get("x-middleware-next"), "1");
+
+  const forwarded = new NextRequest("http://localhost:3100/participants?tab=1", { headers: { "x-forwarded-host": staffHostName } });
+  assert.equal(loaded.proxy(forwarded, {}), loaded.middlewareResponse);
+  const forwardedRewrite = await loaded.handler(async () => ({ isAuthenticated: true }), forwarded);
+  assert.equal(forwardedRewrite.headers.get("x-middleware-rewrite"), "http://localhost:3100/staff/participants?tab=1");
+  const forwardedRobots = loaded.proxy(new NextRequest("http://localhost:3100/robots.txt", { headers: { "x-forwarded-host": `ignored.example, ${staffHostName}` } }), {});
+  assert.equal(forwardedRobots.headers.get("x-middleware-next"), "1");
+
+  const worker = loaded.proxy(new NextRequest(`https://${staffHostName}/staff-sw.js`), {});
+  assert.equal(worker.headers.get("service-worker-allowed"), "/");
+  const mainWorker = loaded.proxy(new NextRequest("https://www.imashmaut.co.il/staff-sw.js"), {});
+  assert.equal(mainWorker.headers.get("service-worker-allowed"), "/staff");
+  for (const path of ["/robots.txt", "/sitemap.xml", "/manifest.webmanifest", "/staff-sw.js", "/api/contact"]) {
+    assert.equal(doesProxyMatch({ config: loaded.config, nextConfig: {}, url: path }), true, path);
+  }
+  assert.equal(doesProxyMatch({ config: loaded.config, nextConfig: {}, url: "/api/internal/mentoring/reminders" }), false);
+  assert.equal(doesProxyMatch({ config: loaded.config, nextConfig: {}, url: "/_next/static/chunk.js" }), false);
+});
+
+test("Clerk sign-in URLs are root-relative only when the staff host is configured", () => {
+  const ClerkProvider = () => null;
+  const { StaffAuthProvider } = loadSource("../../../components/staff/auth/auth-provider.tsx", {
+    "@clerk/nextjs": { ClerkProvider },
+    "@clerk/localizations": { heIL: {} },
+    "@/lib/staff-host": staffHost,
+  }, productionKey, staffEnv);
+  const element = StaffAuthProvider({ children: "workspace" });
+  assert.equal(element.props.signInUrl, "/login");
+  assert.equal(element.props.signUpUrl, "/signup");
+  assert.equal(element.props.signInForceRedirectUrl, "/");
+  assert.equal(element.props.signUpForceRedirectUrl, "/");
+  assert.equal(element.props.afterSignOutUrl, "/login");
+  assert.deepEqual(element.props.allowedRedirectOrigins, parties);
+  assert.equal(element.props.isSatellite, undefined);
+  assert.equal(element.props.proxyUrl, undefined);
 });

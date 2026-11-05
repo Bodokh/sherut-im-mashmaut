@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { staffPublicPath } from "@/lib/staff-host";
 import { useRef, useState, type FormEvent } from "react";
 import {
   CalendarDaysIcon,
@@ -452,7 +453,7 @@ function MonthlyOversightWorkspace({
                       )}
                       <Link
                         className="inline-flex min-h-11 items-center text-sm text-primary underline underline-offset-4"
-                        href={`/staff/participants/${entry.view.participant.id}`}
+                        href={staffPublicPath(`/staff/participants/${entry.view.participant.id}`)}
                       >
                         פתיחת כרטיס החניכה
                       </Link>

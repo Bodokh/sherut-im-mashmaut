@@ -2,6 +2,7 @@
 
 import { useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { staffPublicPath } from "@/lib/staff-host";
 import {
   ArchiveRestoreIcon,
   LoaderCircleIcon,
@@ -963,7 +964,7 @@ export function RecycleBinView() {
                   variant="outline"
                   render={
                     <Link
-                      href={`/staff/participants/${encodeURIComponent(view.participant.id)}`}
+                      href={staffPublicPath(`/staff/participants/${encodeURIComponent(view.participant.id)}`)}
                     />
                   }
                 >

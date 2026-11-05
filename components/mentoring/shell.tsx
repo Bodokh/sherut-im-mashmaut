@@ -45,6 +45,7 @@ import {
   SidebarTrigger,
 } from "@/components/staff/ui/sidebar";
 import { useWorkspace } from "@/lib/mentoring/workspace-client";
+import { staffPublicPath, toStaffInternalPath } from "@/lib/staff-host";
 import { initials } from "./format";
 import { readableError, roleNames } from "./common";
 
@@ -67,6 +68,7 @@ function NavigationItems({
   entries: typeof navigation;
   pathname: string;
 }) {
+  const current = toStaffInternalPath(pathname);
   return (
     <SidebarMenu>
       {entries.map(({ href, label, icon: Icon }) => (
@@ -74,10 +76,10 @@ function NavigationItems({
           <SidebarMenuButton
             size="lg"
             isActive={
-              href === pathname ||
-              (href !== "/staff" && pathname.startsWith(`${href}/`))
+              href === current ||
+              (href !== "/staff" && current.startsWith(`${href}/`))
             }
-            render={<Link href={href} />}
+            render={<Link href={staffPublicPath(href)} />}
           >
             <Icon />
             <span>{label}</span>
@@ -91,14 +93,14 @@ function NavigationItems({
 export function MentoringShell({ children }: { children: ReactNode }) {
   const { snapshot, loading, error, connection, pendingCount, refresh } =
     useWorkspace();
-  const pathname = usePathname();
+  const pathname = toStaffInternalPath(usePathname());
 
   if (!snapshot) {
     const locked = error?.code === "not_authenticated" || error?.code === "expired" || error?.code === "account_changed";
     const denied = error?.code === "not_staff" || error?.code === "forbidden";
     return (
       <div className="mx-auto flex min-h-dvh max-w-3xl flex-col gap-8 px-6 py-12">
-        <Link href="/staff" className="flex items-center gap-3 font-semibold">
+        <Link href={staffPublicPath("/staff")} className="flex items-center gap-3 font-semibold">
           <Image src="/images/logo-mark.png" alt="" width={44} height={44} />
           שירות עם משמעות
           <span className="text-sm font-normal text-muted-foreground">
@@ -130,7 +132,7 @@ export function MentoringShell({ children }: { children: ReactNode }) {
                 <Button
                   variant="outline"
                   nativeButton={false}
-                  render={<Link href="/staff/login" />}
+                  render={<Link href={staffPublicPath("/staff/login")} />}
                 >
                   <ArrowRightIcon data-icon="inline-start" />
                   לכניסה למערכת
@@ -171,7 +173,7 @@ export function MentoringShell({ children }: { children: ReactNode }) {
       </a>
       <Sidebar side="right" collapsible="offcanvas">
         <SidebarHeader className="px-5 py-7">
-          <Link href="/staff" className="flex items-center gap-3">
+          <Link href={staffPublicPath("/staff")} className="flex items-center gap-3">
             <Image src="/images/logo-mark.png" alt="" width={44} height={44} />
             <span className="flex flex-col gap-1">
               <strong className="text-base font-semibold">
@@ -205,7 +207,7 @@ export function MentoringShell({ children }: { children: ReactNode }) {
                   <SidebarMenuButton
                     size="lg"
                     isActive={pathname === "/staff/conflicts"}
-                    render={<Link href="/staff/conflicts" />}
+                    render={<Link href={staffPublicPath("/staff/conflicts")} />}
                   >
                     <ActivityIcon />
                     <span>עדכונים לבדיקה</span>
@@ -215,7 +217,7 @@ export function MentoringShell({ children }: { children: ReactNode }) {
                   <SidebarMenuButton
                     size="lg"
                     isActive={pathname === "/staff/settings"}
-                    render={<Link href="/staff/settings" />}
+                    render={<Link href={staffPublicPath("/staff/settings")} />}
                   >
                     <Settings2Icon />
                     <span>הגדרות</span>
@@ -244,7 +246,7 @@ export function MentoringShell({ children }: { children: ReactNode }) {
               variant="ghost"
               aria-label="יציאה מהמערכת"
               nativeButton={false}
-              render={<Link href="/staff/logout" />}
+              render={<Link href={staffPublicPath("/staff/logout")} />}
             >
               <LogOutIcon />
             </Button>

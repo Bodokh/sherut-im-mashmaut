@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { staffPublicPath } from "@/lib/staff-host";
 import { useEffect, useRef, useState } from "react";
 import {
   Check,
@@ -385,7 +386,7 @@ export function ReviewsView() {
               <Card key={key}>
                 <CardHeader>
                   <CardTitle>
-                    <Link href={`/staff/participants/${participant.id}`} className="inline-flex min-h-11 items-center break-words underline-offset-4 hover:underline">
+                    <Link href={staffPublicPath(`/staff/participants/${participant.id}`)} className="inline-flex min-h-11 items-center break-words underline-offset-4 hover:underline">
                       {participant.displayName}
                     </Link>
                   </CardTitle>
@@ -604,7 +605,7 @@ export function ConflictsView() {
               <CardHeader>
                 <CardTitle>
                   {participantAvailable ? (
-                    <Link href={`/staff/participants/${conflict.participantId}`} className="inline-flex min-h-11 items-center break-words underline-offset-4 hover:underline">{conflict.participantName}</Link>
+                    <Link href={staffPublicPath(`/staff/participants/${conflict.participantId}`)} className="inline-flex min-h-11 items-center break-words underline-offset-4 hover:underline">{conflict.participantName}</Link>
                   ) : conflict.participantName}
                 </CardTitle>
                 <CardDescription>{conflict.authorName} · {formatDate(conflict.createdAt)}</CardDescription>

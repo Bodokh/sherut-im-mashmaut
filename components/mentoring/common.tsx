@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { staffPublicPath } from "@/lib/staff-host";
 import {
   AlertCircleIcon,
   CalendarClockIcon,
@@ -215,8 +216,8 @@ export function ContactLink({
   primary?: boolean;
 }) {
   const href = participantId
-    ? `/staff/contacts/new?participant=${encodeURIComponent(participantId)}`
-    : "/staff/contacts/new";
+    ? staffPublicPath(`/staff/contacts/new?participant=${encodeURIComponent(participantId)}`)
+    : staffPublicPath("/staff/contacts/new");
   return (
     <Button
       variant={primary ? "default" : "outline"}
