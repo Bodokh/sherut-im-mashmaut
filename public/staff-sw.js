@@ -24,7 +24,7 @@ function isStaffPath(path) {
 }
 function isAuthPath(path) {
   const mount = staffMount();
-  return ["login", "signup", "logout"].some((name) => {
+  return ["login", "signup", "logout", "setup"].some((name) => {
     const prefix = `${mount}/${name}`;
     return path === prefix || path.startsWith(`${prefix}/`);
   });

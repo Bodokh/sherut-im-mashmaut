@@ -13,11 +13,14 @@ export const iso = (value: unknown): string => new Date(value as string | Date).
 const nullableIso = (value: unknown): string | null => value == null ? null : iso(value);
 
 export function staffFromRow(row: Row): StaffProfile {
+  const onboardingStatus = row.onboarding_email_status;
   return {
     id: text(row.id), organizationId: text(row.organization_id), authUserId: nullable(row.auth_user_id) ?? "",
     displayName: text(row.display_name), email: nullable(row.email), phone: nullable(row.phone),
     coordinatorId: nullable(row.coordinator_id), smsMuted: row.sms_muted === true,
     role: row.role as StaffProfile["role"], active: row.active === true, version: Number(row.version),
+    ...(onboardingStatus === "queued" || onboardingStatus === "accepted" || onboardingStatus === "failed"
+      ? { onboardingEmailStatus: onboardingStatus } : {}),
   };
 }
 
@@ -51,26 +54,33 @@ export function grantFromRow(row: Row): AccessGrant {
   return { id: text(row.id), organizationId: text(row.organization_id), staffId: text(row.staff_id), participantId: text(row.participant_id), actions: row.actions as AccessGrant["actions"], active: row.active === true, expiresAt: nullableIso(row.expires_at) };
 }
 
-/** Call only with a provider-verified identity and verified email, never request JSON. */
-export async function identityInTransaction(client: PoolClient, authUserId: string, verifiedEmail?: string | null): Promise<StaffProfile | null> {
+/** Identity, verified email and password state must come from the authentication provider. */
+export async function identityInTransaction(client: PoolClient, authUserId: string, verifiedEmail?: string | null, passwordEnabled?: boolean): Promise<StaffProfile | null> {
   if (!authUserId || authUserId.length > 300) return null;
   const existing = await client.query("SELECT * FROM mentoring.memberships WHERE organization_id = $1 AND auth_user_id = $2 FOR UPDATE", [ORGANIZATION_ID, authUserId]);
   if (existing.rows[0]) return existing.rows[0].active === true ? staffFromRow(existing.rows[0]) : null;
   if (!verifiedEmail) return null;
   const email = verifiedEmail.trim().toLowerCase();
   // Email alone cannot create membership, reactivate it, or replace a prior binding.
-  const approved = await client.query("SELECT * FROM mentoring.memberships WHERE organization_id = $1 AND lower(email) = $2 AND auth_user_id IS NULL AND active = true FOR UPDATE", [ORGANIZATION_ID, email]);
+  const approved = await client.query(`SELECT m.*, EXISTS (
+    SELECT 1 FROM mentoring.staff_onboarding_emails e WHERE e.organization_id = m.organization_id AND e.staff_id = m.id
+  ) AS password_setup_required FROM mentoring.memberships m
+  WHERE organization_id = $1 AND lower(email) = $2 AND auth_user_id IS NULL AND active = true FOR UPDATE OF m`, [ORGANIZATION_ID, email]);
   if (!approved.rows[0]) return null;
+  // The job's existence marks onboarding policy independently of email delivery.
+  if (approved.rows[0].password_setup_required && passwordEnabled !== true) {
+    throw new MentoringServerError("password_setup_required", "יש להגדיר סיסמה לפני הכניסה הראשונה למרחב הליווי.");
+  }
   const bound = await client.query("UPDATE mentoring.memberships SET auth_user_id = $3, version = version + 1, updated_at = clock_timestamp() WHERE organization_id = $1 AND id = $2 AND auth_user_id IS NULL AND active = true RETURNING *", [ORGANIZATION_ID, approved.rows[0].id, authUserId]);
   return bound.rows[0] ? staffFromRow(bound.rows[0]) : null;
 }
 
-export async function resolveStaffIdentity(authUserId: string, verifiedEmail?: string | null): Promise<StaffProfile | null> {
-  return withTransaction((client) => identityInTransaction(client, authUserId, verifiedEmail));
+export async function resolveStaffIdentity(authUserId: string, verifiedEmail?: string | null, passwordEnabled?: boolean): Promise<StaffProfile | null> {
+  return withTransaction((client) => identityInTransaction(client, authUserId, verifiedEmail, passwordEnabled));
 }
 
-export async function requireIdentity(client: PoolClient, authUserId: string, verifiedEmail?: string | null): Promise<StaffProfile> {
-  const actor = await identityInTransaction(client, authUserId, verifiedEmail);
+export async function requireIdentity(client: PoolClient, authUserId: string, verifiedEmail?: string | null, passwordEnabled?: boolean): Promise<StaffProfile> {
+  const actor = await identityInTransaction(client, authUserId, verifiedEmail, passwordEnabled);
   if (!actor) throw new MentoringServerError("not_staff", "החשבון אינו משויך לצוות פעיל. יש לפנות להנהלה.");
   return actor;
 }
@@ -143,9 +153,9 @@ async function loadVisibleParticipants(client: PoolClient, organizationId: strin
   });
 }
 
-export async function getWorkspace(authUserId: string, verifiedEmail?: string | null): Promise<WorkspaceSnapshot> {
+export async function getWorkspace(authUserId: string, verifiedEmail?: string | null, passwordEnabled?: boolean): Promise<WorkspaceSnapshot> {
   return withTransaction(async (client) => {
-    const actor = await requireIdentity(client, authUserId, verifiedEmail);
+    const actor = await requireIdentity(client, authUserId, verifiedEmail, passwordEnabled);
     const time = await client.query("SELECT clock_timestamp() AS now");
     const serverTime = iso(time.rows[0].now);
     const visible = await client.query(`SELECT p.id FROM mentoring.participants p WHERE p.organization_id = $1 AND (p.deleted_at IS NULL OR $3 = 'ceo') AND ($3 = 'ceo' OR ($3 = 'coordinator' AND p.created_by = $2 AND NOT EXISTS (SELECT 1 FROM mentoring.assignments a WHERE a.organization_id = p.organization_id AND a.participant_id = p.id AND a.ended_at IS NULL)) OR EXISTS (SELECT 1 FROM mentoring.assignments a WHERE a.organization_id = p.organization_id AND a.participant_id = p.id AND a.ended_at IS NULL AND (($3 = 'mentor' AND a.mentor_id = $2) OR ($3 = 'coordinator' AND a.coordinator_id = $2))) OR EXISTS (SELECT 1 FROM mentoring.grants g WHERE g.organization_id = p.organization_id AND g.participant_id = p.id AND g.staff_id = $2 AND g.active = true AND 'view' = ANY(g.actions) AND (g.expires_at IS NULL OR g.expires_at > $4::timestamptz))) ORDER BY p.created_at DESC, p.id`, [actor.organizationId, actor.id, actor.role, serverTime]);
@@ -171,7 +181,12 @@ export async function getWorkspace(authUserId: string, verifiedEmail?: string | 
       };
     });
     // Staff contact details are visible only to management or their own record.
-    const staffResult = await client.query("SELECT * FROM mentoring.memberships WHERE organization_id = $1 AND (active = true OR id = $2 OR $3 <> 'mentor') ORDER BY display_name, id", [actor.organizationId, actor.id, actor.role]);
+    const staffResult = await client.query(`SELECT m.*, e.status AS onboarding_email_status
+      FROM mentoring.memberships m LEFT JOIN mentoring.staff_onboarding_emails e
+      ON e.organization_id = m.organization_id AND e.staff_id = m.id
+      AND ($3 = 'ceo' OR ($3 = 'coordinator' AND m.coordinator_id = $2 AND m.role = 'mentor'))
+      WHERE m.organization_id = $1 AND (m.active = true OR m.id = $2 OR $3 <> 'mentor')
+      ORDER BY m.display_name, m.id`, [actor.organizationId, actor.id, actor.role]);
     const staff = staffResult.rows.map(staffFromRow).map((member) => actor.role === "mentor" && member.id !== actor.id ? { ...member, email: null, phone: null, authUserId: "" } : member);
     const conflictsResult = await client.query("SELECT c.*, p.display_name AS participant_name, m.display_name AS author_name FROM mentoring.conflicts c JOIN mentoring.participants p ON p.organization_id = c.organization_id AND p.id = c.participant_id JOIN mentoring.memberships m ON m.organization_id = c.organization_id AND m.id = c.actor_id WHERE c.organization_id = $1 AND ($3 = 'ceo' OR c.actor_id = $2) ORDER BY c.created_at DESC", [actor.organizationId, actor.id, actor.role]);
     const visibleIds = new Set(participants.map((view) => view.participant.id));

@@ -131,7 +131,7 @@ test("approval file must be private, regular, bounded JSON and cannot be a symli
 
 test("migration verification uses all current ordered source checksums", async () => {
   const source=await loadMigrations();
-  assert.equal(source.length,6); assert.equal(source[0].filename,"001_initial.sql"); assert.equal(source.at(-1).filename,"006_reminders.sql");
+  assert.equal(source.length,7); assert.equal(source[0].filename,"001_initial.sql"); assert.equal(source.at(-1).filename,"007_staff_onboarding.sql");
   assert.ok(source.every(row=>/^[a-f0-9]{64}$/.test(row.checksum)));
 });
 
@@ -176,7 +176,8 @@ test("exact replay is a no-op; different approval, changed identity, revocation,
 test("preflight and apply reject inherited QA/partial memberships, application data, changed seeds, unknown/RLS tables and migration drift", async () => {
   for (const apply of [false,true]) for (const mutate of [
     c=>{c.state.memberships.push({id:uuid(100),role:"ceo",active:false});}, c=>{c.state.counts.participants=1;},
-    c=>{c.state.counts.reminder_attempts=1;}, c=>{c.state.organizations.push({id:uuid(200)});},
+    c=>{c.state.counts.reminder_attempts=1;}, c=>{c.state.counts.staff_onboarding_emails=1;},
+    c=>{c.state.organizations.push({id:uuid(200)});},
     c=>{c.state.settings[0].version=2;}, c=>{c.state.migrations[0].checksum="b".repeat(64);},
     c=>{c.state.migrations.push({filename:"999_unknown.sql",checksum:"a".repeat(64)});},
   ]) { const client=new FakeClient(); mutate(client); await assert.rejects(executePreapproval(client,manifest(),migrations,{apply}),ProductionBootstrapError); assert.equal(client.writes,0); }

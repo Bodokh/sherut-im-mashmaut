@@ -1,8 +1,8 @@
 import { Resend } from "resend";
 import { validateContactSubmission } from "../../../lib/contact-validation";
+import { ORGANIZATION_EMAIL_FROM } from "../../../lib/organization-email";
 
 const DEFAULT_SUPPORT_EMAIL = "support@imashmaut.co.il";
-const FROM_EMAIL = "שירות עם משמעות <notifications@imashmaut.co.il>";
 
 function readField(payload: Record<string, unknown>, field: string) {
   const value = payload[field];
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
   try {
     const resend = new Resend(apiKey);
     const { error } = await resend.emails.send({
-      from: FROM_EMAIL,
+      from: ORGANIZATION_EMAIL_FROM,
       to: [recipient],
       replyTo: email,
       subject,
@@ -113,7 +113,7 @@ export async function POST(request: Request) {
     // not turn this into a failed submission and encourage a duplicate retry.
     try {
       const confirmation = await resend.emails.send({
-      from: FROM_EMAIL,
+        from: ORGANIZATION_EMAIL_FROM,
       to: [email],
       subject: "קיבלנו את פנייתך | שירות עם משמעות",
       text: [

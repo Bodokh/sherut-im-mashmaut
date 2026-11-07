@@ -24,8 +24,8 @@ test("real PostgreSQL mentoring transactions and current authorization", { skip:
   const { getDatabasePool, withTransaction } = await import("../../../lib/mentoring/server/db.ts");
   const database = new Pool({ connectionString: process.env.MENTORING_DATABASE_URL_UNPOOLED ?? process.env.MENTORING_DATABASE_URL, max: 3, connectionTimeoutMillis: 10_000 });
   try {
-    const schema = await database.query("SELECT to_regclass('mentoring.resource_ids') IS NOT NULL AS resources, to_regclass('mentoring.contact_revisions') IS NOT NULL AS contact_revisions, to_regclass('mentoring.grants') IS NOT NULL AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'mentoring' AND table_name = 'grants' AND column_name = 'version') AS authority, to_regclass('mentoring.organization_settings') IS NOT NULL AS oversight, to_regclass('mentoring.reminder_jobs') IS NOT NULL AS reminder_jobs, to_regclass('mentoring.reminder_attempts') IS NOT NULL AS reminder_attempts, EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'mentoring' AND table_name = 'participants' AND column_name = 'last_ceo_version') AS protection_version, EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'mentoring' AND table_name = 'assignments' AND column_name = 'followup_anchor_at') AS followup_anchor");
-    assert.ok(Object.values(schema.rows[0]).every(Boolean), "Apply every mentoring migration through 006 before running integration tests.");
+    const schema = await database.query("SELECT to_regclass('mentoring.resource_ids') IS NOT NULL AS resources, to_regclass('mentoring.contact_revisions') IS NOT NULL AS contact_revisions, to_regclass('mentoring.grants') IS NOT NULL AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'mentoring' AND table_name = 'grants' AND column_name = 'version') AS authority, to_regclass('mentoring.organization_settings') IS NOT NULL AS oversight, to_regclass('mentoring.reminder_jobs') IS NOT NULL AS reminder_jobs, to_regclass('mentoring.reminder_attempts') IS NOT NULL AS reminder_attempts, to_regclass('mentoring.staff_onboarding_emails') IS NOT NULL AS staff_onboarding_emails, EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'mentoring' AND table_name = 'participants' AND column_name = 'last_ceo_version') AS protection_version, EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'mentoring' AND table_name = 'assignments' AND column_name = 'followup_anchor_at') AS followup_anchor");
+    assert.ok(Object.values(schema.rows[0]).every(Boolean), "Apply every mentoring migration through 007 before running integration tests.");
     // Staff lifecycle commands deliberately re-evaluate reminders across this
     // organization. Run only in the parent's reserved empty development window,
     // so fixture actors can never replace attribution on legitimate reminders.
@@ -164,7 +164,16 @@ test("real PostgreSQL mentoring transactions and current authorization", { skip:
     assert.equal(member.role, "mentor");
     assert.equal(member.coordinator_id, coordinatorA.id);
     const authUserId = `test_${randomUUID()}`;
-    assert.equal((await resolveStaffIdentity(authUserId, command.fields.email))?.id, member.id);
+    const invitedStatus = async (actor) => (await getWorkspace(actor.authUserId, actor.email)).staff.find((person) => person.id === member.id)?.onboardingEmailStatus;
+    assert.equal(await invitedStatus(ceo), "queued");
+    assert.equal(await invitedStatus(coordinatorA), "queued");
+    assert.equal(await invitedStatus(coordinatorB), undefined);
+    assert.equal(await invitedStatus(mentorA), undefined);
+    await assert.rejects(getWorkspace(authUserId, command.fields.email, false), { code: "password_setup_required" });
+    const pending = await executeCommand(authUserId, command.fields.email, { type: "set_sms_muted", operationId: randomUUID(), muted: true }, false);
+    failed(pending, "password_setup_required");
+    assert.equal((await database.query("SELECT auth_user_id FROM mentoring.memberships WHERE id = $1", [member.id])).rows[0].auth_user_id, null);
+    assert.equal((await resolveStaffIdentity(authUserId, command.fields.email, true))?.id, member.id);
     member = (await database.query("SELECT * FROM mentoring.memberships WHERE id = $1", [created.staffId])).rows[0];
     accepted(await run(ceo, { type: "set_staff_active", operationId: randomUUID(), staffId: member.id, expectedVersion: member.version, active: false }));
     failed(await run(ceo, { ...command, operationId: randomUUID(), fields: { ...command.fields, email: command.fields.email.toUpperCase(), displayName: "שם שאסור להחליף" } }), "conflict");
@@ -188,7 +197,7 @@ test("real PostgreSQL mentoring transactions and current authorization", { skip:
     const command = { type: "create_staff", operationId: randomUUID(), fields: { displayName: `בדיקת שרת ${suffix} activation`, email: `${randomUUID()}@mentoring-tests.invalid`, phone: null, role: "mentor", coordinatorId: coordinatorA.id } };
     accepted(await run(ceo, command));
     const member = { id: command.operationId, authUserId: `test_${randomUUID()}`, email: command.fields.email };
-    assert.equal((await resolveStaffIdentity(member.authUserId, member.email))?.id, member.id);
+    assert.equal((await resolveStaffIdentity(member.authUserId, member.email, true))?.id, member.id);
     const current = (await database.query("SELECT * FROM mentoring.memberships WHERE id = $1", [member.id])).rows[0];
     const deactivate = { type: "set_staff_active", operationId: randomUUID(), staffId: member.id, expectedVersion: current.version, active: false };
     failed(await run(mentorA, { ...deactivate, operationId: randomUUID() }), "forbidden");

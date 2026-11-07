@@ -18,6 +18,7 @@ export const APPLICATION_TABLES = Object.freeze([
   "ceo_protections", "operations", "conflicts", "audit", "outbox", "resource_ids", "contact_revisions",
   "review_events", "appointment_history", "manual_color_history", "organization_settings_history",
   "monthly_reviews", "monthly_review_history", "reminder_jobs", "reminder_attempts",
+  "staff_onboarding_emails",
 ]);
 const ALL_TABLES = Object.freeze([...APPLICATION_TABLES, "organizations", "organization_settings", "schema_migrations"]);
 const COUNT_SQL = APPLICATION_TABLES.map(name => `SELECT '${name}' AS table_name, count(*)::text AS row_count FROM mentoring.${name}`).join(" UNION ALL ");

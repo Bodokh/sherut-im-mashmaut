@@ -233,6 +233,25 @@ test("a first verified Google identity binds only an active preapproved email an
   assert.equal(calls.some(({ sql }) => sql.startsWith("INSERT")), false);
 });
 
+test("a new invited Google identity without a password receives a distinct 403 before binding", async () => {
+  const approved = { id: "invited-staff", email: "approved@example.org", password_setup_required: true };
+  const writes = [];
+  const client = { async query(sql) {
+    if (sql.startsWith("SELECT")) return { rows: sql.includes("lower(email) = $2") ? [approved] : [] };
+    writes.push(sql);
+    return { rows: [] };
+  } };
+  for (const passwordEnabled of [false, undefined]) {
+    await assert.rejects(requireIdentity(client, "new_google_identity", approved.email, passwordEnabled), (error) => {
+      const response = privateFailure(serverFailure(error));
+      assert.equal(error.code, "password_setup_required");
+      assert.equal(response.status, 403);
+      return true;
+    });
+  }
+  assert.deepEqual(writes, []);
+});
+
 test("a new Google identity without staff preapproval receives 403 and cannot create membership", async () => {
   const calls = [];
   const client = { async query(sql, params) {
@@ -283,7 +302,7 @@ test("Google account-link verification resumes the pending sign-in with the exis
   const email = elements(tree).find((item) => item.type === "Input" && item.props.name === "email");
   assert.equal(email.props.value, "staff@example.org");
   assert.equal(email.props.readOnly, true);
-  elements(tree).find((item) => item.type === "Input" && item.props.name === "password").props.onChange({ target: { value: "existing password" } });
+  elements(tree).find((item) => item.type === "Input" && item.props.id === "staff-password").props.onChange({ target: { value: "existing password" } });
   tree = harness.render("SignInForm", { googleResult: "verify-account" });
   await elements(tree).find((item) => item.type === "form").props.onSubmit({ preventDefault() {} });
   assert.deepEqual(passwords, [{ password: "existing password" }], "Use the pending provider identifier rather than replacing it.");

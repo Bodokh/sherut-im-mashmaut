@@ -10,7 +10,7 @@ export const privateHeaders = {
 export function failureStatus(failure: ApiFailure): number {
   switch (failure.error.code) {
     case "not_authenticated": return 401;
-    case "not_staff": case "forbidden": return 403;
+    case "not_staff": case "password_setup_required": case "forbidden": return 403;
     case "not_found": return 404;
     case "validation": return 400;
     case "conflict": case "ceo_protected": return 409;

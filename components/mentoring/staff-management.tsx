@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { CheckCircle2, Info, Pencil, ShieldCheck, UserRoundCheck, UserRoundMinus, UserRoundPlus, Users, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/staff/ui/alert";
@@ -27,6 +27,22 @@ import { DraftStatus, useFormDraft } from "./form-draft";
 import { changedStaffFields, isPendingStaffPreapproval, staffEditValues } from "./staff-form-state";
 
 const roleLabels: Record<StaffRole, string> = { mentor: "חונך/ת", coordinator: "רכז/ת", ceo: "מנכ״ל" };
+const onboardingEmailLabels = {
+  queued: "ההזמנה ממתינה לשליחה",
+  accepted: "ההזמנה התקבלה אצל ספק הדוא״ל",
+  failed: "לא התקבל אישור לשליחת ההזמנה",
+};
+
+function StaffOnboardingStatus({ member }: { member: StaffProfile }) {
+  const status = member.onboardingEmailStatus;
+  if (!status) return null;
+
+  return <div className="flex flex-col items-start gap-1 text-xs">
+    <Badge className="h-auto min-h-5 max-w-full text-start whitespace-normal" variant={status === "failed" ? "destructive" : "outline"}>{onboardingEmailLabels[status]}</Badge>
+    <p className="text-muted-foreground">{member.authUserId ? "החשבון הופעל" : "החשבון ממתין להגדרה"}</p>
+  </div>;
+}
+
 function ActionError({ message }: { message: string | null }) {
   return message ? <Alert variant="destructive"><Info aria-hidden="true" /><AlertTitle>הפעולה לא הושלמה</AlertTitle><AlertDescription>{message}</AlertDescription></Alert> : null;
 }
@@ -103,14 +119,14 @@ function StaffPreapprovalForm({ onClose, onBusyChange }: { onClose: () => void; 
       if (!result.ok) { fail(result.error); draft.recheck(); return; }
       try { await draft.clear(); } catch { toast.warning("הבקשה נשמרה. הטיוטה תיבדק לפי אותה פעולת שמירה בפתיחה הבאה."); }
       onClose();
-      if (result.acceptance === "queued") toast.message("בקשת החברות נשמרה במכשיר וממתינה לאישור. טרם ניתנה גישה.");
-      else toast.success("החברות בצוות אושרה מראש. לא נשלחה הזמנה.");
+      if (result.acceptance === "queued") toast.message("בקשת החברות נשמרה במכשיר. ההזמנה תיכנס לתור השליחה לאחר אישור המערכת.");
+      else toast.success("החברות בצוות אושרה. ההזמנה נוספה לתור השליחה.");
     } catch { setFailure({ code: "unavailable", message: prepared ? "לא התקבל אישור מהמערכת. זהות הבקשה נשמרה ותיבדק לניסיון נוסף." : "לא ניתן להכין את הבקשה לשמירה. הפרטים נשארו בטופס; יש להשאיר אותו פתוח, לבדוק את מצב הטיוטה ולנסות שוב." }); if (prepared) draft.recheck(); }
     finally { submitting.current = false; setBusy(false); onBusyChange(false); }
   }
   if (draft.recovered) return <RecoveredStaffSave result={draft.recovered} clear={draft.clear} onClose={onClose}><dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-3 text-sm"><dt>שם</dt><dd>{values.displayName}</dd><dt>כתובת דוא״ל</dt><dd dir="ltr" className="break-all">{values.email}</dd><dt>תפקיד מבוקש</dt><dd>{roleLabels[effectiveRole]}</dd></dl></RecoveredStaffSave>;
   return <form onSubmit={save} noValidate className="flex flex-col gap-5">
-    <Alert><ShieldCheck aria-hidden="true" /><AlertTitle>החברות בצוות והחשבון האישי הם שני שלבים</AlertTitle><AlertDescription>הפעולה מאשרת חברות בצוות בלבד. היא אינה יוצרת חשבון התחברות ואינה שולחת הזמנה או דוא״ל. יצירת החשבון מחייבת הרשמה ואימות באמצעות אותה כתובת דוא״ל.</AlertDescription></Alert>
+    <Alert><ShieldCheck aria-hidden="true" /><AlertTitle>הזמנה להגדרת החשבון</AlertTitle><AlertDescription>לאחר אישור החברות, המערכת תשלח לכתובת הדוא״ל קישור להגדרת סיסמה אישית ולכניסה הראשונה.</AlertDescription></Alert>
     <OfflineNotice /><ActionError message={failure?.message ?? null} />
     <fieldset disabled={busy || !draft.hydrated} className="min-w-0 border-0 p-0"><FieldGroup>
       <Field data-invalid={invalidField === "displayName" || undefined}><FieldLabel htmlFor={`${formId}-name`}>שם מלא</FieldLabel><Input id={`${formId}-name`} value={values.displayName} onChange={(event) => update("displayName", event.target.value)} maxLength={200} autoComplete="name" required aria-invalid={invalidField === "displayName" || undefined} aria-describedby={invalidField === "displayName" ? `${formId}-displayName-error` : undefined} /><FieldFailure failure={failure} field="displayName" formId={formId} /></Field>
@@ -221,9 +237,17 @@ function StaffAccessForm({ member, onClose, onBusyChange }: { member: StaffProfi
   </form>;
 }
 export function StaffManagement() {
-  const { snapshot } = useWorkspace();
+  const { snapshot, isOnline, refresh } = useWorkspace();
   const [target, setTarget] = useState<{ id: string; mode: "edit" | "access" } | null>(null);
   const [busy, setBusy] = useState(false);
+  const hasQueuedInvitations = snapshot?.staff.some((member) => member.onboardingEmailStatus === "queued");
+  useEffect(() => {
+    if (!isOnline || !hasQueuedInvitations) return;
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") void refresh().catch(() => undefined);
+    }, 30_000);
+    return () => window.clearInterval(interval);
+  }, [hasQueuedInvitations, isOnline, refresh]);
   if (!snapshot) return null;
   const { actor, staff } = snapshot;
   const isCeo = actor.role === "ceo";
@@ -238,11 +262,12 @@ export function StaffManagement() {
     return <div className="flex flex-wrap items-center gap-2"><Tooltip><TooltipTrigger render={<Button type="button" variant="ghost" size="icon" aria-label="עריכת פרטים" onClick={() => setTarget({ id: member.id, mode: "edit" })} />}><Pencil aria-hidden="true" /></TooltipTrigger><TooltipContent>עריכת פרטי הצוות</TooltipContent></Tooltip>{member.id !== actor.id && <Button variant="outline" onClick={() => setTarget({ id: member.id, mode: "access" })}>{member.active ? <UserRoundMinus data-icon="inline-start" /> : <UserRoundCheck data-icon="inline-start" />}{member.active ? "ביטול גישה" : "הפעלת גישה"}</Button>}</div>;
   }
   function accessStatus(member: StaffProfile, pendingLabel: string) {
-    return <div className="flex min-w-0 max-w-full flex-col items-start gap-2"><div className="flex min-w-0 max-w-full items-center gap-1"><Badge className="h-auto min-h-5 max-w-full whitespace-normal" variant={member.active ? "secondary" : "outline"}>{isPendingStaffPreapproval(member) ? pendingLabel : member.active ? "גישה פעילה" : "ללא גישה"}</Badge>{isCeo && member.id === actor.id && <Tooltip><TooltipTrigger render={<Button type="button" variant="ghost" size="icon" aria-label="אין אפשרות לבטל את הגישה של החשבון שלך" />}><Info aria-hidden="true" /></TooltipTrigger><TooltipContent>אין אפשרות לבטל את הגישה של החשבון שלך</TooltipContent></Tooltip>}</div>{member.localPending && !isPendingStaffPreapproval(member) && <Badge className="h-auto min-h-5 max-w-full whitespace-normal" variant="outline">עדכון ממתין לאישור</Badge>}</div>;
+    const awaitingSetup = member.onboardingEmailStatus && !member.authUserId;
+    return <div className="flex min-w-0 max-w-full flex-col items-start gap-2"><div className="flex min-w-0 max-w-full items-center gap-1"><Badge className="h-auto min-h-5 max-w-full whitespace-normal" variant={member.active ? "secondary" : "outline"}>{isPendingStaffPreapproval(member) ? pendingLabel : member.active ? awaitingSetup ? "גישה מאושרת" : "גישה פעילה" : "ללא גישה"}</Badge>{isCeo && member.id === actor.id && <Tooltip><TooltipTrigger render={<Button type="button" variant="ghost" size="icon" aria-label="אין אפשרות לבטל את הגישה של החשבון שלך" />}><Info aria-hidden="true" /></TooltipTrigger><TooltipContent>אין אפשרות לבטל את הגישה של החשבון שלך</TooltipContent></Tooltip>}</div>{member.localPending && !isPendingStaffPreapproval(member) && <Badge className="h-auto min-h-5 max-w-full whitespace-normal" variant="outline">עדכון ממתין לאישור</Badge>}</div>;
   }
   return <TooltipProvider><div className="flex min-w-0 flex-col gap-4">
     {canCreate && <OfflineNotice />}
-    <Card className="min-w-0 max-w-full"><CardHeader><CardTitle>צוות הליווי</CardTitle><CardDescription>{activeCount} עם גישה פעילה · {inactiveCount} ללא גישה{pendingCount > 0 ? ` · ${pendingCount} בקשות חברות ממתינות לאישור` : ""}</CardDescription><CardAction>{canCreate ? <AddStaffDialog /> : <Badge variant="secondary">{staff.length} בצוות</Badge>}</CardAction></CardHeader>
+    <Card className="min-w-0 max-w-full"><CardHeader><CardTitle>צוות הליווי</CardTitle><CardDescription>{activeCount} עם גישה מאושרת · {inactiveCount} ללא גישה{pendingCount > 0 ? ` · ${pendingCount} בקשות חברות ממתינות לאישור` : ""}</CardDescription><CardAction>{canCreate ? <AddStaffDialog /> : <Badge variant="secondary">{staff.length} בצוות</Badge>}</CardAction></CardHeader>
       <CardContent className="min-w-0 max-w-full">{staff.length === 0 ? <Empty><EmptyHeader><EmptyMedia variant="icon"><Users aria-hidden="true" /></EmptyMedia><EmptyTitle>אין צוות להצגה</EmptyTitle><EmptyDescription>{canCreate ? "אפשר לאשר חברות חדשה בצוות באמצעות הכפתור למעלה." : "רשימת הצוות תוצג לאחר הגדרת חשבונות הצוות."}</EmptyDescription></EmptyHeader></Empty> : <>
         <div className="hidden min-w-0 max-w-full md:block">
           <Table className={cn("table-fixed", isCeo ? "min-w-[60rem]" : "min-w-[44rem]")} aria-label="צוות הליווי">
@@ -253,12 +278,12 @@ export function StaffManagement() {
               <TableCell><Badge className="h-auto min-h-5 max-w-full whitespace-normal" variant="outline">{isPendingStaffPreapproval(member) ? "תפקיד מבוקש: " : ""}{roleLabels[member.role]}</Badge></TableCell>
               <TableCell className="whitespace-normal"><div className="flex min-w-0 flex-col gap-1"><span dir="ltr" className="[overflow-wrap:anywhere]">{member.phone ?? "לא הוזן טלפון"}</span>{member.email && <span dir="ltr" title={member.email} className="block max-w-full truncate text-xs text-muted-foreground">{member.email}</span>}</div></TableCell>
               <TableCell className="whitespace-normal"><span className="[overflow-wrap:anywhere]">{isPendingStaffPreapproval(member) ? "שיוך מבוקש: " : ""}{staff.find((person) => person.id === member.coordinatorId)?.displayName ?? "ללא שיוך"}</span></TableCell>
-              <TableCell>{accessStatus(member, "בקשת חברות ממתינה לאישור")}</TableCell>
+              <TableCell><div className="flex min-w-0 flex-col gap-2">{accessStatus(member, "בקשת חברות ממתינה לאישור")}<StaffOnboardingStatus member={member} /></div></TableCell>
               {isCeo && <TableCell>{controls(member)}</TableCell>}
             </TableRow>)}</TableBody>
           </Table>
         </div>
-        <div className="grid gap-3 md:hidden">{staff.map((member) => <Card key={member.id} size="sm"><CardHeader><CardTitle className="min-w-0 break-words">{member.displayName}</CardTitle><CardDescription>{isPendingStaffPreapproval(member) ? "תפקיד מבוקש: " : ""}{roleLabels[member.role]}{member.id === actor.id ? " · החשבון שלך" : ""}</CardDescription><CardAction>{accessStatus(member, "בקשת חברות ממתינה לאישור")}</CardAction></CardHeader><CardContent><dl className="flex min-w-0 flex-col gap-2 text-sm"><div className="flex flex-col gap-1"><dt className="text-muted-foreground">פרטי קשר</dt><dd><span dir="ltr">{member.phone ?? "לא הוזן טלפון"}</span></dd>{member.email && <dd dir="ltr" className="break-all text-start">{member.email}</dd>}</div><div className="flex flex-col gap-1"><dt className="text-muted-foreground">{isPendingStaffPreapproval(member) ? "רכז/ת מבוקש/ת" : "רכז/ת אחראי/ת"}</dt><dd>{staff.find((person) => person.id === member.coordinatorId)?.displayName ?? "ללא שיוך"}</dd></div></dl></CardContent>{isCeo && <CardFooter>{controls(member)}</CardFooter>}</Card>)}</div>
+        <div className="grid gap-3 md:hidden">{staff.map((member) => <Card key={member.id} size="sm"><CardHeader><CardTitle className="min-w-0 break-words">{member.displayName}</CardTitle><CardDescription>{isPendingStaffPreapproval(member) ? "תפקיד מבוקש: " : ""}{roleLabels[member.role]}{member.id === actor.id ? " · החשבון שלך" : ""}</CardDescription><CardAction>{accessStatus(member, "בקשת חברות ממתינה לאישור")}</CardAction></CardHeader><CardContent className="flex flex-col gap-2"><dl className="flex min-w-0 flex-col gap-2 text-sm"><div className="flex flex-col gap-1"><dt className="text-muted-foreground">פרטי קשר</dt><dd><span dir="ltr">{member.phone ?? "לא הוזן טלפון"}</span></dd>{member.email && <dd dir="ltr" className="break-all text-start">{member.email}</dd>}</div><div className="flex flex-col gap-1"><dt className="text-muted-foreground">{isPendingStaffPreapproval(member) ? "רכז/ת מבוקש/ת" : "רכז/ת אחראי/ת"}</dt><dd>{staff.find((person) => person.id === member.coordinatorId)?.displayName ?? "ללא שיוך"}</dd></div></dl><StaffOnboardingStatus member={member} /></CardContent>{isCeo && <CardFooter>{controls(member)}</CardFooter>}</Card>)}</div>
       </>}</CardContent><CardFooter><p className="text-xs leading-relaxed text-muted-foreground">{isCeo ? "אפשר לאשר חברות מראש, לערוך פרטים ולהפעיל או לבטל גישה. היסטוריית הפעילות נשמרת גם לאחר ביטול גישה." : actor.role === "coordinator" ? "אפשר להוסיף חונכים וחונכות לצוות שלך. שינוי פרטי צוות וגישה נמצא בידי המנכ״ל." : "שינוי חברות בצוות והרשאות נעשה על ידי ההנהלה."}</p></CardFooter>
     </Card>
     <Dialog open={target !== null && isCeo} onOpenChange={(next, details) => { if (busy) details.cancel(); else if (!next) setTarget(null); }}><DialogContent showCloseButton={false} className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg"><DialogHeader><DialogTitle>{target?.mode === "edit" ? "עריכת פרטי צוות" : "שינוי גישה לצוות"} · {selected?.displayName ?? "חבר/ת צוות"}</DialogTitle><DialogDescription>{target?.mode === "edit" ? "עדכון פרטי הצוות, התפקיד והשיוך הארגוני." : "הבקשה תיבדק מול מצב הצוות וההרשאות העדכניים במערכת."}</DialogDescription></DialogHeader>{selected && target ? target.mode === "edit" ? <StaffEditForm key={`edit:${selected.id}`} member={selected} onClose={() => setTarget(null)} onBusyChange={setBusy} /> : <StaffAccessForm key={`access:${selected.id}`} member={selected} onClose={() => setTarget(null)} onBusyChange={setBusy} /> : <ActionError message="פרטי חבר/ת הצוות אינם זמינים במידע העדכני. יש לסגור את הטופס ולרענן את הרשימה." />}</DialogContent></Dialog>

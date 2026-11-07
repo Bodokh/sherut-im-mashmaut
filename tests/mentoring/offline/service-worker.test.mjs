@@ -400,6 +400,7 @@ test("private APIs, RSC payloads, authentication, public pages, and writes are n
     ["/staff?_rsc=private"], ["/staff/participants/p?_rsc=private"],
     ["/staff/login", { mode: "navigate" }], ["/staff/login/factor-one", { mode: "navigate" }],
     ["/staff/signup", { mode: "navigate" }], ["/staff/signup/verify", { mode: "navigate" }],
+    ["/staff/setup", { mode: "navigate" }],
     ["/staff/logout", { mode: "navigate" }], ["/staff/logout/complete", { mode: "navigate" }],
     ["/", { mode: "navigate" }], ["/about", { mode: "navigate" }], ["/staffing", { mode: "navigate" }],
     ["https://other.test/staff", { mode: "navigate" }],
@@ -950,6 +951,7 @@ test("a root-scoped worker uses /offline and controls the staff host without the
   assert.equal(worker.fetch("/participants/p", { mode: "navigate" }).intercepted, true);
   assert.equal(worker.fetch("/login", { mode: "navigate" }).intercepted, false);
   assert.equal(worker.fetch("/signup/verify", { mode: "navigate" }).intercepted, false);
+  assert.equal(worker.fetch("/setup", { mode: "navigate" }).intercepted, false);
   assert.equal(worker.fetch("/logout", { mode: "navigate" }).intercepted, false);
   const unprepared = harness(async () => { throw new TypeError("offline"); }, { scope: `${origin}/` });
   const offline = await unprepared.fetchAndSettle("/participants", { mode: "navigate" });

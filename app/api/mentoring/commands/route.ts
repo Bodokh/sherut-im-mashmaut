@@ -1,7 +1,10 @@
+import { after } from "next/server";
 import { getVerifiedIdentity } from "@/lib/mentoring/server/auth";
 import { executeCommand } from "@/lib/mentoring/server/commands";
 import { serverFailure } from "@/lib/mentoring/server/db";
 import { accountBindingFailure, privateFailure, privateHeaders, readCommandBody, unauthenticated } from "@/lib/mentoring/server/http";
+import { dispatchStaffOnboardingEmails } from "@/lib/mentoring/server/staff-onboarding";
+import { staffOnboardingSender } from "@/lib/mentoring/server/staff-onboarding-email";
 
 export async function POST(request: Request) {
   try {
@@ -13,8 +16,18 @@ export async function POST(request: Request) {
     if (bindingFailure) return privateFailure(bindingFailure);
     // Keep the original payload for matching receipts written before phone
     // normalization; executeCommand validates all new operations itself.
-    const result = await executeCommand(identity.userId, identity.verifiedEmail, body.value);
-    return result.ok ? Response.json(result, { headers: privateHeaders }) : privateFailure(result);
+    const result = await executeCommand(identity.userId, identity.verifiedEmail, body.value, identity.passwordEnabled);
+    if (!result.ok) return privateFailure(result);
+
+    const command = body.value;
+    if (result.staffId && command && typeof command === "object" && "type" in command && command.type === "create_staff") {
+      const send = staffOnboardingSender();
+      const staffId = result.staffId;
+      if (send) after(() => dispatchStaffOnboardingEmails(send, staffId).catch(() => {
+        console.error("Staff onboarding email could not be processed after preapproval.");
+      }));
+    }
+    return Response.json(result, { headers: privateHeaders });
   } catch (error) {
     return privateFailure(serverFailure(error));
   }

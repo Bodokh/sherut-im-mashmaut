@@ -7,7 +7,7 @@ export async function GET() {
   try {
     const identity = await getVerifiedIdentity();
     if (!identity) return unauthenticated();
-    const snapshot = await getWorkspace(identity.userId, identity.verifiedEmail);
+    const snapshot = await getWorkspace(identity.userId, identity.verifiedEmail, identity.passwordEnabled);
     return Response.json(snapshot, { headers: privateHeaders });
   } catch (error) {
     return privateFailure(serverFailure(error));

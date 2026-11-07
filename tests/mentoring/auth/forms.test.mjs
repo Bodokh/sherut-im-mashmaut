@@ -30,6 +30,7 @@ function harness(path, providers = {}) {
     if (id === "react") return react;
     if (id === "react/jsx-runtime") return { jsx, jsxs: jsx, Fragment: "Fragment" };
     if (id === "@clerk/nextjs") return { useAuth: () => ({ isLoaded: true, isSignedIn: false }), ...providers };
+    if (id === "@clerk/nextjs/errors") return { isReverificationCancelledError: (error) => error?.code === "reverification_cancelled" };
     if (id === "./auth-validation") return authValidation;
     if (id === "@/lib/contact-validation") return contactValidation;
     if (id === "@/lib/cn") return { cn: (...values) => values.filter(Boolean).join(" ") };
@@ -40,26 +41,97 @@ function harness(path, providers = {}) {
     if (id === "./auth-frame") return { AuthFrame: "AuthFrame" };
     if (id === "next/link") return { default: "Link" };
     if (id === "lucide-react") return { Info: "Info" };
+    if (id === "input-otp") return { REGEXP_ONLY_DIGITS: "^[0-9]+$" };
     if (id === "@/lib/staff-host") return staffHost;
     if (id.startsWith("@/components/staff/ui/")) return new Proxy({}, { get: (_target, key) => key });
     throw new Error(`Unexpected dependency: ${id}`);
   }, loaded, loaded.exports);
-  return { cooldown, render(name, props) { cursor = 0; return loaded.exports[name](props); } };
+  return { cooldown, render(name, props) { cursor = 0; return (typeof name === "function" ? name : loaded.exports[name])(props); } };
 }
 
 function elements(tree) {
   if (!tree || typeof tree !== "object") return [];
   return [tree, ...[tree.props?.children].flat(Infinity).flatMap(elements)];
 }
-const find = (tree, type, name) => elements(tree).find((item) => item.type === type && (!name || item.props.name === name));
+const find = (tree, type, field) => elements(tree).find((item) => item.type === type && (!field || item.props.name === field || item.props.id === field || item.props.type === field));
 const submit = (tree, currentTarget) => find(tree, "form").props.onSubmit({ preventDefault() {}, currentTarget });
 const change = (tree, name, value) => find(tree, "Input", name).props.onChange({ target: { value } });
 const button = (tree, text) => elements(tree).find((item) => item.type === "Button" && item.props.children === text);
 
+test("password setup offers login when signed out and never replaces an existing password", () => {
+  let user;
+  const view = harness("staff/auth/password-setup-form", { useUser: () => ({ isLoaded: true, user }) });
+  assert.equal(button(view.render("PasswordSetupForm"), "לכניסה למערכת").props.render.props.href, staffHost.staffPublicPath("/staff/login"));
+  user = { id: "existing", passwordEnabled: true };
+  const tree = view.render("PasswordSetupForm");
+  assert.ok(find(tree, "SignedInActions"));
+  assert.equal(find(tree, "form"), undefined);
+});
+
+test("password setup validates locally and reverifies one password update before opening the workspace", async (t) => {
+  const calls = [];
+  const visits = [];
+  let finish;
+  const user = {
+    id: "invited", passwordEnabled: false,
+    updatePassword(params) {
+      calls.push(params);
+      return new Promise((resolve) => { finish = resolve; });
+    },
+  };
+  const previousWindow = globalThis.window;
+  globalThis.window = { location: { assign(path) { visits.push(path); } } };
+  t.after(() => { globalThis.window = previousWindow; });
+  const view = harness("staff/auth/password-setup-form", {
+    useUser: () => ({ isLoaded: true, user }), useClerk: () => ({ user }),
+    useReverification: (operation) => async (...args) => { calls.push("reverify"); return operation(...args); },
+  });
+  const render = () => {
+    const form = elements(view.render("PasswordSetupForm")).find((item) => typeof item.type === "function");
+    return view.render(form.type, form.props);
+  };
+  assert.equal(find(render(), "form").props.method, "post");
+  assert.equal(find(render(), "Input").props.name, undefined, "An unhydrated form must not send the password to the page route.");
+  await submit(render());
+  assert.equal(find(render(), "Input").props["aria-invalid"], true);
+  assert.deepEqual(calls, []);
+  change(render(), undefined, "unique test passphrase");
+  const tree = render();
+  const pending = submit(tree);
+  await submit(tree);
+  assert.deepEqual(calls, ["reverify", { newPassword: "unique test passphrase", signOutOfOtherSessions: true }]);
+  assert.deepEqual(visits, []);
+  finish({ ...user, passwordEnabled: true });
+  await pending;
+  assert.deepEqual(visits, [staffHost.staffPublicPath("/staff")]);
+});
+
+test("password setup never writes to an account switched during reverification", async () => {
+  const writes = [];
+  const user = { id: "invited", passwordEnabled: false, updatePassword() { writes.push(this.id); } };
+  const clerk = { user };
+  const view = harness("staff/auth/password-setup-form", {
+    useUser: () => ({ isLoaded: true, user }), useClerk: () => clerk,
+    useReverification: (operation) => async (...args) => {
+      clerk.user = { ...user, id: "different-account" };
+      return operation(...args);
+    },
+  });
+  const form = elements(view.render("PasswordSetupForm")).find((item) => typeof item.type === "function");
+  const render = () => view.render(form.type, form.props);
+  change(render(), undefined, "unique test passphrase");
+  await submit(render());
+  assert.deepEqual(writes, []);
+  assert.match(find(render(), "AuthError").props.message, /לפנות להנהלה/);
+});
+
 test("login validates fields accessibly before contacting Clerk", async () => {
   const view = harness("staff/auth/sign-in-form", { useSignIn: () => ({ signIn: { password() { assert.fail("Invalid fields must stay local."); } }, fetchStatus: "idle" }) });
-  await submit(view.render("SignInForm"));
   let tree = view.render("SignInForm");
+  assert.equal(find(tree, "form").props.method, "post", "Native fallback must never put fields in a URL.");
+  assert.equal(find(tree, "Input", "password").props.name, undefined, "Native fallback must omit the password.");
+  await submit(tree);
+  tree = view.render("SignInForm");
   for (const name of ["email", "password"]) {
     const input = find(tree, "Input", name);
     assert.equal(input.props["aria-invalid"], true);
@@ -108,7 +180,14 @@ test("recovery validates OTP, preserves expired codes and only clears codes afte
   const view = harness("staff/auth/sign-in-form", { useSignIn: () => ({ signIn, fetchStatus: "idle" }) });
   let tree = view.render("SignInForm");
   change(tree, "email", "staff@example.org");
-  button(tree, "שכחת את הסיסמה?").props.onClick();
+  const forgotPassword = button(tree, "שכחת את הסיסמה?");
+  assert.equal(forgotPassword.props.type, "button");
+  forgotPassword.props.onClick();
+  const recoveryEmail = find(view.render("SignInForm"), "Input", "email");
+  assert.equal(recoveryEmail.props.value, "staff@example.org");
+  let emailFocused = false;
+  recoveryEmail.props.ref?.({ focus() { emailFocused = true; } });
+  assert.equal(emailFocused, true, "Keyboard focus must move into the recovery step.");
   await submit(view.render("SignInForm"));
   tree = view.render("SignInForm");
   assert.ok(find(tree, "CodeField"));
@@ -139,6 +218,7 @@ test("TOTP can switch to backup code with an explicit required error", async () 
   await submit(view.render("SignInForm"));
   const tree = view.render("SignInForm");
   const input = find(tree, "Input", "backup-code");
+  assert.equal(input.props.name, undefined, "Native fallback must omit the backup code.");
   assert.equal(input.props["aria-invalid"], true);
   assert.match(input.props["aria-describedby"], /backup-code-error/);
   assert.match(elements(tree).find((item) => item.props.id === "backup-code-error").props.children, /קודי הגיבוי/);
@@ -149,6 +229,8 @@ test("signup validates password policy and keeps input after provider rejection"
   const signUp = { verifications: { externalAccount: {} }, async password(params) { calls.push(params); return { error: { code: "form_password_pwned" } }; } };
   const view = harness("staff/auth/sign-up-form", { useSignUp: () => ({ signUp, fetchStatus: "idle" }) });
   let tree = view.render("SignUpForm");
+  assert.equal(find(tree, "form").props.method, "post", "Native fallback must never put fields in a URL.");
+  assert.equal(find(tree, "Input", "password").props.name, undefined, "Native fallback must omit the password.");
   change(tree, "email", "staff@example.org");
   change(tree, "password", "short");
   await submit(view.render("SignUpForm"));
@@ -161,6 +243,14 @@ test("signup validates password policy and keeps input after provider rejection"
   assert.equal(calls.length, 1);
   assert.equal(find(tree, "Input", "password").props.value, "a long secret phrase");
   assert.match(elements(tree).find((item) => item.props.id === "signup-password-error").props.children, /ייחודית/);
+});
+
+test("the shared verification control excludes the one-time code from native form submission", () => {
+  const view = harness("staff/auth/auth-controls");
+  const tree = view.render("CodeField", { value: "123456", onChange() {}, disabled: false, description: "קוד אימות" });
+  const code = find(tree, "InputOTP", "verification-code");
+  assert.equal(code.props.value, "123456");
+  assert.equal(code.props.name, undefined);
 });
 
 test("new-password recovery validates locally and retains the new password after rejection", async () => {

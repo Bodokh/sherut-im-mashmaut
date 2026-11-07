@@ -13,6 +13,10 @@ import { Input } from "@/components/staff/ui/input";
 
 type Factor = "email_code" | "totp" | "backup_code";
 
+function focusRecoveryEmail(input: HTMLInputElement | null) {
+  input?.focus();
+}
+
 export function SignInForm({ googleResult }: { googleResult?: string } = {}) {
   const { signIn, fetchStatus } = useSignIn();
   const { isLoaded, isSignedIn } = useAuth();
@@ -164,12 +168,12 @@ export function SignInForm({ googleResult }: { googleResult?: string } = {}) {
   const verifying = stage === "verification" || stage === "recovery-code";
   const recovering = stage.startsWith("recovery") || stage === "new-password";
   const title = verifying ? "עוד רגע, נכנסים" : recovering ? "חזרה לחשבון" : "טוב לראות אותך";
-  const description = verifying || stage === "google-verification" ? "נשלים את האימות כדי להמשיך למרחב הליווי." : recovering ? "אימות החשבון מאפשר לבחור סיסמה חדשה." : "נכנסים עם Google או עם כתובת הדוא״ל והסיסמה של חשבון הצוות.";
+  const description = stage === "recovery-email" ? "יש להזין את כתובת הדוא״ל של חשבון הצוות כדי לקבל קוד לאיפוס הסיסמה." : verifying || stage === "google-verification" ? "נשלים את האימות כדי להמשיך למרחב הליווי." : recovering ? "אימות החשבון מאפשר לבחור סיסמה חדשה." : "נכנסים עם Google או עם כתובת הדוא״ל והסיסמה של חשבון הצוות.";
 
   return (
     <AuthFrame variant="login" title={title} description={description} footer={<p className="text-sm text-muted-foreground">עדיין אין לך חשבון? <Link href={staffPublicPath("/staff/signup")} className="font-medium text-primary underline-offset-4 hover:underline">יצירת חשבון לצוות</Link></p>}>
       {isSignedIn ? <SignedInActions /> : (
-        <form onSubmit={submit} noValidate aria-busy={pending}>
+        <form method="post" onSubmit={submit} noValidate aria-busy={pending}>
           <FieldGroup>
             {stage === "password" && <>
               <Button data-auth-google type="button" variant="outline" size="lg" className="w-full" disabled={pending} onClick={signInWithGoogle}>
@@ -186,19 +190,19 @@ export function SignInForm({ googleResult }: { googleResult?: string } = {}) {
             </>}
             {(stage === "password" || stage === "google-account" || stage === "recovery-email") && <Field data-invalid={!!fieldErrors.identifier || undefined}>
               <FieldLabel htmlFor="staff-email">כתובת דוא״ל</FieldLabel>
-              <Input id="staff-email" name="email" type="email" dir="ltr" autoComplete="username" placeholder="name@example.com" value={stage === "google-account" ? signIn.identifier ?? "" : identifier} readOnly={stage === "google-account"} onChange={(event) => { setIdentifier(event.target.value); clearField("identifier"); }} onBlur={() => validateField("identifier")} disabled={pending} aria-invalid={!!fieldErrors.identifier} aria-describedby={fieldErrors.identifier ? "staff-email-error" : undefined} required maxLength={254} />
+              <Input id="staff-email" name="email" type="email" dir="ltr" autoComplete="username" placeholder="name@example.com" value={stage === "google-account" ? signIn.identifier ?? "" : identifier} readOnly={stage === "google-account"} onChange={(event) => { setIdentifier(event.target.value); clearField("identifier"); }} onBlur={() => validateField("identifier")} ref={stage === "recovery-email" ? focusRecoveryEmail : undefined} disabled={pending} aria-invalid={!!fieldErrors.identifier} aria-describedby={fieldErrors.identifier ? "staff-email-error" : undefined} required maxLength={254} />
               {fieldErrors.identifier && <FieldError id="staff-email-error">{fieldErrors.identifier}</FieldError>}
             </Field>}
             {(stage === "password" || stage === "google-account" || stage === "new-password") && <Field data-auth-password-field data-invalid={!!fieldErrors.password || undefined}>
               <FieldLabel htmlFor="staff-password">{stage === "new-password" ? "סיסמה חדשה" : "סיסמה"}</FieldLabel>
-              <Input id="staff-password" name="password" type="password" dir="ltr" autoComplete={stage === "new-password" ? "new-password" : "current-password"} value={password} onChange={(event) => { setPassword(event.target.value); clearField("password"); }} onBlur={() => validateField("password")} disabled={pending} aria-invalid={!!fieldErrors.password} aria-describedby={[stage === "new-password" ? "staff-password-description" : null, fieldErrors.password ? "staff-password-error" : null].filter(Boolean).join(" ") || undefined} minLength={stage === "new-password" ? 15 : undefined} maxLength={512} required />
-              {stage === "password" && <Button data-auth-forgot type="button" variant="link" disabled={pending} onClick={() => restart(true)}>שכחת את הסיסמה?</Button>}
+              <Input id="staff-password" type="password" dir="ltr" autoComplete={stage === "new-password" ? "new-password" : "current-password"} value={password} onChange={(event) => { setPassword(event.target.value); clearField("password"); }} onBlur={() => validateField("password")} disabled={pending} aria-invalid={!!fieldErrors.password} aria-describedby={[stage === "new-password" ? "staff-password-description" : null, fieldErrors.password ? "staff-password-error" : null].filter(Boolean).join(" ") || undefined} minLength={stage === "new-password" ? 15 : undefined} maxLength={512} required />
               {stage === "new-password" && <FieldDescription id="staff-password-description">לפחות 15 תווים. מומלץ לבחור משפט סודי וייחודי.</FieldDescription>}
               {fieldErrors.password && <FieldError id="staff-password-error">{fieldErrors.password}</FieldError>}
+              {stage === "password" && <div className="flex justify-end"><Button data-auth-forgot type="button" variant="outline" size="sm" disabled={pending} onClick={() => restart(true)}>שכחת את הסיסמה?</Button></div>}
             </Field>}
             {verifying && (factor === "backup_code" && stage === "verification" ? <Field data-invalid={!!fieldErrors.code || undefined}>
               <FieldLabel htmlFor="backup-code">קוד גיבוי</FieldLabel>
-              <Input id="backup-code" name="backup-code" dir="ltr" autoComplete="off" value={code} onChange={(event) => { setCode(event.target.value); clearField("code"); }} onBlur={() => validateField("code")} disabled={pending} maxLength={128} aria-invalid={!!fieldErrors.code} aria-describedby={`backup-code-description${fieldErrors.code ? " backup-code-error" : ""}`} required />
+              <Input id="backup-code" dir="ltr" autoComplete="off" value={code} onChange={(event) => { setCode(event.target.value); clearField("code"); }} onBlur={() => validateField("code")} disabled={pending} maxLength={128} aria-invalid={!!fieldErrors.code} aria-describedby={`backup-code-description${fieldErrors.code ? " backup-code-error" : ""}`} required />
               <FieldDescription id="backup-code-description">יש להזין קוד גיבוי אחד ששמרת בהגדרת האימות. ניתן להשתמש בכל קוד פעם אחת בלבד.</FieldDescription>
               {fieldErrors.code && <FieldError id="backup-code-error">{fieldErrors.code}</FieldError>}
             </Field> : <CodeField value={code} onChange={(value) => { setCode(value); clearField("code"); }} onBlur={() => validateField("code")} disabled={pending} error={fieldErrors.code} description={stage === "verification" && factor === "totp" ? "יש להזין את שש הספרות מאפליקציית האימות." : "יש להזין את שש הספרות שנשלחו לכתובת הדוא״ל של החשבון."} />)}

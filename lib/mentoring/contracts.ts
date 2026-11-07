@@ -19,6 +19,7 @@ import type { ReminderCommand, ReminderJobView, ReminderReadiness } from "./feat
 
 export interface StaffProfile extends StaffMember {
   readonly localPending?: boolean;
+  readonly onboardingEmailStatus?: "queued" | "accepted" | "failed";
   readonly authUserId: string;
   readonly displayName: string;
   readonly email: string | null;
@@ -130,6 +131,7 @@ export type MentoringCommand = Operation & (
 export type ApiErrorCode =
   | "not_authenticated"
   | "not_staff"
+  | "password_setup_required"
   | "not_configured"
   | "forbidden"
   | "not_found"

@@ -80,7 +80,13 @@ Replace the example identity with the approved owner. This creates a database me
 
 Production uses its separate reviewed [preapproval tool](../../scripts/mentoring/bootstrap-production-owners.mjs), not a development-guard bypass. Thirteen tests and real three-owner apply/exact replay passed: three unbound CEO memberships/receipts/audit rows, no participant/job/attempt data. Production Clerk-user creation, verified-email binding and real login remain distinct acceptance steps.
 
-The team screen supports scoped staff membership preapproval, staff edits and CEO revocation/reactivation with version checks. Preapproval does not create a Clerk account or send an invitation; the staff member creates a verified login using the approved email. These application intents can queue offline, but provider enrollment and central membership acceptance require connectivity.
+The team screen supports scoped staff membership preapproval, staff edits and CEO revocation/reactivation with version checks. A newly accepted team preapproval queues a welcome email in the same database transaction. Offline additions wait for central acceptance. The email leads to staff signup, where the recipient chooses a password and verifies the approved address with Clerk. An invited recipient who first authenticates through a passwordless account goes through password setup before accessing the workspace. Earlier preapprovals and existing staff accounts keep their current sign-in options.
+
+### Staff welcome email rollout
+
+Apply `007_staff_onboarding.sql` through the mentoring migration runner before deploying the application. Configure `RESEND_API_KEY` for the existing sender `notifications@imashmaut.co.il`, a server-only `CRON_SECRET` for the scheduled endpoint, and `MENTORING_STAFF_ONBOARDING_EMAIL_ENABLED=true` where sending is authorized. The Vercel schedule processes the queue every five minutes and a successful Add Staff request triggers an immediate attempt after commit. The queue survives deployments and retains a provider acceptance ID. Team shows provider acceptance separately from account activation. Resend acceptance does not verify inbox delivery.
+
+Use a controlled recipient to verify the email, password setup, verified staff access, and password recovery before enabling live sending. Existing memberships are excluded from automatic mail. If the sending flag is disabled, new preapprovals still queue; review any pending work before enabling sending.
 
 ### Google sign-in
 

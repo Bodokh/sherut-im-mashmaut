@@ -32,7 +32,7 @@ export function CodeField({ value, onChange, onBlur, disabled, invalid, error, d
     <Field data-invalid={!!error || invalid || undefined}>
       <FieldLabel htmlFor="verification-code">קוד אימות</FieldLabel>
       <div dir="ltr">
-        <InputOTP id="verification-code" name="code" autoComplete="one-time-code" inputMode="numeric" maxLength={6} pattern={REGEXP_ONLY_DIGITS} value={value} onChange={onChange} onBlur={onBlur} disabled={disabled} aria-invalid={!!error || invalid} aria-describedby={`verification-description${error ? " verification-error" : ""}`} required>
+        <InputOTP id="verification-code" autoComplete="one-time-code" inputMode="numeric" maxLength={6} pattern={REGEXP_ONLY_DIGITS} value={value} onChange={onChange} onBlur={onBlur} disabled={disabled} aria-invalid={!!error || invalid} aria-describedby={`verification-description${error ? " verification-error" : ""}`} required>
           <InputOTPGroup>
             {Array.from({ length: 6 }, (_, index) => <InputOTPSlot key={index} index={index} />)}
           </InputOTPGroup>

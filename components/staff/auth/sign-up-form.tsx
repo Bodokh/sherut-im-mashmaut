@@ -106,7 +106,7 @@ export function SignUpForm() {
 
   return (
     <AuthFrame title={verifying ? "נאמת את כתובת הדוא״ל" : "מצטרפים למרחב הליווי"} description={verifying ? "יש להזין את הקוד מהודעת הדוא״ל כדי ליצור את החשבון. אם ההודעה לא הגיעה, אפשר לבקש קוד חדש." : "יוצרים חשבון אישי עם כתובת הדוא״ל שאושרה על ידי ההנהלה."} footer={<p className="text-sm text-muted-foreground">כבר יש לך חשבון? <Link href={staffPublicPath("/staff/login")} className="font-medium text-primary underline-offset-4 hover:underline">כניסה למערכת</Link></p>}>
-      {isSignedIn ? <SignedInActions /> : <form onSubmit={submit} noValidate aria-busy={pending}>
+      {isSignedIn ? <SignedInActions /> : <form method="post" onSubmit={submit} noValidate aria-busy={pending}>
         <FieldGroup>
           {!verifying && <>
             <Field data-invalid={!!fieldErrors.identifier || undefined}>
@@ -116,7 +116,7 @@ export function SignUpForm() {
             </Field>
             <Field data-invalid={!!fieldErrors.password || undefined}>
               <FieldLabel htmlFor="signup-password">סיסמה</FieldLabel>
-              <Input id="signup-password" name="password" type="password" dir="ltr" autoComplete="new-password" value={password} onChange={(event) => { setPassword(event.target.value); clearField("password"); }} onBlur={() => validateField("password")} disabled={pending} aria-invalid={!!fieldErrors.password} minLength={15} maxLength={512} required aria-describedby={`signup-password-description${fieldErrors.password ? " signup-password-error" : ""}`} />
+              <Input id="signup-password" type="password" dir="ltr" autoComplete="new-password" value={password} onChange={(event) => { setPassword(event.target.value); clearField("password"); }} onBlur={() => validateField("password")} disabled={pending} aria-invalid={!!fieldErrors.password} minLength={15} maxLength={512} required aria-describedby={`signup-password-description${fieldErrors.password ? " signup-password-error" : ""}`} />
               <FieldDescription id="signup-password-description">לפחות 15 תווים. מומלץ לבחור משפט סודי וייחודי.</FieldDescription>
               {fieldErrors.password && <FieldError id="signup-password-error">{fieldErrors.password}</FieldError>}
             </Field>

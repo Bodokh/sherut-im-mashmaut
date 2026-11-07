@@ -166,11 +166,10 @@ async function createStaff(client: PoolClient, actor: StaffProfile, command: Ext
     const coordinator = await client.query("SELECT id FROM mentoring.memberships WHERE organization_id = $1 AND id = $2 AND role = 'coordinator' AND active = true FOR SHARE", [actor.organizationId, fields.coordinatorId]);
     if (!coordinator.rows[0]) return failure("validation", "יש לבחור רכז/ת עם גישה פעילה מהארגון.", "fields.coordinatorId");
   }
-  // Membership is preapproved only. The provider identity remains unbound until
-  // a verified Clerk email matches on sign-in; no invitations are sent here.
   const id = command.operationId;
   const inserted = await client.query("INSERT INTO mentoring.memberships (id,organization_id,email,display_name,phone,role,coordinator_id,active,version,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,true,1,clock_timestamp(),clock_timestamp()) ON CONFLICT DO NOTHING RETURNING id", [id, actor.organizationId, fields.email, fields.displayName, fields.phone || null, fields.role, fields.coordinatorId]);
   if (inserted.rowCount !== 1) return failure("conflict", "כתובת הדוא״ל או מזהה חבר/ת הצוות כבר קיימים. הרשאות קיימות לא שונו.", "fields.email");
+  await client.query("INSERT INTO mentoring.staff_onboarding_emails (organization_id,staff_id,recipient_email) VALUES ($1,$2,$3)", [actor.organizationId, id, fields.email]);
   await audit(client, actor, command, undefined, { staffId: id, role: fields.role, coordinatorId: fields.coordinatorId });
   return { ...success(command), staffId: id };
 }
@@ -212,14 +211,14 @@ function legacyPhoneCommand(value: unknown): MentoringCommand | null {
 }
 
 /** Every accepted or preserved operation has one durable receipt in the same transaction. */
-export async function executeCommand(authUserId: string, verifiedEmail: string | null, value: unknown): Promise<CommandResult> {
+export async function executeCommand(authUserId: string, verifiedEmail: string | null, value: unknown, passwordEnabled?: boolean): Promise<CommandResult> {
   const parsed = parseCommand(value);
   const legacy = legacyPhoneCommand(value);
   if (!parsed.ok && !legacy) return parsed;
   const command = parsed.ok ? parsed.command : legacy!;
   try {
     return await withTransaction(async (client) => {
-      const actor = await requireIdentity(client, authUserId, verifiedEmail);
+      const actor = await requireIdentity(client, authUserId, verifiedEmail, passwordEnabled);
       let now = "";
       let view: ParticipantView | null = null;
       if (isAuthorityCommand(command) && actor.role !== "ceo") return failure("forbidden", "הפעולה זמינה למנכ״ל בלבד.");

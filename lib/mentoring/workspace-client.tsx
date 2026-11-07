@@ -51,6 +51,7 @@ class RequestFailure extends Error {
 const apiFailureMessages: Record<ApiFailure["error"]["code"], string> = {
   not_authenticated: "יש להיכנס מחדש לחשבון הצוות כדי להמשיך.",
   not_staff: "גישת הצוות אינה זמינה לחשבון הזה. יש לפנות להנהלה לבדיקת ההרשאות.",
+  password_setup_required: "יש להגדיר סיסמה לפני הכניסה הראשונה למרחב הליווי.",
   not_configured: "המערכת אינה מוכנה לפעולה כרגע. יש לנסות שוב או לפנות למנהל המערכת.",
   forbidden: "אין הרשאה להשלים את הפעולה. יש לבדוק את ההרשאות או לפנות להנהלה.",
   not_found: "הרשומה אינה זמינה. יש לרענן את הנתונים ולבחור אותה מחדש.",

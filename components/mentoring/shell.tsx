@@ -96,6 +96,7 @@ export function MentoringShell({ children }: { children: ReactNode }) {
   const pathname = toStaffInternalPath(usePathname());
 
   if (!snapshot) {
+    const needsPassword = error?.code === "password_setup_required";
     const locked = error?.code === "not_authenticated" || error?.code === "expired" || error?.code === "account_changed";
     const denied = error?.code === "not_staff" || error?.code === "forbidden";
     return (
@@ -120,23 +121,31 @@ export function MentoringShell({ children }: { children: ReactNode }) {
         ) : (
           <Alert>
             <ShieldCheckIcon />
-            <AlertTitle>{denied ? "החשבון אינו מורשה לפתוח את סביבת הליווי" : locked ? "סביבת הליווי נעולה עד לאימות מחדש" : "סביבת הליווי אינה זמינה כרגע"}</AlertTitle>
+            <AlertTitle>{needsPassword ? "הגדרת סיסמה לחשבון הצוות" : denied ? "החשבון אינו מורשה לפתוח את סביבת הליווי" : locked ? "סביבת הליווי נעולה עד לאימות מחדש" : "סביבת הליווי אינה זמינה כרגע"}</AlertTitle>
             <AlertDescription>
               <p>{readableError(error)}</p>
               {(locked || denied) && <p>עבודה מקומית שלא הושלמה נשמרת נעולה. לאחר כניסה לאותו חשבון ואימות ההרשאות, אפשר לבדוק את אפשרויות השחזור במסך העדכונים לבדיקה.</p>}
               <div className="mt-4 flex flex-wrap gap-2">
-                <Button onClick={() => void refresh()}>
-                  <RefreshCwIcon data-icon="inline-start" />
-                  ניסיון נוסף
-                </Button>
-                <Button
-                  variant="outline"
-                  nativeButton={false}
-                  render={<Link href={staffPublicPath("/staff/login")} />}
-                >
-                  <ArrowRightIcon data-icon="inline-start" />
-                  לכניסה למערכת
-                </Button>
+                {needsPassword ? (
+                  <Button nativeButton={false} render={<Link href={staffPublicPath("/staff/setup")} />}>
+                    להגדרת סיסמה
+                  </Button>
+                ) : (
+                  <>
+                    <Button onClick={() => void refresh()}>
+                      <RefreshCwIcon data-icon="inline-start" />
+                      ניסיון נוסף
+                    </Button>
+                    <Button
+                      variant="outline"
+                      nativeButton={false}
+                      render={<Link href={staffPublicPath("/staff/login")} />}
+                    >
+                      <ArrowRightIcon data-icon="inline-start" />
+                      לכניסה למערכת
+                    </Button>
+                  </>
+                )}
               </div>
             </AlertDescription>
           </Alert>

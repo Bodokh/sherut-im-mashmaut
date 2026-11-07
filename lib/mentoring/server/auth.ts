@@ -6,6 +6,7 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 export async function getVerifiedIdentity(): Promise<{
   userId: string;
   verifiedEmail: string | null;
+  passwordEnabled: boolean;
 } | null> {
   const session = await auth();
   if (!session.isAuthenticated || session.sessionStatus !== "active") return null;
@@ -19,6 +20,7 @@ export async function getVerifiedIdentity(): Promise<{
 
   return {
     userId: user.id,
+    passwordEnabled: user.passwordEnabled === true,
     verifiedEmail:
       primaryEmail?.verification?.status === "verified"
         ? primaryEmail.emailAddress.trim().toLowerCase()
