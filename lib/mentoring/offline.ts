@@ -2,6 +2,7 @@ import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import type { ApiFailure, CommandResult, CommandSuccess, MentoringCommand, WorkspaceSnapshot } from "./contracts";
 import { canPerformParticipantAction } from "./domain/index";
 import { applyOptimisticCommand } from "./offline-projections";
+import { canSendStaffInvite } from "./staff-invites";
 export { applyOptimisticCommand } from "./offline-projections";
 
 export const MENTORING_OFFLINE_DATABASE = "sherut-mentoring-private-v1";
@@ -164,6 +165,7 @@ function commandAllowed(snapshot: WorkspaceSnapshot, command: MentoringCommand, 
   switch (command.type) {
     case "create_participant": return actor.role !== "mentor";
     case "create_staff": return actor.role === "ceo" || (actor.role === "coordinator" && command.fields.role === "mentor" && command.fields.coordinatorId === actor.id);
+    case "resend_staff_invite": return canSendStaffInvite(actor, snapshot.staff.find((member) => member.id === command.staffId));
     case "evaluate_reminders": return actor.role !== "mentor";
     case "save_monthly_review": return actor.role === "ceo" || (actor.role === "coordinator" && command.scopeStaffId === actor.id);
     case "resolve_conflict": return actor.role === "ceo" && snapshot.conflicts.some((item) => item.id === command.conflictId);

@@ -28,8 +28,8 @@ test("staff onboarding queues and dispatches accepted membership commands", { sk
   t.after(async () => {
     const cleanup = new Pool({ connectionString: databaseUrl.toString() });
     try {
-      await cleanup.query("DELETE FROM mentoring.audit WHERE organization_id=$1 AND actor_id=$2", [organizationId, ceoId]);
-      await cleanup.query("DELETE FROM mentoring.operations WHERE organization_id=$1 AND actor_id=$2", [organizationId, ceoId]);
+      await cleanup.query("DELETE FROM mentoring.audit WHERE organization_id=$1 AND actor_id=ANY($2::uuid[])", [organizationId, fixtureIds]);
+      await cleanup.query("DELETE FROM mentoring.operations WHERE organization_id=$1 AND actor_id=ANY($2::uuid[])", [organizationId, fixtureIds]);
       await cleanup.query("DELETE FROM mentoring.memberships WHERE organization_id=$1 AND id=ANY($2::uuid[])", [organizationId, fixtureIds]);
     } finally {
       await cleanup.end();
@@ -42,6 +42,15 @@ test("staff onboarding queues and dispatches accepted membership commands", { sk
     return { type: "create_staff", operationId, fields: { displayName: "Onboarding integration staff", email: email ?? `${operationId}@staff-tests.invalid`, role: "mentor", phone: null, coordinatorId: null } };
   }
   const execute = (command) => executeCommand(ceoUserId, ceoEmail, command);
+  const resend = (staffId, expectedVersion = 1) => ({ type: "resend_staff_invite", staffId, expectedVersion, operationId: randomUUID() });
+  async function legacyMember(role = "mentor", coordinatorId = null, bound = true) {
+    const id = randomUUID();
+    const userId = bound ? `test_${randomUUID()}` : null;
+    const email = `${id}@staff-tests.invalid`;
+    fixtureIds.push(id);
+    await database.query("INSERT INTO mentoring.memberships (organization_id,id,auth_user_id,email,display_name,role,coordinator_id) VALUES ($1,$2,$3,$4,'Existing staff member',$5,$6)", [organizationId, id, userId, email, role, coordinatorId]);
+    return { id, userId, email };
+  }
   async function createMember() {
     const command = createCommand();
     const result = await execute(command);
@@ -55,6 +64,62 @@ test("staff onboarding queues and dispatches accepted membership commands", { sk
   async function makeDue(staffId) {
     await database.query("UPDATE mentoring.staff_onboarding_emails SET next_attempt_at=clock_timestamp()-interval '1 second' WHERE organization_id=$1 AND staff_id=$2", [organizationId, staffId]);
   }
+
+  await t.test("an existing account gets one access email and the same action can be replayed safely", async () => {
+    const member = await legacyMember();
+    const request = resend(member.id);
+    const result = await execute(request);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    assert.equal(result.staffId, member.id);
+    assert.equal((await execute(request)).replayed, true);
+    assert.equal((await execute(resend(member.id))).error.code, "conflict", "Pending work is reused only by exact receipt replay.");
+
+    const sent = [];
+    await dispatchStaffOnboardingEmails(async (job) => {
+      sent.push(job);
+      return { status: "accepted", providerId: "access-email-id" };
+    }, member.id);
+    const queue = await emailJob(member.id);
+    assert.equal(queue.status, "accepted");
+    assert.notEqual(queue.delivery_id, member.id);
+    assert.deepEqual(sent, [{ staffId: member.id, recipientEmail: member.email, deliveryId: queue.delivery_id, kind: "access" }]);
+    assert.equal((await execute(resend(member.id))).error.code, "conflict", "A new request observes the one-minute cooldown.");
+    const membership = await database.query("SELECT version,auth_user_id FROM mentoring.memberships WHERE organization_id=$1 AND id=$2", [organizationId, member.id]);
+    assert.deepEqual(membership.rows, [{ version: 1, auth_user_id: member.userId }]);
+  });
+
+  await t.test("a distinct resend to an unbound member keeps an invitation and changes its delivery ID", async () => {
+    const command = await createMember();
+    const staffId = command.operationId;
+    const sent = [];
+    const send = async (job) => {
+      sent.push(job);
+      return { status: "accepted", providerId: `invitation-email-${sent.length}` };
+    };
+    await dispatchStaffOnboardingEmails(send, staffId);
+    await database.query("UPDATE mentoring.staff_onboarding_emails SET requested_at=clock_timestamp()-interval '2 minutes' WHERE organization_id=$1 AND staff_id=$2", [organizationId, staffId]);
+    assert.equal((await execute(resend(staffId))).ok, true);
+    await dispatchStaffOnboardingEmails(send, staffId);
+    assert.equal(sent.length, 2);
+    assert.deepEqual(sent.map((job) => job.kind), ["invitation", "invitation"]);
+    assert.equal(sent[0].deliveryId, staffId, "First delivery preserves the original key.");
+    assert.notEqual(sent[1].deliveryId, staffId);
+  });
+
+  await t.test("resend checks team scope before receipt replay and member version before new work", async () => {
+    const coordinator = await legacyMember("coordinator");
+    const own = await legacyMember("mentor", coordinator.id, false);
+    const other = await legacyMember();
+    const executeAsCoordinator = (request) => executeCommand(coordinator.userId, coordinator.email, request);
+    assert.equal((await executeAsCoordinator(resend(other.id))).error.code, "forbidden");
+    assert.equal((await executeCommand(other.userId, other.email, resend(other.id))).error.code, "forbidden");
+    assert.equal((await execute(resend(own.id, 2))).error.code, "conflict");
+    const request = resend(own.id);
+    assert.equal((await executeAsCoordinator(request)).ok, true);
+    assert.equal((await emailJob(own.id)).kind, "invitation");
+    await database.query("UPDATE mentoring.memberships SET coordinator_id=NULL, version=version+1 WHERE organization_id=$1 AND id=$2", [organizationId, own.id]);
+    assert.equal((await executeAsCoordinator(request)).error.code, "forbidden");
+  });
 
   await t.test("create, replay and duplicate email produce exactly one matching queued job", async () => {
     const command = await createMember();
@@ -91,7 +156,7 @@ test("staff onboarding queues and dispatches accepted membership commands", { sk
       releaseSender();
       await first;
     }
-    assert.deepEqual(sent, [{ staffId: command.operationId, recipientEmail: command.fields.email }]);
+    assert.deepEqual(sent, [{ staffId: command.operationId, recipientEmail: command.fields.email, deliveryId: command.operationId, kind: "invitation" }]);
     const job = await emailJob(command.operationId);
     assert.equal(job.status, "accepted");
     assert.equal(job.provider_id, "provider-email-id");
@@ -124,6 +189,41 @@ test("staff onboarding queues and dispatches accepted membership commands", { sk
     assert.equal(job.attempt_count, 2);
     assert.equal(job.status, "accepted");
     assert.equal(job.provider_id, "recovered-email-id");
+  });
+
+  await t.test("a late provider response cannot overwrite a new delivery with the same attempt number", async () => {
+    const command = await createMember();
+    const staffId = command.operationId;
+    let signalStarted;
+    let releaseSender;
+    const started = new Promise((resolve) => { signalStarted = resolve; });
+    const released = new Promise((resolve) => { releaseSender = resolve; });
+    const original = dispatchStaffOnboardingEmails(async () => {
+      signalStarted();
+      await released;
+      return { status: "accepted", providerId: "original-delivery-id" };
+    }, staffId);
+    let current;
+    try {
+      await Promise.race([started, original]);
+      await database.query("UPDATE mentoring.memberships SET active=false WHERE organization_id=$1 AND id=$2", [organizationId, staffId]);
+      await database.query("UPDATE mentoring.memberships SET active=true WHERE organization_id=$1 AND id=$2", [organizationId, staffId]);
+      await database.query("UPDATE mentoring.staff_onboarding_emails SET requested_at=clock_timestamp()-interval '2 minutes' WHERE organization_id=$1 AND staff_id=$2", [organizationId, staffId]);
+      assert.equal((await execute(resend(staffId))).ok, true);
+      await dispatchStaffOnboardingEmails(async () => {
+        releaseSender();
+        await original;
+        current = await emailJob(staffId);
+        return { status: "accepted", providerId: "new-delivery-id" };
+      }, staffId);
+    } finally {
+      releaseSender();
+      await original;
+    }
+    assert.equal(current.attempt_count, 1);
+    assert.equal(current.status, "queued");
+    assert.equal(current.provider_id, null);
+    assert.equal((await emailJob(staffId)).provider_id, "new-delivery-id");
   });
 
   await t.test("temporary failures retry the same recipient and expiry prevents another send", async () => {

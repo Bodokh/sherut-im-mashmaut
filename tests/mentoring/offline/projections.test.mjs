@@ -42,6 +42,30 @@ test("offline staff creation is an inactive display identity and acceptance keep
   assert.equal(snapshot.staff.length, 2);
 });
 
+test("invite resend shows device and server queues without changing access or version", () => {
+  const snapshot = fixture("coordinator");
+  snapshot.staff[1] = { ...snapshot.staff[1], email: "mentor@example.org", coordinatorId: snapshot.actor.id, onboardingEmailStatus: "accepted" };
+  const command = { type: "resend_staff_invite", operationId: "resend", staffId: "target", expectedVersion: 1 };
+  const pending = apply(snapshot, command).staff[1];
+  assert.equal(pending.localInvitePending, true);
+  assert.equal(pending.onboardingEmailStatus, "accepted");
+  assert.equal(pending.version, 1);
+  assert.equal(pending.active, true);
+  assert.equal(pending.authUserId, "target-account");
+
+  const accepted = apply(snapshot, command, true).staff[1];
+  assert.equal(accepted.onboardingEmailStatus, "queued");
+  assert.equal(accepted.version, 1);
+  assert.equal(Boolean(accepted.localInvitePending), false);
+
+  for (const overrides of [{ version: 2 }, { coordinatorId: "another" }, { active: false }, { email: null }]) {
+    const stale = { ...snapshot, staff: [snapshot.actor, { ...snapshot.staff[1], ...overrides }] };
+    assert.equal(apply(stale, command).staff[1], stale.staff[1]);
+  }
+  const mentor = { ...snapshot, actor: { ...snapshot.actor, role: "mentor" } };
+  assert.equal(apply(mentor, command).staff[1], mentor.staff[1]);
+});
+
 test("pending role, team and activation commands advance staff tokens without changing authority", () => {
   const snapshot = fixture();
   const update = { type: "update_staff", operationId: "staff-edit", staffId: "target", expectedVersion: 1, fields: { displayName: "שם חדש", role: "coordinator", coordinatorId: null } };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { CheckCircle2, Info, Pencil, ShieldCheck, UserRoundCheck, UserRoundMinus, UserRoundPlus, Users, WifiOff } from "lucide-react";
+import { CheckCircle2, Info, Mail, Pencil, ShieldCheck, UserRoundCheck, UserRoundMinus, UserRoundPlus, Users, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/staff/ui/alert";
 import { Badge } from "@/components/staff/ui/badge";
@@ -21,6 +21,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/staff/ui/toggle-group
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/staff/ui/tooltip";
 import type { ApiFailure, CommandSuccess, StaffProfile } from "@/lib/mentoring/contracts";
 import type { StaffRole } from "@/lib/mentoring/domain";
+import { canSendStaffInvite } from "@/lib/mentoring/staff-invites";
 import { useWorkspace } from "@/lib/mentoring/workspace-client";
 import { cn } from "@/lib/mentoring/ui-utils";
 import { DraftStatus, useFormDraft } from "./form-draft";
@@ -28,19 +29,29 @@ import { changedStaffFields, isPendingStaffPreapproval, staffEditValues } from "
 
 const roleLabels: Record<StaffRole, string> = { mentor: "חונך/ת", coordinator: "רכז/ת", ceo: "מנכ״ל" };
 const onboardingEmailLabels = {
-  queued: "ההזמנה ממתינה לשליחה",
-  accepted: "ההזמנה התקבלה אצל ספק הדוא״ל",
-  failed: "לא התקבל אישור לשליחת ההזמנה",
+  queued: "הדוא״ל ממתין לשליחה",
+  accepted: "ספק הדוא״ל קיבל את ההודעה",
+  failed: "לא התקבל אישור לשליחת הדוא״ל",
 };
 
 function StaffOnboardingStatus({ member }: { member: StaffProfile }) {
   const status = member.onboardingEmailStatus;
-  if (!status) return null;
+  const label = member.localInvitePending ? "בקשת השליחה ממתינה לסנכרון" : status && onboardingEmailLabels[status];
+  if (!label) return null;
 
   return <div className="flex flex-col items-start gap-1 text-xs">
-    <Badge className="h-auto min-h-5 max-w-full text-start whitespace-normal" variant={status === "failed" ? "destructive" : "outline"}>{onboardingEmailLabels[status]}</Badge>
+    <Badge className="h-auto min-h-5 max-w-full text-start whitespace-normal" variant={status === "failed" && !member.localInvitePending ? "destructive" : "outline"}>{label}</Badge>
     <p className="text-muted-foreground">{member.authUserId ? "החשבון הופעל" : "החשבון ממתין להגדרה"}</p>
   </div>;
+}
+
+function staffInviteActionLabel(member: StaffProfile): string {
+  if (member.authUserId) return "שליחת קישור כניסה";
+  return member.onboardingEmailStatus ? "שליחת הזמנה מחדש" : "שליחת הזמנה";
+}
+
+function staffInvitePending(member: StaffProfile): boolean {
+  return Boolean(member.localPending || member.localInvitePending || member.onboardingEmailStatus === "queued");
 }
 
 function ActionError({ message }: { message: string | null }) {
@@ -236,11 +247,58 @@ function StaffAccessForm({ member, onClose, onBusyChange }: { member: StaffProfi
     <DialogFooter><Button type="button" variant="outline" disabled={busy} onClick={onClose}>סגירה</Button><Button type="submit" variant={values.active ? "default" : "destructive"} disabled={busy || !draft.hydrated || stale || member.active === values.active}>{busy ? <Spinner data-icon="inline-start" /> : values.active ? <UserRoundCheck data-icon="inline-start" /> : <UserRoundMinus data-icon="inline-start" />}{values.active ? "אישור הפעלת הגישה" : "אישור ביטול הגישה"}</Button></DialogFooter>
   </form>;
 }
+function StaffInviteForm({ member, onClose, onBusyChange }: { member: StaffProfile; onClose: () => void; onBusyChange: (busy: boolean) => void }) {
+  const { snapshot, isOnline, submit } = useWorkspace();
+  const [expectedVersion] = useState(member.version);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const submitting = useRef(false);
+  const unavailable = !snapshot || !canSendStaffInvite(snapshot.actor, member) || member.version !== expectedVersion;
+  const canSend = !unavailable && isOnline && !staffInvitePending(member);
+
+  async function send(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!canSend || submitting.current) return;
+    submitting.current = true;
+    setBusy(true);
+    onBusyChange(true);
+    setError(null);
+    try {
+      const result = await submit({ type: "resend_staff_invite", staffId: member.id, expectedVersion, operationId: crypto.randomUUID() });
+      if (!result.ok) { setError(result.error.message); return; }
+      if (result.acceptance === "queued") toast.message("בקשת השליחה נשמרה במכשיר ותיבדק לאחר חידוש החיבור.");
+      else toast.success("הדוא״ל נוסף לתור השליחה.");
+      onClose();
+    } catch {
+      setError("לא התקבל אישור לשמירת הבקשה. יש לבדוק את מצב השליחה ברשימת הצוות לפני ניסיון נוסף.");
+    } finally {
+      submitting.current = false;
+      setBusy(false);
+      onBusyChange(false);
+    }
+  }
+
+  return <form onSubmit={send} className="flex flex-col gap-5">
+    <div className="text-sm leading-relaxed">
+      <p>{member.authUserId ? "קישור לכניסה לחשבון הקיים יישלח לכתובת המאושרת." : "הזמנה להגדרת סיסמה ולכניסה הראשונה תישלח לכתובת המאושרת."}</p>
+      <bdi dir="ltr" className="block break-all font-medium">{member.email}</bdi>
+    </div>
+    {unavailable && <ActionError message="פרטי חבר/ת הצוות או ההרשאות השתנו. יש לפתוח את הפעולה מחדש מרשימת הצוות." />}
+    {!isOnline && <p className="text-sm text-muted-foreground">שליחת דוא״ל זמינה כשיש חיבור לאינטרנט.</p>}
+    {!busy && staffInvitePending(member) && <p className="text-sm text-muted-foreground">יש להמתין לעדכון מצב השליחה ברשימת הצוות.</p>}
+    <ActionError message={error} />
+    <DialogFooter>
+      <Button type="button" variant="outline" disabled={busy} onClick={onClose}>ביטול</Button>
+      <Button type="submit" disabled={busy || !canSend}>{busy ? <Spinner data-icon="inline-start" /> : <Mail data-icon="inline-start" />}{staffInviteActionLabel(member)}</Button>
+    </DialogFooter>
+  </form>;
+}
+
 export function StaffManagement() {
   const { snapshot, isOnline, refresh } = useWorkspace();
-  const [target, setTarget] = useState<{ id: string; mode: "edit" | "access" } | null>(null);
+  const [target, setTarget] = useState<{ id: string; mode: "edit" | "access" | "invite" } | null>(null);
   const [busy, setBusy] = useState(false);
-  const hasQueuedInvitations = snapshot?.staff.some((member) => member.onboardingEmailStatus === "queued");
+  const hasQueuedInvitations = snapshot?.staff.some((member) => member.onboardingEmailStatus === "queued" || member.localInvitePending);
   useEffect(() => {
     if (!isOnline || !hasQueuedInvitations) return;
     const interval = window.setInterval(() => {
@@ -256,6 +314,16 @@ export function StaffManagement() {
   const pendingCount = staff.filter(isPendingStaffPreapproval).length;
   const inactiveCount = staff.filter((member) => !member.active && !isPendingStaffPreapproval(member)).length;
   const selected = staff.find((member) => member.id === target?.id);
+  const closeDialog = () => setTarget(null);
+  function inviteControl(member: StaffProfile) {
+    if (!canSendStaffInvite(actor, member)) return null;
+    const label = staffInviteActionLabel(member);
+    return <Button type="button" size="sm" variant="outline" className="h-auto min-h-11 max-w-full self-start whitespace-normal md:min-h-8"
+      aria-label={`${label} עבור ${member.displayName}`} disabled={!isOnline || staffInvitePending(member)}
+      onClick={() => setTarget({ id: member.id, mode: "invite" })}>
+      <Mail data-icon="inline-start" />{label}
+    </Button>;
+  }
   function controls(member: StaffProfile) {
     if (!isCeo) return null;
     if (isPendingStaffPreapproval(member)) return <p className="text-xs text-muted-foreground">ניהול הגישה יתאפשר לאחר אישור החברות במערכת</p>;
@@ -267,6 +335,7 @@ export function StaffManagement() {
   }
   return <TooltipProvider><div className="flex min-w-0 flex-col gap-4">
     {canCreate && <OfflineNotice />}
+    {canCreate && !isOnline && <p className="text-sm text-muted-foreground">שליחת הזמנה או קישור כניסה זמינה כשיש חיבור לאינטרנט.</p>}
     <Card className="min-w-0 max-w-full"><CardHeader><CardTitle>צוות הליווי</CardTitle><CardDescription>{activeCount} עם גישה מאושרת · {inactiveCount} ללא גישה{pendingCount > 0 ? ` · ${pendingCount} בקשות חברות ממתינות לאישור` : ""}</CardDescription><CardAction>{canCreate ? <AddStaffDialog /> : <Badge variant="secondary">{staff.length} בצוות</Badge>}</CardAction></CardHeader>
       <CardContent className="min-w-0 max-w-full">{staff.length === 0 ? <Empty><EmptyHeader><EmptyMedia variant="icon"><Users aria-hidden="true" /></EmptyMedia><EmptyTitle>אין צוות להצגה</EmptyTitle><EmptyDescription>{canCreate ? "אפשר לאשר חברות חדשה בצוות באמצעות הכפתור למעלה." : "רשימת הצוות תוצג לאחר הגדרת חשבונות הצוות."}</EmptyDescription></EmptyHeader></Empty> : <>
         <div className="hidden min-w-0 max-w-full md:block">
@@ -278,14 +347,29 @@ export function StaffManagement() {
               <TableCell><Badge className="h-auto min-h-5 max-w-full whitespace-normal" variant="outline">{isPendingStaffPreapproval(member) ? "תפקיד מבוקש: " : ""}{roleLabels[member.role]}</Badge></TableCell>
               <TableCell className="whitespace-normal"><div className="flex min-w-0 flex-col gap-1"><span dir="ltr" className="[overflow-wrap:anywhere]">{member.phone ?? "לא הוזן טלפון"}</span>{member.email && <span dir="ltr" title={member.email} className="block max-w-full truncate text-xs text-muted-foreground">{member.email}</span>}</div></TableCell>
               <TableCell className="whitespace-normal"><span className="[overflow-wrap:anywhere]">{isPendingStaffPreapproval(member) ? "שיוך מבוקש: " : ""}{staff.find((person) => person.id === member.coordinatorId)?.displayName ?? "ללא שיוך"}</span></TableCell>
-              <TableCell><div className="flex min-w-0 flex-col gap-2">{accessStatus(member, "בקשת חברות ממתינה לאישור")}<StaffOnboardingStatus member={member} /></div></TableCell>
+              <TableCell><div className="flex min-w-0 flex-col items-start gap-2">{accessStatus(member, "בקשת חברות ממתינה לאישור")}<StaffOnboardingStatus member={member} />{inviteControl(member)}</div></TableCell>
               {isCeo && <TableCell>{controls(member)}</TableCell>}
             </TableRow>)}</TableBody>
           </Table>
         </div>
-        <div className="grid gap-3 md:hidden">{staff.map((member) => <Card key={member.id} size="sm"><CardHeader><CardTitle className="min-w-0 break-words">{member.displayName}</CardTitle><CardDescription>{isPendingStaffPreapproval(member) ? "תפקיד מבוקש: " : ""}{roleLabels[member.role]}{member.id === actor.id ? " · החשבון שלך" : ""}</CardDescription><CardAction>{accessStatus(member, "בקשת חברות ממתינה לאישור")}</CardAction></CardHeader><CardContent className="flex flex-col gap-2"><dl className="flex min-w-0 flex-col gap-2 text-sm"><div className="flex flex-col gap-1"><dt className="text-muted-foreground">פרטי קשר</dt><dd><span dir="ltr">{member.phone ?? "לא הוזן טלפון"}</span></dd>{member.email && <dd dir="ltr" className="break-all text-start">{member.email}</dd>}</div><div className="flex flex-col gap-1"><dt className="text-muted-foreground">{isPendingStaffPreapproval(member) ? "רכז/ת מבוקש/ת" : "רכז/ת אחראי/ת"}</dt><dd>{staff.find((person) => person.id === member.coordinatorId)?.displayName ?? "ללא שיוך"}</dd></div></dl><StaffOnboardingStatus member={member} /></CardContent>{isCeo && <CardFooter>{controls(member)}</CardFooter>}</Card>)}</div>
+        <div className="grid gap-3 md:hidden">{staff.map((member) => <Card key={member.id} size="sm"><CardHeader><CardTitle className="min-w-0 break-words">{member.displayName}</CardTitle><CardDescription>{isPendingStaffPreapproval(member) ? "תפקיד מבוקש: " : ""}{roleLabels[member.role]}{member.id === actor.id ? " · החשבון שלך" : ""}</CardDescription><CardAction>{accessStatus(member, "בקשת חברות ממתינה לאישור")}</CardAction></CardHeader><CardContent className="flex flex-col gap-2"><dl className="flex min-w-0 flex-col gap-2 text-sm"><div className="flex flex-col gap-1"><dt className="text-muted-foreground">פרטי קשר</dt><dd><span dir="ltr">{member.phone ?? "לא הוזן טלפון"}</span></dd>{member.email && <dd dir="ltr" className="break-all text-start">{member.email}</dd>}</div><div className="flex flex-col gap-1"><dt className="text-muted-foreground">{isPendingStaffPreapproval(member) ? "רכז/ת מבוקש/ת" : "רכז/ת אחראי/ת"}</dt><dd>{staff.find((person) => person.id === member.coordinatorId)?.displayName ?? "ללא שיוך"}</dd></div></dl>
+          <StaffOnboardingStatus member={member} />
+          {inviteControl(member)}
+        </CardContent>{isCeo && <CardFooter>{controls(member)}</CardFooter>}</Card>)}</div>
       </>}</CardContent><CardFooter><p className="text-xs leading-relaxed text-muted-foreground">{isCeo ? "אפשר לאשר חברות מראש, לערוך פרטים ולהפעיל או לבטל גישה. היסטוריית הפעילות נשמרת גם לאחר ביטול גישה." : actor.role === "coordinator" ? "אפשר להוסיף חונכים וחונכות לצוות שלך. שינוי פרטי צוות וגישה נמצא בידי המנכ״ל." : "שינוי חברות בצוות והרשאות נעשה על ידי ההנהלה."}</p></CardFooter>
     </Card>
-    <Dialog open={target !== null && isCeo} onOpenChange={(next, details) => { if (busy) details.cancel(); else if (!next) setTarget(null); }}><DialogContent showCloseButton={false} className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg"><DialogHeader><DialogTitle>{target?.mode === "edit" ? "עריכת פרטי צוות" : "שינוי גישה לצוות"} · {selected?.displayName ?? "חבר/ת צוות"}</DialogTitle><DialogDescription>{target?.mode === "edit" ? "עדכון פרטי הצוות, התפקיד והשיוך הארגוני." : "הבקשה תיבדק מול מצב הצוות וההרשאות העדכניים במערכת."}</DialogDescription></DialogHeader>{selected && target ? target.mode === "edit" ? <StaffEditForm key={`edit:${selected.id}`} member={selected} onClose={() => setTarget(null)} onBusyChange={setBusy} /> : <StaffAccessForm key={`access:${selected.id}`} member={selected} onClose={() => setTarget(null)} onBusyChange={setBusy} /> : <ActionError message="פרטי חבר/ת הצוות אינם זמינים במידע העדכני. יש לסגור את הטופס ולרענן את הרשימה." />}</DialogContent></Dialog>
+    <Dialog open={target !== null && (target.mode === "invite" ? canCreate : isCeo)} onOpenChange={(next, details) => { if (busy) details.cancel(); else if (!next) closeDialog(); }}>
+      <DialogContent showCloseButton={false} className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{target?.mode === "invite" ? selected ? staffInviteActionLabel(selected) : "שליחת דוא״ל לצוות" : target?.mode === "edit" ? "עריכת פרטי צוות" : "שינוי גישה לצוות"} · {selected?.displayName ?? "חבר/ת צוות"}</DialogTitle>
+          <DialogDescription>{target?.mode === "invite" ? "יש לוודא שהכתובת נכונה לפני השליחה." : target?.mode === "edit" ? "עדכון פרטי הצוות, התפקיד והשיוך הארגוני." : "הבקשה תיבדק מול מצב הצוות וההרשאות העדכניים במערכת."}</DialogDescription>
+        </DialogHeader>
+        {selected && target ? (
+          target.mode === "invite" ? <StaffInviteForm key={`invite:${selected.id}`} member={selected} onClose={closeDialog} onBusyChange={setBusy} />
+            : target.mode === "edit" ? <StaffEditForm key={`edit:${selected.id}`} member={selected} onClose={closeDialog} onBusyChange={setBusy} />
+              : <StaffAccessForm key={`access:${selected.id}`} member={selected} onClose={closeDialog} onBusyChange={setBusy} />
+        ) : <ActionError message="פרטי חבר/ת הצוות אינם זמינים במידע העדכני. יש לסגור את הטופס ולרענן את הרשימה." />}
+      </DialogContent>
+    </Dialog>
   </div></TooltipProvider>;
 }

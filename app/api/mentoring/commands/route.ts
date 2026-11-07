@@ -20,11 +20,13 @@ export async function POST(request: Request) {
     if (!result.ok) return privateFailure(result);
 
     const command = body.value;
-    if (result.staffId && command && typeof command === "object" && "type" in command && command.type === "create_staff") {
+    const dispatchOnboarding = command && typeof command === "object" && "type" in command
+      && (command.type === "create_staff" || (command.type === "resend_staff_invite" && !result.replayed));
+    if (result.staffId && dispatchOnboarding) {
       const send = staffOnboardingSender();
       const staffId = result.staffId;
       if (send) after(() => dispatchStaffOnboardingEmails(send, staffId).catch(() => {
-        console.error("Staff onboarding email could not be processed after preapproval.");
+        console.error("Staff onboarding email could not be processed after approval.");
       }));
     }
     return Response.json(result, { headers: privateHeaders });

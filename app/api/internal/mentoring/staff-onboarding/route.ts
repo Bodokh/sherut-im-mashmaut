@@ -20,6 +20,7 @@ export async function GET(request: Request) {
     return new Response(null, { status: 401, headers });
   }
 
+  if (process.env.MENTORING_STAFF_ONBOARDING_EMAIL_ENABLED !== "true") return new Response(null, { status: 204, headers });
   const send = staffOnboardingSender();
   if (!send) return new Response(null, { status: 503, headers });
   try {

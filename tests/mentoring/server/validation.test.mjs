@@ -95,3 +95,11 @@ test("staff activation changes require a current positive revision and a boolean
     assert.equal(parseCommand({ ...command, ...overrides }).ok, false);
   }
 });
+
+test("staff invite resend accepts only a member ID and its current revision", () => {
+  const command = { type: "resend_staff_invite", operationId: randomUUID(), staffId: randomUUID(), expectedVersion: 3 };
+  assert.deepEqual(parseCommand(command), { ok: true, command });
+  for (const extra of [{ expectedVersion: undefined }, { expectedVersion: 0 }, { staffId: "invalid" }, { email: "outside@example.org" }, { role: "ceo" }]) {
+    assert.equal(parseCommand({ ...command, ...extra }).ok, false);
+  }
+});

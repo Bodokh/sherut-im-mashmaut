@@ -25,6 +25,7 @@ export const commandSchema = z.discriminatedUnion("type", [
     displayName: staffNameSchema, email: emailSchema,
     phone: phoneSchema, role: staffRoleSchema, coordinatorId: recordIdSchema.nullable(),
   }, strictObjectError) }, strictObjectError),
+  z.strictObject({ ...operation, type: z.literal("resend_staff_invite"), staffId: recordIdSchema, expectedVersion: versionSchema }, strictObjectError),
   z.strictObject({ ...operation, type: z.literal("set_staff_active"), staffId: recordIdSchema, expectedVersion: versionSchema, active: booleanSchema("הגישה לצוות פעילה") }, strictObjectError),
   z.strictObject({ ...operation, type: z.literal("create_participant"), fields }, strictObjectError),
   z.strictObject({ ...operation, type: z.literal("update_participant"), participantId: recordIdSchema, expectedVersion: versionSchema, fields: fields.refine((value) => Object.keys(value).length > 0, { message: "יש לבחור לפחות שדה אחד לעדכון." }) }, strictObjectError),

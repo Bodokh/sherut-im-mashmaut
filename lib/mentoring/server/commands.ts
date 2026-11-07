@@ -10,6 +10,7 @@ import { handleAuthorityCommand, isAuthorityCommand } from "../features/authorit
 import { handleOversightCommand } from "../features/oversight/server";
 import { canReviewMonthlyScope } from "../features/oversight/selectors";
 import { handleReminderCommand, rebuildParticipantReminders } from "../features/reminders/server";
+import { canSendStaffInvite } from "../staff-invites";
 import { MentoringServerError, serverFailure, withTransaction } from "./db";
 import { iso, loadActorGrants, loadParticipant, ownsUnassignedParticipant, requireIdentity, staffFromRow } from "./repository";
 import { commandHash, parseCommand } from "./validation";
@@ -174,6 +175,24 @@ async function createStaff(client: PoolClient, actor: StaffProfile, command: Ext
   return { ...success(command), staffId: id };
 }
 
+async function resendStaffInvite(client: PoolClient, actor: StaffProfile, command: Extract<MentoringCommand, { type: "resend_staff_invite" }>, member: StaffProfile & { email: string }): Promise<CommandResult> {
+  if (member.version !== command.expectedVersion) return failure("conflict", "פרטי חבר/ת הצוות השתנו. יש לרענן את הנתונים לפני השליחה.");
+  const kind = member.authUserId ? "access" : "invitation";
+  const result = await client.query(`
+    INSERT INTO mentoring.staff_onboarding_emails AS email (organization_id, staff_id, recipient_email, delivery_id, kind, requested_at)
+    VALUES ($1,$2,$3,$4,$5,statement_timestamp())
+    ON CONFLICT (organization_id, staff_id) DO UPDATE
+    SET recipient_email = excluded.recipient_email, delivery_id = excluded.delivery_id,
+        kind = excluded.kind, requested_at = excluded.requested_at, status = 'queued',
+        attempt_count = 0, first_attempt_at = NULL, next_attempt_at = statement_timestamp(), provider_id = NULL
+    WHERE email.status <> 'queued' AND email.requested_at <= statement_timestamp() - interval '1 minute'
+    RETURNING staff_id
+  `, [actor.organizationId, member.id, member.email, randomUUID(), kind]);
+  if (result.rowCount !== 1) return failure("conflict", "כבר יש הודעה בתור לשליחה, או שהוגשה בקשה בדקה האחרונה. אפשר לנסות שוב בהמשך.");
+  await audit(client, actor, command, undefined, { staffId: member.id, kind });
+  return { ...success(command), staffId: member.id };
+}
+
 async function setStaffActive(client: PoolClient, actor: StaffProfile, command: Extract<MentoringCommand, { type: "set_staff_active" }>): Promise<CommandResult> {
   // Serialize owner-count decisions, including concurrent requests by two CEOs.
   await client.query("SELECT id FROM mentoring.organizations WHERE id = $1 FOR UPDATE", [actor.organizationId]);
@@ -221,6 +240,17 @@ export async function executeCommand(authUserId: string, verifiedEmail: string |
       const actor = await requireIdentity(client, authUserId, verifiedEmail, passwordEnabled);
       let now = "";
       let view: ParticipantView | null = null;
+      let resendTarget: (StaffProfile & { email: string }) | undefined;
+      if (command.type === "resend_staff_invite") {
+        const denied = failure("forbidden", "אין הרשאה לשלוח הודעת הצטרפות או כניסה לחבר/ת הצוות הזה.");
+        if (actor.role === "mentor") return denied;
+        const target = await client.query(`SELECT * FROM mentoring.memberships
+          WHERE organization_id=$1 AND id=$2 AND ($3='ceo' OR (role='mentor' AND coordinator_id=$4)) FOR UPDATE`,
+        [actor.organizationId, command.staffId, actor.role, actor.id]);
+        const member = target.rows[0] && staffFromRow(target.rows[0]);
+        if (!member || !canSendStaffInvite(actor, member)) return denied;
+        resendTarget = member;
+      }
       if (isAuthorityCommand(command) && actor.role !== "ceo") return failure("forbidden", "הפעולה זמינה למנכ״ל בלבד.");
       if (command.type === "update_organization_settings" && actor.role !== "ceo") return failure("forbidden", "שינוי מדיניות זמין למנכ״ל בלבד.");
       if (command.type === "save_monthly_review" && !canReviewMonthlyScope(actor, command.scopeStaffId)) return failure("forbidden", "אין הרשאה לסקירה החודשית שנבחרה.");
@@ -324,6 +354,7 @@ export async function executeCommand(authUserId: string, verifiedEmail: string |
       }
       switch (command.type) {
         case "create_staff": return finish(await createStaff(client, actor, command));
+        case "resend_staff_invite": return finish(await resendStaffInvite(client, actor, command, resendTarget!));
         case "set_staff_active": return finish(await setStaffActive(client, actor, command));
         case "create_participant": return finish(await createParticipant(client, actor, command));
         case "update_participant": return finish(await updateParticipant(client, actor, command, view!));

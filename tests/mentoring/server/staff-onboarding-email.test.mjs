@@ -3,7 +3,8 @@ import { test } from "node:test";
 import { staffOnboardingSender } from "../../../lib/mentoring/server/staff-onboarding-email.ts";
 
 const enabled = { MENTORING_STAFF_ONBOARDING_EMAIL_ENABLED: "true", RESEND_API_KEY: "re_synthetic_test" };
-const job = { staffId: "11111111-1111-4111-8111-111111111112", recipientEmail: "staff@example.test" };
+const staffId = "11111111-1111-4111-8111-111111111112";
+const job = { staffId, deliveryId: staffId, recipientEmail: "staff@example.test", kind: "invitation" };
 
 test("staff welcome mail requires explicit enablement and a Resend key", () => {
   assert.equal(staffOnboardingSender({ RESEND_API_KEY: enabled.RESEND_API_KEY }), null);
@@ -53,4 +54,25 @@ test("staff welcome mail retries transient failures and rejects permanent provid
   for (const status of ["retry", "retry", "failed", "retry", "retry", "failed", "retry"]) {
     assert.deepEqual(await send(job), { status });
   }
+});
+
+test("resending to an established account sends a sign-in link with a fresh, retryable delivery key", async (t) => {
+  const requests = [];
+  t.mock.method(globalThis, "fetch", async (_url, options) => {
+    requests.push({ key: new Headers(options.headers).get("Idempotency-Key"), body: JSON.parse(options.body) });
+    return Response.json({ id: "mail-access" });
+  });
+  const send = staffOnboardingSender(enabled);
+  const deliveryId = "11111111-1111-4111-8111-111111111113";
+  const resend = { ...job, deliveryId, kind: "access" };
+  await send(job);
+  await send(resend);
+  await send(resend);
+  assert.equal(requests[0].key, `staff-onboarding/${staffId}`);
+  assert.equal(requests[1].key, `staff-onboarding/${staffId}/${deliveryId}`);
+  assert.deepEqual(requests[1], requests[2]);
+  assert.deepEqual(requests[1].body.to, [job.recipientEmail]);
+  assert.match(requests[1].body.html, /href="https:\/\/staff\.imashmaut\.co\.il\/login"/);
+  assert.match(requests[1].body.text, /שכחת את הסיסמה/);
+  assert.doesNotMatch(requests[1].body.html, /staff\.imashmaut\.co\.il\/signup/);
 });

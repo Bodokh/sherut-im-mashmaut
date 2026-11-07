@@ -5,6 +5,7 @@ import type { AuthorityCommand, AuthorityExtras, GrantView, ProtectionStateView 
 import type { AppointmentChange, ContactCommand, ContactHistory, ContactRevision } from "./features/contacts/contracts";
 import { invalidationNeedsAppointmentReview, planContactRevision } from "./features/contacts/policy";
 import type { MonthlyReview, MonthlyReviewHistory, OrganizationSettings, OversightCommand } from "./features/oversight/contracts";
+import { canSendStaffInvite } from "./staff-invites";
 
 type ProjectionCommand = MentoringCommand | ContactCommand | AuthorityCommand | OversightCommand;
 type View = ParticipantView & Partial<ContactHistory & AuthorityExtras> & { readonly participant: ParticipantView["participant"] & { readonly localCreatedByStaffId?: string } };
@@ -211,6 +212,13 @@ export function applyOptimisticCommand(snapshot: WorkspaceSnapshot, operation: O
     if (actor.role === "mentor" || (actor.role === "coordinator" && (command.fields.role !== "mentor" || command.fields.coordinatorId !== actor.id)) || current.staff.some((entry) => entry.id === command.operationId)) return snapshot;
     const staff: StaffProfile = { ...command.fields, id: command.operationId, organizationId: actor.organizationId, authUserId: "", active: accepted, version: 1, smsMuted: false, localPending: !accepted };
     return { ...current, staff: [...current.staff, staff] };
+  }
+  if (command.type === "resend_staff_invite") {
+    const staff = current.staff.map((member): StaffProfile => {
+      if (member.id !== command.staffId || member.version !== command.expectedVersion || !canSendStaffInvite(actor, member)) return member;
+      return accepted ? { ...member, localInvitePending: false, onboardingEmailStatus: "queued" } : { ...member, localInvitePending: true };
+    });
+    return { ...current, staff };
   }
   if (command.type === "set_staff_active" || command.type === "update_staff") {
     if (actor.role !== "ceo") return snapshot;

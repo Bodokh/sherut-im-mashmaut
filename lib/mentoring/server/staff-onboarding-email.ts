@@ -20,12 +20,24 @@ const WELCOME_HTML = renderBrandedEmail({
       <a href="${LOGIN_URL}" style="color:${emailColors.ink};font-weight:bold;text-decoration:underline">כניסה לחשבון קיים</a>
     </p>`,
 });
+const ACCESS_SUBJECT = "קישור כניסה לצוות הליווי | שירות עם משמעות";
+const ACCESS = "אפשר להיכנס למרחב הליווי של שירות עם משמעות באמצעות חשבון הצוות הקיים.";
+const RECOVERY = "אם יש צורך לאפס את הסיסמה, אפשר לבחור ״שכחת את הסיסמה?״ במסך הכניסה.";
+const ACCESS_HTML = renderBrandedEmail({
+  language: "he",
+  category: "מרחב הליווי",
+  title: "קישור כניסה לצוות הליווי",
+  body: `${emailPanel(`${emailParagraph(ACCESS)}${emailButton(LOGIN_URL, "כניסה למרחב הליווי")}`)}
+    ${emailParagraph(RECOVERY)}`,
+});
 
 export function staffOnboardingSender(env = process.env): StaffOnboardingSender | null {
   const apiKey = env.RESEND_API_KEY?.trim();
   if (env.MENTORING_STAFF_ONBOARDING_EMAIL_ENABLED !== "true" || !apiKey) return null;
 
-  return async ({ staffId, recipientEmail }) => {
+  return async ({ staffId, recipientEmail, deliveryId, kind }) => {
+    const key = deliveryId === staffId ? staffId : `${staffId}/${deliveryId}`;
+    const accessEmail = kind === "access";
     try {
       const response = await fetch("https://api.resend.com/emails", {
         method: "POST",
@@ -34,14 +46,14 @@ export function staffOnboardingSender(env = process.env): StaffOnboardingSender 
         headers: {
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
-          "Idempotency-Key": `staff-onboarding/${staffId}`,
+          "Idempotency-Key": `staff-onboarding/${key}`,
         },
         body: JSON.stringify({
           from: ORGANIZATION_EMAIL_FROM,
           to: [recipientEmail],
-          subject: SUBJECT,
-          text: [WELCOME, SETUP, SIGNUP_URL, EXISTING, LOGIN_URL].join("\n\n"),
-          html: WELCOME_HTML,
+          subject: accessEmail ? ACCESS_SUBJECT : SUBJECT,
+          text: (accessEmail ? [ACCESS, LOGIN_URL, RECOVERY] : [WELCOME, SETUP, SIGNUP_URL, EXISTING, LOGIN_URL]).join("\n\n"),
+          html: accessEmail ? ACCESS_HTML : WELCOME_HTML,
         }),
       });
       const payload: { id?: unknown; name?: unknown } | null = await response.json().catch(() => null);

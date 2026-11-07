@@ -22,7 +22,7 @@ Store values privately; never in docs/screenshots/logs. Preserve unrelated publi
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY` | Selected Clerk instance browser/server configuration. |
 | `MENTORING_DATABASE_URL` | Runtime PostgreSQL connection. |
 | `MENTORING_DATABASE_URL_UNPOOLED` | Required direct migration/bootstrap connection, without `-pooler`. |
-| `CRON_SECRET` | Exact Bearer secret for internal reminder GET. |
+| `CRON_SECRET` | Exact Bearer secret for the internal scheduled reminder and staff email endpoints. |
 | `MENTORING_REMINDER_ACTOR_ID` | Existing real active CEO membership in the fixed organization. |
 | `NODE_ENV`, `VERCEL_ENV` | Environment guards; not independent database-target verification. |
 | `NEXT_PUBLIC_STAFF_HOST` | Production-only hostname `staff.imashmaut.co.il`. Unset in Preview and Development. Manual DNS, Vercel, Clerk, and Google steps are in [staff subdomain](staff-subdomain.md). |
@@ -33,7 +33,7 @@ Production live-key DNS/development-key proxy and Google identity signup now wor
 
 Independently verify account owner, environment/project/branch/database and direct endpoint using approved provider records. Record non-secret target IDs and change/backup approval. The [runner](../../scripts/mentoring/migrate.mjs) has **no dry-run, production prohibition or target-identity check**.
 
-Order: `001_initial.sql` → `002_resource_namespace.sql` → `003_contacts.sql` → `004_authority.sql` → `005_oversight.sql` → `006_reminders.sql`.
+Apply `001_initial.sql` through `008_staff_onboarding_resend.sql` in order. Apply `007` and `008` before deploying the staff email feature. The [staff email rollout instructions](development.md#staff-welcome-email-rollout) cover sending configuration and the controlled delivery check.
 
 Applied SHA-256 history is in `mentoring.schema_migrations`; missing/changed applied files, duplicate versions and older pending versions fail. All pending SQL/registry inserts use one transaction/advisory lock. Failure rolls back that pending batch. Never edit applied SQL/checksums or delete records to force success.
 

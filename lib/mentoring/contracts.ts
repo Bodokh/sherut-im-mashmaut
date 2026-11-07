@@ -19,6 +19,7 @@ import type { ReminderCommand, ReminderJobView, ReminderReadiness } from "./feat
 
 export interface StaffProfile extends StaffMember {
   readonly localPending?: boolean;
+  readonly localInvitePending?: boolean;
   readonly onboardingEmailStatus?: "queued" | "accepted" | "failed";
   readonly authUserId: string;
   readonly displayName: string;
@@ -107,6 +108,7 @@ export type MentoringCommand = Operation & (
   | OversightCommand
   | ReminderCommand
   | { readonly type: "create_staff"; readonly fields: NewStaffFields }
+  | { readonly type: "resend_staff_invite"; readonly staffId: string; readonly expectedVersion: number }
   | { readonly type: "set_staff_active"; readonly staffId: string; readonly expectedVersion: number; readonly active: boolean }
   | { readonly type: "create_participant"; readonly fields: ParticipantFields }
   | { readonly type: "update_participant"; readonly participantId: string; readonly expectedVersion: number; readonly fields: ParticipantFields }

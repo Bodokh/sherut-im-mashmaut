@@ -8,11 +8,14 @@ test("staff onboarding cron requires its exact secret and rejects HEAD without d
   t.mock.method(globalThis, "fetch", () => assert.fail("request must not contact the email provider"));
   const secret = process.env.CRON_SECRET;
   const enabled = process.env.MENTORING_STAFF_ONBOARDING_EMAIL_ENABLED;
+  const key = process.env.RESEND_API_KEY;
   t.after(() => {
     if (secret === undefined) delete process.env.CRON_SECRET;
     else process.env.CRON_SECRET = secret;
     if (enabled === undefined) delete process.env.MENTORING_STAFF_ONBOARDING_EMAIL_ENABLED;
     else process.env.MENTORING_STAFF_ONBOARDING_EMAIL_ENABLED = enabled;
+    if (key === undefined) delete process.env.RESEND_API_KEY;
+    else process.env.RESEND_API_KEY = key;
   });
   process.env.CRON_SECRET = "synthetic_test_cron_secret";
   delete process.env.MENTORING_STAFF_ONBOARDING_EMAIL_ENABLED;
@@ -23,6 +26,9 @@ test("staff onboarding cron requires its exact secret and rejects HEAD without d
   }
   assert.equal(HEAD().status, 405);
   const authorized = new Request(endpoint, { headers: { authorization: "Bearer synthetic_test_cron_secret" } });
+  assert.equal((await GET(authorized)).status, 204);
+  process.env.MENTORING_STAFF_ONBOARDING_EMAIL_ENABLED = "true";
+  delete process.env.RESEND_API_KEY;
   assert.equal((await GET(authorized)).status, 503);
   delete process.env.CRON_SECRET;
   assert.equal((await GET(authorized)).status, 503);
