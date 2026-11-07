@@ -64,6 +64,43 @@ test("public API rejects wrong content type, malformed JSON, oversized submissio
   assert.equal((await POST(new Request("http://localhost/api/contact", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ website: "bot" }) }))).status, 200);
 });
 
+test("contact mail uses the organization logo and safely displays mixed-direction submissions", async (t) => {
+  const originalKey = process.env.RESEND_API_KEY;
+  process.env.RESEND_API_KEY = "re_synthetic_test_not_a_real_key";
+  t.after(() => {
+    if (originalKey === undefined) delete process.env.RESEND_API_KEY;
+    else process.env.RESEND_API_KEY = originalKey;
+  });
+  const messages = [];
+  const emailPrototype = Object.getPrototypeOf(new Resend(process.env.RESEND_API_KEY).emails);
+  t.mock.method(emailPrototype, "send", async (message) => {
+    messages.push(message);
+    return { data: { id: "synthetic-message" }, error: null };
+  });
+
+  const submission = { ...valid, name: '<img src="https://example.org/injected">', message: "שלום & ברכה\n<script>bad()</script>" };
+  const response = await POST(new Request("http://localhost/api/contact", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(submission) }));
+  assert.equal(response.status, 200);
+  assert.equal(messages.length, 2);
+  for (const { html } of messages) {
+    assert.match(html, /<img\b[^>]*src="https:\/\/www\.imashmaut\.co\.il\/images\/logo-mark\.png"/i);
+    assert.match(html, /dir="rtl"/);
+    assert.match(html, /&lt;img src=&quot;https:\/\/example\.org\/injected&quot;&gt;/);
+    assert.doesNotMatch(html, /<img src="https:\/\/example\.org\/injected">/);
+  }
+
+  const [notification, confirmation] = messages;
+  assert.equal(notification.replyTo, "person@example.org");
+  assert.match(notification.html, /<a\b[^>]*dir="ltr"[^>]*href="mailto:person@example\.org"/);
+  assert.match(notification.html, /<span\b[^>]*dir="ltr"[^>]*>\+972501234567<\/span>/);
+  assert.match(notification.html, /שלום &amp; ברכה<br\s*\/?\s*>&lt;script&gt;bad\(\)&lt;\/script&gt;/);
+  assert.doesNotMatch(notification.html, /<script>/);
+  assert.match(notification.text, /שלום & ברכה\n<script>bad\(\)<\/script>/);
+  assert.deepEqual(confirmation.to, ["person@example.org"]);
+  assert.doesNotMatch(confirmation.html, /bad\(\)/);
+  assert.match(confirmation.text, /אין צורך להשיב להודעה זו/);
+});
+
 test("accepted team email stays successful if courtesy confirmation is rejected or throws", async () => {
   const originalKey = process.env.RESEND_API_KEY;
   process.env.RESEND_API_KEY = "re_synthetic_test_not_a_real_key";

@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { validateContactSubmission } from "../../../lib/contact-validation";
+import { emailColors, emailPanel, emailParagraph, escapeEmailHtml, renderBrandedEmail } from "../../../lib/email/brand";
 import { ORGANIZATION_EMAIL_FROM } from "../../../lib/organization-email";
 
 const DEFAULT_SUPPORT_EMAIL = "support@imashmaut.co.il";
@@ -7,20 +8,6 @@ const DEFAULT_SUPPORT_EMAIL = "support@imashmaut.co.il";
 function readField(payload: Record<string, unknown>, field: string) {
   const value = payload[field];
   return typeof value === "string" ? value.trim() : "";
-}
-
-function escapeHtml(value: string) {
-  return value.replace(
-    /[&<>"']/g,
-    (character) =>
-      ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#039;",
-      })[character] ?? character,
-  );
 }
 
 export async function POST(request: Request) {
@@ -69,12 +56,24 @@ export async function POST(request: Request) {
     return Response.json({ error: "email_service_unavailable" }, { status: 503 });
   }
 
-  const safeName = escapeHtml(name);
-  const safeEmail = escapeHtml(email);
-  const safePhone = escapeHtml(phone || "לא צוין");
-  const safeTopic = escapeHtml(topic || "יצירת קשר");
-  const safeMessage = escapeHtml(message).replace(/\n/g, "<br />");
+  const safeName = escapeEmailHtml(name);
+  const safeEmail = escapeEmailHtml(email);
+  const safeMailto = escapeEmailHtml(encodeURIComponent(email.toWellFormed()).replace("%40", "@"));
+  const safePhone = phone ? `<span dir="ltr">${escapeEmailHtml(phone)}</span>` : "לא צוין";
+  const safeTopic = escapeEmailHtml(topic || "יצירת קשר");
+  const safeMessage = escapeEmailHtml(message).replace(/\r\n?|\n/g, "<br />");
   const subject = `פנייה חדשה מהאתר: ${topic || "יצירת קשר"}`;
+  const contactFields = [
+    ["שם", safeName],
+    ["דוא״ל", `<a dir="ltr" href="mailto:${safeMailto}" style="color:${emailColors.ink};text-decoration:underline">${safeEmail}</a>`],
+    ["טלפון", safePhone],
+    ["נושא", safeTopic],
+  ];
+  const details = `<table width="100%" dir="rtl" cellpadding="0" cellspacing="0" style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:15px;line-height:1.5;color:${emailColors.text}">${contactFields.map(([label, value], index) => `
+    <tr>
+      <th scope="row" width="54" align="right" valign="top" style="width:54px;padding:10px 0 10px 8px;color:${emailColors.ink};${index ? `border-top:1px solid ${emailColors.line}` : ""}">${label}</th>
+      <td align="right" valign="top" style="padding:10px 0;word-break:break-word;overflow-wrap:anywhere;${index ? `border-top:1px solid ${emailColors.line}` : ""}">${value}</td>
+    </tr>`).join("")}</table>`;
 
   try {
     const resend = new Resend(apiKey);
@@ -91,17 +90,14 @@ export async function POST(request: Request) {
         "",
         message,
       ].join("\n"),
-      html: `
-        <div dir="rtl" style="font-family: Arial, sans-serif; line-height: 1.6; color: #172033">
-          <h2 style="margin-bottom: 20px">פנייה חדשה מאתר שירות עם משמעות</h2>
-          <p><strong>שם:</strong> ${safeName}</p>
-          <p><strong>דוא״ל:</strong> <a href="mailto:${safeEmail}">${safeEmail}</a></p>
-          <p><strong>טלפון:</strong> ${safePhone}</p>
-          <p><strong>נושא:</strong> ${safeTopic}</p>
-          <hr style="border: 0; border-top: 1px solid #dce2ec; margin: 24px 0" />
-          <p>${safeMessage}</p>
-        </div>
-      `,
+      html: renderBrandedEmail({
+        language: "he",
+        category: "פניות מהאתר",
+        title: "פנייה חדשה מאתר שירות עם משמעות",
+        body: `${emailPanel(details)}
+          <h2 style="margin:24px 0 8px;color:${emailColors.ink};font-size:18px;line-height:1.4">תוכן ההודעה</h2>
+          <p style="margin:0;font-size:16px;line-height:1.65;word-break:break-word;overflow-wrap:anywhere">${safeMessage}</p>`,
+      }),
     });
 
     if (error) {
@@ -114,24 +110,25 @@ export async function POST(request: Request) {
     try {
       const confirmation = await resend.emails.send({
         from: ORGANIZATION_EMAIL_FROM,
-      to: [email],
-      subject: "קיבלנו את פנייתך | שירות עם משמעות",
-      text: [
-        `שלום ${name},`,
-        "",
-        "קיבלנו את פנייתך באתר שירות עם משמעות.",
-        "הצוות יחזור אליך בהקדם.",
-        "",
-        "אין צורך להשיב להודעה זו.",
-      ].join("\n"),
-      html: `
-        <div dir="rtl" style="font-family: Arial, sans-serif; line-height: 1.6; color: #172033">
-          <p>שלום ${safeName},</p>
-          <p>קיבלנו את פנייתך באתר שירות עם משמעות. הצוות יחזור אליך בהקדם.</p>
-          <p style="color: #5b6578">אין צורך להשיב להודעה זו.</p>
-        </div>
-      `,
-    });
+        to: [email],
+        subject: "קיבלנו את פנייתך | שירות עם משמעות",
+        text: [
+          `שלום ${name},`,
+          "",
+          "קיבלנו את פנייתך באתר שירות עם משמעות.",
+          "הצוות יחזור אליך בהקדם.",
+          "",
+          "אין צורך להשיב להודעה זו.",
+        ].join("\n"),
+        html: renderBrandedEmail({
+          language: "he",
+          category: "אישור פנייה",
+          title: "קיבלנו את פנייתך",
+          body: `${emailParagraph(`שלום ${safeName},`)}
+            ${emailPanel('<p style="margin:0;font-size:16px;line-height:1.65">קיבלנו את פנייתך באתר שירות עם משמעות.<br /><strong>הצוות יחזור אליך בהקדם.</strong></p>')}
+            <p style="margin:18px 0 0;color:${emailColors.muted};font-size:14px;line-height:1.6">אין צורך להשיב להודעה זו.</p>`,
+        }),
+      });
 
       if (confirmation.error) {
         console.error("Resend rejected confirmation email", confirmation.error);

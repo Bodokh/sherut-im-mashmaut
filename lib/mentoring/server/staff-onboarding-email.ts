@@ -1,5 +1,6 @@
 import "server-only";
 
+import { emailButton, emailColors, emailPanel, emailParagraph, renderBrandedEmail } from "../../email/brand";
 import { ORGANIZATION_EMAIL_FROM } from "../../organization-email";
 import type { StaffOnboardingSender } from "./staff-onboarding";
 
@@ -9,6 +10,16 @@ const SUBJECT = "הזמנה לצוות הליווי | שירות עם משמעו
 const WELCOME = "אושרה הצטרפותך לצוות הליווי של שירות עם משמעות.";
 const SETUP = "כדי להתחיל, יש לפתוח חשבון עם כתובת הדוא״ל שאליה נשלחה ההזמנה, לבחור סיסמה ולאמת את הכתובת באמצעות הקוד שיישלח אליה.";
 const EXISTING = "כבר יש לך חשבון? אפשר להיכנס עם אותו חשבון. אם עדיין אין בו סיסמה, המערכת תבקש להגדיר אחת.";
+const WELCOME_HTML = renderBrandedEmail({
+  language: "he",
+  category: "הצטרפות לצוות",
+  title: "הזמנה לצוות הליווי",
+  body: `${emailParagraph(WELCOME)}
+    ${emailPanel(`${emailParagraph(SETUP)}${emailButton(SIGNUP_URL, "יצירת חשבון והגדרת סיסמה")}`)}
+    <p style="margin:20px 0 0;color:${emailColors.muted};font-size:14px;line-height:1.7">${EXISTING}<br />
+      <a href="${LOGIN_URL}" style="color:${emailColors.ink};font-weight:bold;text-decoration:underline">כניסה לחשבון קיים</a>
+    </p>`,
+});
 
 export function staffOnboardingSender(env = process.env): StaffOnboardingSender | null {
   const apiKey = env.RESEND_API_KEY?.trim();
@@ -30,13 +41,7 @@ export function staffOnboardingSender(env = process.env): StaffOnboardingSender 
           to: [recipientEmail],
           subject: SUBJECT,
           text: [WELCOME, SETUP, SIGNUP_URL, EXISTING, LOGIN_URL].join("\n\n"),
-          html: `<div dir="rtl" lang="he" style="font-family:Arial,sans-serif;color:#172033;line-height:1.6">
-            <h1 style="font-size:22px">הזמנה לצוות הליווי</h1>
-            <p>${WELCOME}</p>
-            <p>${SETUP}</p>
-            <p><a href="${SIGNUP_URL}">יצירת חשבון והגדרת סיסמה</a></p>
-            <p>${EXISTING} <a href="${LOGIN_URL}">כניסה לחשבון קיים</a></p>
-          </div>`,
+          html: WELCOME_HTML,
         }),
       });
       const payload: { id?: unknown; name?: unknown } | null = await response.json().catch(() => null);

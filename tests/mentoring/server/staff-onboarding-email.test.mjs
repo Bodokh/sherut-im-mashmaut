@@ -26,7 +26,10 @@ test("staff welcome mail directs password setup to the staff signup page and reu
   assert.deepEqual(body.to, [job.recipientEmail]);
   assert.match(body.from, /notifications@imashmaut\.co\.il/);
   assert.match(body.text, /https:\/\/staff\.imashmaut\.co\.il\/signup/);
-  assert.match(body.html, /href="https:\/\/staff\.imashmaut\.co\.il\/signup"/);
+  assert.match(body.html, /<img\b[^>]*src="https:\/\/www\.imashmaut\.co\.il\/images\/logo-mark\.png"/i);
+  assert.match(body.html, /dir="rtl"/);
+  assert.match(body.html, /<a\b(?=[^>]*href="https:\/\/staff\.imashmaut\.co\.il\/signup")(?=[^>]*style="[^"]*background(?:-color)?:\s*#102d40)[^>]*>/i);
+  assert.match(body.html, /href="https:\/\/staff\.imashmaut\.co\.il\/login"/);
   assert.match(body.text, /סיסמה/);
   assert.doesNotMatch(body.text, new RegExp(job.staffId));
 });
