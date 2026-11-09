@@ -183,7 +183,7 @@ test("all date inputs reject invalid calendar dates, missing timezones and wrong
 });
 
 test("organization number inputs enforce documented whole-number ranges and nullable recurrence", () => {
-  for (const [field, minimum, maximum] of [["offlineLeaseHours", 1, 24], ["appointmentReminderMinutesBefore", 0, 1440], ["overdueRepeatHours", 1, 168]]) {
+  for (const [field, minimum, maximum] of [["offlineLeaseHours", 1, 24], ["appointmentReminderMinutesBefore", 0, 4320], ["overdueRepeatHours", 1, 168]]) {
     for (const value of [minimum, maximum]) assert.equal(parseCommand(set(make("update_organization_settings"), `settings.${field}`, value)).ok, true);
     for (const value of [minimum - 1, maximum + 1, 1.5, "1", Number.NaN, Number.POSITIVE_INFINITY]) rejected(set(make("update_organization_settings"), `settings.${field}`, value), `settings.${field}`);
   }

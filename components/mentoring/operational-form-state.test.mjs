@@ -23,7 +23,7 @@ test("blank required reminder cannot become a valid zero through numeric coercio
   assert.deepEqual(settingsInputIssues(settings), {});
   for (const blank of ["", "   "]) {
     const issues = settingsInputIssues({ ...settings, appointmentReminderMinutesBefore: blank });
-    assert.match(issues.appointmentReminderMinutesBefore, /0.*1,440/);
+    assert.match(issues.appointmentReminderMinutesBefore, /0.*4,320/);
   }
   assert.equal(settingsInputIssues({ ...settings, overdueRepeatHours: " " }).overdueRepeatHours, undefined);
 });
@@ -31,7 +31,7 @@ test("blank required reminder cannot become a valid zero through numeric coercio
 test("every policy numeric field rejects fractions, exponents, negatives, and overflow with its own message", () => {
   for (const [field, valid, invalid] of [
     ["offlineLeaseHours", ["1", "24"], ["0", "25", "1.5", "1e1", "-1"]],
-    ["appointmentReminderMinutesBefore", ["0", "1440"], ["1441", "-1", "0.5", "0x10"]],
+    ["appointmentReminderMinutesBefore", ["0", "1440", "4320"], ["4321", "-1", "0.5", "0x10"]],
     ["overdueRepeatHours", ["", "1", "168"], ["0", "169", "2.5", "1e1"]],
   ]) {
     for (const value of valid) assert.equal(settingsInputIssues({ ...settings, [field]: value })[field], undefined, `${field} accepts ${value}`);

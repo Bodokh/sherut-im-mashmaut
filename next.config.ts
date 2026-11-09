@@ -72,6 +72,7 @@ const nextConfig: NextConfig = {
       { source: "/team", destination: "/he/team" },
       { source: "/get-involved", destination: "/he/get-involved" },
       { source: "/videos", destination: "/he/videos" },
+      { source: "/gallery", destination: "/he/gallery" },
       { source: "/faq", destination: "/he/faq" },
       { source: "/contact", destination: "/he/contact" },
       { source: "/terms", destination: "/he/terms" },

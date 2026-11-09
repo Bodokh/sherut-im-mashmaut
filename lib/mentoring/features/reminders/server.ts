@@ -7,6 +7,7 @@ import { getOrganizationSettings } from "../oversight/server";
 import type { ReminderAttempt, ReminderJobView, ReminderReadiness, ReminderReason } from "./contracts";
 import { normalizeStaffMobile, planReminderOccurrences, selectReminderRecipients } from "./policy";
 import { configuredReminderTransport, transportBlockedReason, type ReminderTransport } from "./transport";
+import { hostedReminderSchedulerConfigured } from "./configuration";
 
 export type ReminderTransaction = <T>(run: (client: PoolClient) => Promise<T>) => Promise<T>;
 export const reminderTransaction: ReminderTransaction = (run) => withTransaction(run);
@@ -78,6 +79,7 @@ export async function loadReminderExtras(client: PoolClient, actor: StaffProfile
   const settings = await getOrganizationSettings(client, actor.organizationId, new Date().toISOString());
   const transport = configuredReminderTransport();
   const blocked = transportBlockedReason(transport);
+  const hostedSchedulerConfigured = hostedReminderSchedulerConfigured();
   const rows = !actor.active || actor.role === "mentor" || visibleParticipantIds.length === 0 ? { rows: [] } : await client.query(`WITH scoped AS (SELECT j.*,p.display_name AS participant_name,m.display_name AS recipient_name
     FROM mentoring.reminder_jobs j JOIN mentoring.participants p ON p.organization_id=j.organization_id AND p.id=j.participant_id
     JOIN mentoring.memberships m ON m.organization_id=j.organization_id AND m.id=j.recipient_staff_id
@@ -98,5 +100,5 @@ export async function loadReminderExtras(client: PoolClient, actor: StaffProfile
     kind: row.kind, scheduledAt: iso(row.scheduled_at), referenceAt: iso(row.reference_at), state: row.state, reason: row.reason, updatedAt: iso(row.updated_at),
     attempts: attempts.rows.filter((attempt) => attempt.job_id === row.id).map((attempt): ReminderAttempt => ({ id: String(attempt.id), attemptNumber: Number(attempt.attempt_number), state: attempt.state, claimedAt: iso(attempt.claimed_at), finishedAt: attempt.finished_at == null ? null : iso(attempt.finished_at), leaseExpiresAt: iso(attempt.lease_expires_at), provider: String(attempt.provider), providerReference: attempt.provider_reference, reason: attempt.reason })),
   }));
-  return { reminders, reminderReadiness: { smsProviderConfigured: transport !== null, smsCredentialsConfigured: transport?.credentialsConfigured === true, smsSendingEnabled: blocked === null, hostedSchedulerConfigured: false, evaluationMode: "manual_and_cli", blockedReasons: [...(transport ? [] : ["missing_sms_provider" as const]), ...(transport?.credentialsConfigured ? [] : ["missing_sms_credentials" as const]), ...(blocked === "sending_disabled" ? ["sending_disabled" as const] : []), "hosted_scheduler_not_configured"], audience: settings.reminderAudience, appointmentReminderMinutesBefore: settings.appointmentReminderMinutesBefore, overdueRemindersEnabled: settings.overdueRemindersEnabled, overdueRepeatHours: settings.overdueRepeatHours, diagnosticsTruncated: history.length > MAX_HISTORY_DIAGNOSTICS } };
+  return { reminders, reminderReadiness: { smsProviderConfigured: transport !== null, smsCredentialsConfigured: transport?.credentialsConfigured === true, smsSendingEnabled: blocked === null, hostedSchedulerConfigured, evaluationMode: hostedSchedulerConfigured ? "hosted_and_manual" : "manual_and_cli", blockedReasons: [...(transport ? [] : ["missing_sms_provider" as const]), ...(transport?.credentialsConfigured ? [] : ["missing_sms_credentials" as const]), ...(blocked === "sending_disabled" ? ["sending_disabled" as const] : []), ...(hostedSchedulerConfigured ? [] : ["hosted_scheduler_not_configured" as const])], audience: settings.reminderAudience, appointmentReminderMinutesBefore: settings.appointmentReminderMinutesBefore, overdueRemindersEnabled: settings.overdueRemindersEnabled, overdueRepeatHours: settings.overdueRepeatHours, diagnosticsTruncated: history.length > MAX_HISTORY_DIAGNOSTICS } };
 }

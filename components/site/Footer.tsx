@@ -19,6 +19,7 @@ const FOOTER_LINKS = [
   "team",
   "getInvolved",
   "videos",
+  "gallery",
   "faq",
   "contact",
 ] as const satisfies readonly SiteRouteKey[];

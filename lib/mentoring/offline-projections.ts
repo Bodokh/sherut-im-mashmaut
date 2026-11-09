@@ -164,7 +164,7 @@ function projectParticipant(view: View, command: ProjectionCommand, actor: Staff
       scheduledAt: command.nextAppointmentAt, version: (view.nextAppointment?.version ?? 0) + 1, sourceContactId: command.operationId, requiresReview: false,
     } : view.nextAppointment, expectedAppointmentVersion: command.expectedAppointmentVersion, manualColor: command.manualColor }, at);
     if (!transition.ok) return view;
-    const appointmentView = command.outcome === "completed" && command.nextAppointmentAt ? changeAppointment(view, actor, operation, "contact_recorded", null,
+    const appointmentView = command.outcome === "completed" && command.nextAppointmentAt && transition.state.nextAppointment?.version !== view.nextAppointment?.version ? changeAppointment(view, actor, operation, "contact_recorded", null,
       { scheduledAt: command.nextAppointmentAt, sourceContactId: command.operationId, requiresReview: false }, accepted) : view;
     let next = withRevision({ ...appointmentView, contacts: transition.state.contacts, nextAppointment: transition.state.nextAppointment, manualColor: transition.state.manualColor,
       participant: { ...view.participant, version: view.participant.version + 1 }, manualColorAt: command.manualColor && command.manualColor !== view.manualColor ? at : view.manualColorAt }, contactRevision(view, entry, "initial", actor, at, null, command.operationId));

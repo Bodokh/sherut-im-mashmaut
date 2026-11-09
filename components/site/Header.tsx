@@ -10,7 +10,7 @@ import { donationLink } from "@/lib/contact";
 import { localizedPath, type SiteRouteKey } from "@/lib/routes";
 import styles from "./Header.module.css";
 
-const PRIMARY_ROUTES = ["lectures", "guidance", "videos", "getInvolved", "faq", "contact"] as const;
+const PRIMARY_ROUTES = ["lectures", "guidance", "videos", "gallery", "getInvolved", "faq", "contact"] as const;
 
 type HeaderNavKey =
   | (typeof PRIMARY_ROUTES)[number]
@@ -50,6 +50,7 @@ export function buildHeaderCopy(dict: Dictionary): HeaderCopy {
       lectures: dict.nav.lectures,
       guidance: dict.nav.guidance,
       videos: dict.nav.videos,
+      gallery: dict.nav.gallery,
       getInvolved: dict.nav.getInvolved,
       faq: dict.nav.faq,
     },

@@ -21,7 +21,7 @@ const now = "2026-10-26T12:00:00.000Z";
  * provider acceptance claim. Actual production claim/rebuild/result functions
  * execute their queries; the model supplies fixture rows and atomic rollback.
  */
-function fixture({ singleOccurrence = false } = {}) {
+function fixture({ singleOccurrence = false, leadMinutes = 0, scheduledAt = "2026-10-26T11:00:00Z" } = {}) {
   const actor = { id: actorId, organization_id: ORGANIZATION_ID, auth_user_id: "synthetic-ceo", role: "ceo", active: true,
     display_name: "Synthetic CEO", phone: null, email: null, coordinator_id: null, sms_muted: true, version: 1 };
   const mentor = { ...actor, id: mentorId, auth_user_id: "synthetic-mentor", role: "mentor", display_name: "Synthetic mentor",
@@ -36,9 +36,9 @@ function fixture({ singleOccurrence = false } = {}) {
     // enforce its stricter CEO ceiling before any subsequent claim.
     coordinator_id: actorId, assigned_at: "2026-10-18T12:00:00Z", followup_anchor_at: "2026-10-18T12:00:00Z", version: 1 };
   const appointment = { id: id(5), organization_id: ORGANIZATION_ID, participant_id: participantId, mentor_id: mentorId,
-    scheduled_at: "2026-10-26T11:00:00Z", version: 1, source_contact_id: null, is_current: true };
+    scheduled_at: scheduledAt, version: 1, source_contact_id: null, is_current: true };
   const settings = { organization_id: ORGANIZATION_ID, version: 1, offline_lease_hours: 24, reminder_audience: "responsible_team",
-    appointment_reminder_minutes_before: 0, overdue_reminders_enabled: !singleOccurrence, overdue_repeat_hours: null, updated_at: now, updated_by: null };
+    appointment_reminder_minutes_before: leadMinutes, overdue_reminders_enabled: !singleOccurrence, overdue_repeat_hours: null, updated_at: now, updated_by: null };
   let jobs = new Map();
   let attempts = new Map();
   let inTransaction = false;
@@ -140,10 +140,42 @@ async function seededModel(options) {
   const transport = { provider: "unit-only", credentialsConfigured: true, sendingEnabled: true,
     send: async () => { throw new Error("The seed phase must never send"); } };
   await model.transaction((client) => rebuildParticipantReminders(client, ORGANIZATION_ID, participantId, actorId, null, now, transport));
-  assert.equal(model.jobs.length, options?.singleOccurrence ? 1 : 2);
+  assert.equal(model.jobs.length, (options?.singleOccurrence ? 1 : 2) + (options?.leadMinutes > 0 ? 1 : 0));
   assert.equal(model.jobs.every((job) => job.state === "pending"), true);
   return model;
 }
+
+test("a contact scheduled within three days sends one advance reminder now and one at the scheduled time", async () => {
+  const scheduledAt = "2026-10-28T12:00:00.000Z";
+  const model = await seededModel({ singleOccurrence: true, leadMinutes: 4320, scheduledAt });
+  let sends = 0;
+  const transport = { provider: "unit-only", credentialsConfigured: true, sendingEnabled: true,
+    send: async () => { sends += 1; return { state: "provider_accepted", providerReference: `unit-reminder-${sends}` }; } };
+  const dispatch = (time) => runDispatcher({ actor: { id: actorId, organizationId: ORGANIZATION_ID }, transport,
+    transaction: model.transaction, now: () => time });
+  assert.equal((await dispatch(now)).claimed, 1);
+  assert.equal((await dispatch(now)).claimed, 0, "accepted advance reminders never resend");
+  assert.equal(model.jobs.find((job) => job.scheduled_at === scheduledAt).state, "pending");
+  assert.equal((await dispatch(scheduledAt)).claimed, 1);
+  assert.equal((await dispatch(scheduledAt)).claimed, 0, "accepted same-day reminders never resend");
+  assert.equal(sends, 2);
+  assert.equal(model.attempts.length, 2);
+});
+
+test("expired pending appointment notices are cancelled without sending or deleting their history", async () => {
+  const model = await seededModel({ singleOccurrence: true, leadMinutes: 4320, scheduledAt: "2026-10-27T08:00:00Z" });
+  const ids = model.jobs.map((job) => job.id).sort();
+  let sends = 0;
+  const transport = { provider: "unit-only", credentialsConfigured: true, sendingEnabled: true,
+    send: async () => { sends += 1; return { state: "provider_accepted", providerReference: "must-not-send-expired" }; } };
+  const result = await runDispatcher({ actor: { id: actorId, organizationId: ORGANIZATION_ID }, transport,
+    transaction: model.transaction, now: () => "2026-10-27T22:00:00Z" });
+  assert.equal(result.claimed, 0);
+  assert.equal(sends, 0);
+  assert.deepEqual(model.jobs.map((job) => job.id).sort(), ids);
+  assert.equal(model.jobs.every((job) => job.state === "cancelled" && job.reason === "superseded"), true);
+  assert.equal(model.attempts.length, 0);
+});
 
 test("known external acceptance survives scheduler actor loss without authorizing new work", async (context) => {
   for (const changes of [{ active: false }, { role: "coordinator" }]) for (const singleOccurrence of [false, true]) {

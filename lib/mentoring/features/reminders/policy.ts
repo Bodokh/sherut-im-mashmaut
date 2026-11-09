@@ -1,6 +1,10 @@
 import type { ParticipantView, StaffProfile } from "../../contracts";
-import { computeFollowup, type ContactEntry } from "../../domain";
+import { computeFollowup, DEFAULT_CADENCE_POLICY, type ContactEntry } from "../../domain";
 import type { OrganizationSettings } from "../oversight/contracts";
+
+const appointmentDayFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: DEFAULT_CADENCE_POLICY.timeZone, year: "numeric", month: "2-digit", day: "2-digit",
+});
 
 export interface ReminderOccurrence {
   readonly kind: "appointment" | "seven_day_overdue";
@@ -33,7 +37,7 @@ function validScope(view: ParticipantView, settings: OrganizationSettings): bool
 export function reminderGeneration(view: ParticipantView, settings: OrganizationSettings, now: string): string {
   const completed = latestQualifyingContact(view, now);
   return JSON.stringify([
-    "reminder-v1", view.participant.id, view.participant.version, view.participant.lifecycle,
+    "reminder-v2", view.participant.id, view.participant.version, view.participant.lifecycle,
     view.participant.deletedAt ?? view.deletedAt ?? null,
     view.assignment?.id ?? null, view.assignment?.version ?? null,
     view.assignment?.followupAnchorAt ?? view.assignment?.assignedAt ?? null,
@@ -44,7 +48,7 @@ export function reminderGeneration(view: ParticipantView, settings: Organization
 }
 
 /**
- * Plan one appointment and one initial breach, plus the latest explicitly
+ * Plan the scheduled-day and optional advance reminders and one initial breach, plus the latest explicitly
  * configured repeat. Old repeat intervals are never backfilled in a burst.
  */
 export function planReminderOccurrences(view: ParticipantView, settings: OrganizationSettings, now: string): readonly ReminderOccurrence[] {
@@ -53,9 +57,17 @@ export function planReminderOccurrences(view: ParticipantView, settings: Organiz
   const occurrences: ReminderOccurrence[] = [];
   const appointment = view.nextAppointment;
   if (appointment && appointment.organizationId === view.participant.organizationId && appointment.participantId === view.participant.id) {
-    occurrences.push({ kind: "appointment", occurrenceKey: JSON.stringify(["appointment", appointment.id, appointment.version]), generation,
-      scheduledAt: new Date(Date.parse(appointment.scheduledAt) - settings.appointmentReminderMinutesBefore * 60_000).toISOString(),
-      referenceAt: new Date(appointment.scheduledAt).toISOString() });
+    const appointmentAt = Date.parse(appointment.scheduledAt);
+    const nowAt = Date.parse(now);
+    if (appointmentAt >= nowAt || appointmentDayFormatter.format(appointmentAt) === appointmentDayFormatter.format(nowAt)) {
+      occurrences.push({ kind: "appointment", occurrenceKey: JSON.stringify(["appointment", appointment.id, appointment.version]), generation,
+        scheduledAt: new Date(appointmentAt).toISOString(), referenceAt: new Date(appointmentAt).toISOString() });
+    }
+    if (settings.appointmentReminderMinutesBefore > 0 && appointmentAt >= nowAt) {
+      occurrences.push({ kind: "appointment", occurrenceKey: JSON.stringify(["appointment", appointment.id, appointment.version, "advance"]), generation,
+        scheduledAt: new Date(appointmentAt - settings.appointmentReminderMinutesBefore * 60_000).toISOString(),
+        referenceAt: new Date(appointmentAt).toISOString() });
+    }
   }
   if (!settings.overdueRemindersEnabled) return occurrences;
   const followup = computeFollowup({ organizationId: view.participant.organizationId, participantId: view.participant.id,
@@ -104,12 +116,12 @@ export function selectReminderRecipients(view: ParticipantView, staff: readonly 
   return [...selected.values()].sort((left, right) => left.id.localeCompare(right.id));
 }
 
-const dateFormatter = new Intl.DateTimeFormat("he-IL", { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Jerusalem" });
+const dateFormatter = new Intl.DateTimeFormat("he-IL", { dateStyle: "short", timeStyle: "short", timeZone: DEFAULT_CADENCE_POLICY.timeZone });
 
-/** Only a participant name, the relevant date/time, and the contact need. */
+/** Only the participant name, relevant date/time, and standard contact instructions. */
 export function reminderMessage(participantName: string, occurrence: Pick<ReminderOccurrence, "kind" | "referenceAt">): string {
   const name = participantName.replace(/[\r\n\t\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 200);
   const when = dateFormatter.format(new Date(occurrence.referenceAt));
-  return occurrence.kind === "appointment" ? `תזכורת לקשר עם ${name}: ${when}.` :
+  return occurrence.kind === "appointment" ? `תזכורת לקשר עם ${name}: ${when}. יש להתקשר לחניכה ולהתעניין בשלומה. לאחר השיחה יש למלא באתר את פרטי המעקב והחניכה.` :
     `נדרש קשר עם ${name}. מועד שבעת הימים: ${when}.`;
 }

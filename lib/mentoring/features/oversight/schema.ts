@@ -6,7 +6,7 @@ export const monthSchema = z.string({ error: monthError }).regex(/^(?!0000)\d{4}
 export const organizationPolicySchema = z.strictObject({
   offlineLeaseHours: integerRangeSchema("משך עבודה ללא חיבור בשעות", 1, 24),
   reminderAudience: z.enum(["responsible_team", "all_staff"], { error: "יש לבחור נמענים לתזכורות: הצוות האחראי או כל הצוות." }),
-  appointmentReminderMinutesBefore: integerRangeSchema("זמן התזכורת לפני פגישה בדקות", 0, 1440),
+  appointmentReminderMinutesBefore: integerRangeSchema("זמן התזכורת לפני פגישה בדקות", 0, 4320),
   overdueRemindersEnabled: booleanSchema("תזכורות על איחור בקשר פעילות"),
   overdueRepeatHours: integerRangeSchema("תדירות תזכורת חוזרת בשעות", 1, 168).nullable(),
 }, strictObjectError);

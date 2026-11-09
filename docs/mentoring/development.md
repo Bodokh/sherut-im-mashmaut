@@ -55,7 +55,7 @@ rtk proxy npm run db:mentoring:migrate
 rtk proxy npm run dev
 ```
 
-Open [the staff login](http://localhost:3000/staff/login). The migration runner uses a direct connection, checks migration order and applied checksums, and applies changes in a transaction under an advisory lock. It is not itself restricted to development: verify the target environment before running it. All checked-in migrations `001`–`006` have been applied to the existing development database: initial records, resource namespace, contact revision/history, authority/lifecycle, oversight/settings, and canonical reminder jobs/attempts.
+Open [the staff login](http://localhost:3000/staff/login). The migration runner uses a direct connection, checks migration order and applied checksums, and applies changes in a transaction under an advisory lock. It is not itself restricted to development: verify the target environment before running it. Migrations `001`–`006` were applied to the existing development database: initial records, resource namespace, contact revision/history, authority/lifecycle, oversight/settings, and canonical reminder jobs/attempts. New migration `009_appointment_reminder_timing.sql` enables the three-day setting and preserves existing reminder delivery evidence; applying it to the shared development or production database is a separate rollout step. Follow the [reminder rollout instructions](operations-handoff.md#three-day-and-scheduled-day-contact-reminders).
 
 For a local production-mode preview, stop the development server, build, and use a matching server/browser origin:
 

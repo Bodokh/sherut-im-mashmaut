@@ -8,7 +8,8 @@ const { reminderGeneration, planReminderOccurrences, selectReminderRecipients, n
 
 const now = "2026-10-26T12:00:00Z";
 const settings = (overrides = {}) => ({ ...defaultOrganizationSettings("org-1", now), ...overrides });
-const view = (overrides = {}) => snapshot({ ...overrides });
+const upcomingAppointment = { ...appointment, scheduledAt: "2026-10-27T08:00:00.000Z" };
+const view = (overrides = {}) => snapshot({ nextAppointment: upcomingAppointment, ...overrides });
 const member = (id, role, overrides = {}) => ({ id, organizationId: "org-1", role, active: true, version: 1, authUserId: id,
   displayName: id, email: null, phone: "050-1234567", coordinatorId: null, smsMuted: false, ...overrides });
 const staff = () => [member("mentor-1", "mentor"), member("coordinator-1", "coordinator"), member("ceo-1", "ceo"),
@@ -19,17 +20,48 @@ test("default plan has one appointment and one seven-day breach with determinist
   const planned = planReminderOccurrences(view(), settings(), now);
   assert.equal(planned.length, 2);
   assert.deepEqual(planned, planReminderOccurrences(view(), settings(), now));
-  assert.equal(byKind(planned, "appointment").scheduledAt, appointment.scheduledAt);
+  assert.equal(byKind(planned, "appointment").scheduledAt, upcomingAppointment.scheduledAt);
   assert.equal(byKind(planned, "seven_day_overdue").scheduledAt, "2026-10-25T08:00:00.000Z");
   assert.equal(new Set(planned.map((item) => item.occurrenceKey)).size, 2);
 });
 
-test("appointment offset changes scheduling and validation generation without changing delivered occurrence identity", () => {
-  const ordinary = planReminderOccurrences(view(), settings(), now)[0];
-  const earlier = planReminderOccurrences(view(), settings({ appointmentReminderMinutesBefore: 90, version: 2 }), now)[0];
-  assert.equal(earlier.scheduledAt, "2026-10-25T06:30:00.000Z");
-  assert.equal(earlier.occurrenceKey, ordinary.occurrenceKey);
-  assert.notEqual(earlier.generation, ordinary.generation);
+test("a three-day advance and the scheduled-day reminder have stable distinct delivery identities", () => {
+  const ordinary = planReminderOccurrences(view(), settings({ overdueRemindersEnabled: false }), now)[0];
+  const paired = planReminderOccurrences(view(), settings({ appointmentReminderMinutesBefore: 4320, overdueRemindersEnabled: false, version: 2 }), now);
+  assert.equal(paired.length, 2);
+  const sameDay = paired.find((item) => item.scheduledAt === ordinary.scheduledAt);
+  const advance = paired.find((item) => item !== sameDay);
+  assert.equal(advance.scheduledAt, "2026-10-24T08:00:00.000Z");
+  assert.equal(sameDay.occurrenceKey, ordinary.occurrenceKey, "zero lead keeps the existing scheduled-day delivery identity");
+  assert.notEqual(advance.occurrenceKey, sameDay.occurrenceKey);
+  assert.equal(advance.referenceAt, sameDay.referenceAt);
+  assert.notEqual(advance.generation, ordinary.generation);
+  const changed = planReminderOccurrences(view(), settings({ appointmentReminderMinutesBefore: 90, overdueRemindersEnabled: false, version: 3 }), now);
+  assert.deepEqual(changed.map((item) => item.occurrenceKey).sort(), paired.map((item) => item.occurrenceKey).sort(), "policy changes cannot resend an accepted occurrence");
+  assert.equal(changed.find((item) => item.occurrenceKey === advance.occurrenceKey).scheduledAt, "2026-10-27T06:30:00.000Z");
+});
+
+test("scheduled-day reminders allow cron delay but expire at Israel midnight in winter and summer", () => {
+  const policy = settings({ appointmentReminderMinutesBefore: 4320, overdueRemindersEnabled: false });
+  for (const [scheduledAt, minutesLate, lastMoment, midnight] of [
+    ["2026-11-09T21:55:00Z", "2026-11-09T21:59:00Z", "2026-11-09T21:59:59.999Z", "2026-11-09T22:00:00Z"],
+    ["2026-06-01T20:55:00Z", "2026-06-01T20:59:00Z", "2026-06-01T20:59:59.999Z", "2026-06-01T21:00:00Z"],
+  ]) {
+    const current = view({ nextAppointment: { ...upcomingAppointment, scheduledAt } });
+    const atTime = planReminderOccurrences(current, policy, scheduledAt);
+    assert.equal(atTime.length, 2, "An advance reminder remains eligible through the scheduled instant");
+    for (const timestamp of [minutesLate, lastMoment]) {
+      const delayed = planReminderOccurrences(current, policy, timestamp);
+      assert.equal(delayed.length, 1);
+      assert.equal(delayed[0].occurrenceKey, atTime[0].occurrenceKey, "Only the scheduled-day notice remains after the appointment time");
+    }
+    assert.deepEqual(planReminderOccurrences(current, policy, midnight), []);
+  }
+});
+
+test("past-day appointments leave missed contact to the existing overdue reminder", () => {
+  const planned = planReminderOccurrences(view({ nextAppointment: appointment }), settings({ appointmentReminderMinutesBefore: 4320 }), now);
+  assert.deepEqual(planned.map((item) => item.kind), ["seven_day_overdue"]);
 });
 
 test("a no-answer changes validation generation while preserving occurrence delivery keys and cadence", () => {
@@ -100,22 +132,26 @@ test("missing or invalid staff mobile remains an explicit transport problem, nev
 });
 
 test("repeats are disabled by default and explicit repetition schedules only base plus latest occurrence", () => {
-  assert.equal(planReminderOccurrences(view(), settings(), "2027-01-01T12:00:00Z").length, 2);
-  const planned = planReminderOccurrences(view(), settings({ overdueRepeatHours: 12 }), "2026-10-28T09:00:00Z");
-  assert.equal(planned.length, 3);
-  assert.equal(planned[2].scheduledAt, "2026-10-28T08:00:00.000Z");
-  assert.equal(planned[2].referenceAt, "2026-10-25T08:00:00.000Z");
-  assert.notEqual(planned[1].occurrenceKey, planned[2].occurrenceKey);
-  assert.equal(planReminderOccurrences(view(), settings({ overdueRepeatHours: 12 }), "2026-10-25T19:59:59Z").length, 2);
-  assert.equal(planReminderOccurrences(view(), settings({ overdueRemindersEnabled: false, overdueRepeatHours: 12 }), now).length, 1);
+  const current = view({ nextAppointment: null });
+  assert.equal(planReminderOccurrences(current, settings(), "2027-01-01T12:00:00Z").length, 1);
+  const planned = planReminderOccurrences(current, settings({ overdueRepeatHours: 12 }), "2026-10-28T09:00:00Z");
+  assert.equal(planned.length, 2);
+  assert.equal(planned[1].scheduledAt, "2026-10-28T08:00:00.000Z");
+  assert.equal(planned[1].referenceAt, "2026-10-25T08:00:00.000Z");
+  assert.notEqual(planned[0].occurrenceKey, planned[1].occurrenceKey);
+  assert.equal(planReminderOccurrences(current, settings({ overdueRepeatHours: 12 }), "2026-10-25T19:59:59Z").length, 1);
+  assert.equal(planReminderOccurrences(current, settings({ overdueRemindersEnabled: false, overdueRepeatHours: 12 }), now).length, 0);
 });
 
-test("message contains only the provided name, relevant date/time and need, with no narrative or phones", () => {
+test("messages request a call and follow-up recording without including private narrative or phones", () => {
   const occurrence = planReminderOccurrences(view({ contacts: [contact({ notes: "SECRET-NARRATIVE" })] }), settings(), now)[0];
   const text = reminderMessage("שם\nחניכה", occurrence);
   assert.match(text, /שם חניכה/);
   assert.match(text, /תזכורת לקשר/);
+  assert.match(text, /להתקשר לחניכה/);
+  assert.match(text, /בשלומה/);
+  assert.match(text, /למלא באתר את פרטי המעקב והחניכה/);
   assert.doesNotMatch(text, /SECRET|050|\n/);
-  assert.ok(text.length < 300);
+  assert.ok(text.length < 500);
   assert.match(reminderMessage("שם", { kind: "seven_day_overdue", referenceAt: now }), /נדרש קשר/);
 });

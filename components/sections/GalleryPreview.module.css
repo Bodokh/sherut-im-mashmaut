@@ -1,0 +1,5 @@
+.heading { display: flex; align-items: end; justify-content: space-between; gap: 2rem; margin-block-end: 2.5rem; }
+.heading h2 { color: #173547; font-size: clamp(2rem, 4vw, 3.5rem); }
+.heading p { margin-block-start: 1rem; color: #526b7a; line-height: 1.8; }
+.heading > a { flex: none; }
+@media (max-width: 639px) { .heading { flex-direction: column; align-items: start; gap: 1.25rem; } }

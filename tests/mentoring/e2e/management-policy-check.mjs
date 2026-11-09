@@ -106,7 +106,7 @@ try {
     await persist(); await route.continue();
   });
   const min = { offlineLeaseHours: 1, reminderAudience: "responsible_team", appointmentReminderMinutesBefore: 0, overdueRemindersEnabled: false, overdueRepeatHours: 1 };
-  const max = { offlineLeaseHours: 24, reminderAudience: "all_staff", appointmentReminderMinutesBefore: 1440, overdueRemindersEnabled: true, overdueRepeatHours: 168 };
+  const max = { offlineLeaseHours: 24, reminderAudience: "all_staff", appointmentReminderMinutesBefore: 4320, overdueRemindersEnabled: true, overdueRepeatHours: 168 };
   const noRepeat = { ...max, overdueRepeatHours: null };
   let version = initialVersion;
   for (const [phase, value] of [["minimum", min], ["maximum", max], ["optional-repeat-blank", noRepeat]]) version = await savePolicy(value, phase, version);

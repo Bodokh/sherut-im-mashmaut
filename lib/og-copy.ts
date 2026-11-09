@@ -38,6 +38,10 @@ export const ogCopy: Record<Locale, Record<SiteRouteKey, CoverCopy>> = {
       title: ["סיפורים מהשטח.", "השראה לדרך."],
       subtitle: ["הרצאות, שיחות ורגעים שכדאי לראות"],
     },
+    gallery: {
+      title: ["רגעים מהעשייה", "שלנו"],
+      subtitle: ["תמונות מהרצאות, מפגשים ופעילויות"],
+    },
     faq: {
       title: ["שאלות טובות.", "תשובות ברורות."],
       subtitle: ["כל מה שרציתם לדעת על שירות עם משמעות"],
@@ -87,6 +91,10 @@ export const ogCopy: Record<Locale, Record<SiteRouteKey, CoverCopy>> = {
     videos: {
       title: ["Real stories.", "Lasting inspiration."],
       subtitle: ["Lectures, conversations and stories to watch."],
+    },
+    gallery: {
+      title: ["Moments from", "our work."],
+      subtitle: ["Photos from lectures, gatherings and activities."],
     },
     faq: {
       title: ["Good questions.", "Clear answers."],

@@ -93,7 +93,7 @@ export function settingsInputIssues(values: {
   const issues: FormIssues = {};
   const integer = (value: string, minimum: number, maximum: number) => /^\d+$/.test(value.trim()) && Number.isInteger(Number(value)) && Number(value) >= minimum && Number(value) <= maximum;
   if (!integer(values.offlineLeaseHours, 1, 24)) issues.offlineLeaseHours = "יש להזין מספר שלם בין 1 ל־24 שעות.";
-  if (!integer(values.appointmentReminderMinutesBefore, 0, 1440)) issues.appointmentReminderMinutesBefore = "יש להזין מספר שלם בין 0 ל־1,440 דקות. להזמנה במועד עצמו יש להזין 0.";
+  if (!integer(values.appointmentReminderMinutesBefore, 0, 4320)) issues.appointmentReminderMinutesBefore = "יש להזין מספר שלם בין 0 ל־4,320 דקות. לתזכורת במועד עצמו בלבד יש להזין 0.";
   if (values.overdueRepeatHours.trim() && !integer(values.overdueRepeatHours, 1, 168)) issues.overdueRepeatHours = "יש להשאיר ריק או להזין מספר שלם בין 1 ל־168 שעות.";
   if (!["responsible_team", "all_staff"].includes(values.reminderAudience)) issues.reminderAudience = "יש לבחור את קהל התזכורות מהרשימה.";
   if (!values.reason.trim()) issues.reason = "יש לכתוב סיבה לשינוי המדיניות.";

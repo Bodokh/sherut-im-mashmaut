@@ -553,6 +553,20 @@ test("a CEO completed contact protects that report while the mentor can advance 
   assert.deepEqual(continued.protections, accepted.protections);
 });
 
+test("preparation calls retain the existing future appointment and history in pending and accepted projections", () => {
+  for (const accepted of [false, true]) {
+    const snapshot = fixture();
+    const before = snapshot.participants[0];
+    const command = participantCommand("record_contact", { expectedAppointmentVersion: 1, method: "phone", outcome: "completed",
+      occurredAt: "2026-10-26T09:00:00Z", nextAppointmentAt: "2026-10-28T11:00:00+02:00", notes: "שיחת התעניינות לפני המפגש" });
+    const after = apply(snapshot, command, accepted).participants[0];
+    assert.equal(after.participant.version, before.participant.version + 1);
+    assert.equal(after.contacts.length, before.contacts.length + 1);
+    assert.deepEqual(after.nextAppointment, before.nextAppointment);
+    assert.deepEqual(after.appointmentHistory, before.appointmentHistory);
+  }
+});
+
 test("automatic participant protections preserve an existing active whole lock", () => {
   const snapshot = fixture();
   const protection = { organizationId: "org", resourceId: "participant", protectedByStaffId: "prior-ceo", protectedRevision: 1, active: true, fieldPaths: null };

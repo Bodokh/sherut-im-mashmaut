@@ -4,6 +4,10 @@
     {
       "path": "/api/internal/mentoring/staff-onboarding",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/internal/mentoring/reminders",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

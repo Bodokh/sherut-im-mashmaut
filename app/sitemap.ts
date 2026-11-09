@@ -5,13 +5,14 @@ import { absoluteUrl, siteRouteKeys, type SiteRouteKey } from "@/lib/routes";
 // Update a route only when its user-visible primary content changes. These
 // dates intentionally do not use build time, which would overstate freshness.
 const lastModifiedByRoute: Record<SiteRouteKey, string> = {
-  home: "2026-09-22",
+  home: "2026-11-09",
   about: "2026-09-22",
   lectures: "2026-08-11",
   guidance: "2026-08-11",
   team: "2026-08-11",
   getInvolved: "2026-08-11",
   videos: "2026-09-24",
+  gallery: "2026-11-09",
   faq: "2026-08-11",
   contact: "2026-09-22",
   terms: "2026-10-27",

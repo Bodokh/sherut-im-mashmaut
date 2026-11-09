@@ -11,6 +11,7 @@ export const siteRoutes = {
   team: { slug: "team" },
   getInvolved: { slug: "get-involved" },
   videos: { slug: "videos" },
+  gallery: { slug: "gallery" },
   faq: { slug: "faq" },
   contact: { slug: "contact" },
   terms: { slug: "terms" },

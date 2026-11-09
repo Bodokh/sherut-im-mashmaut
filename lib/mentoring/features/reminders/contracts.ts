@@ -35,7 +35,7 @@ export interface ReminderReadiness {
   readonly smsCredentialsConfigured: boolean;
   readonly smsSendingEnabled: boolean;
   readonly hostedSchedulerConfigured: boolean;
-  readonly evaluationMode: "manual_and_cli";
+  readonly evaluationMode: "manual_and_cli" | "hosted_and_manual";
   readonly blockedReasons: readonly ("missing_sms_provider" | "missing_sms_credentials" | "sending_disabled" | "hosted_scheduler_not_configured")[];
   readonly audience: "responsible_team" | "all_staff";
   readonly appointmentReminderMinutesBefore: number;

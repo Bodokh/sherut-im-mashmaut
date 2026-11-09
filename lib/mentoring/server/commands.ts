@@ -127,16 +127,16 @@ async function recordContact(client: PoolClient, actor: StaffProfile, command: E
   if (!await reserveResource(client, actor, entry.id, "contact")) return failure("conflict", "מזהה הפעולה כבר משויך לרשומה אחרת. יש לשלוח פעולה חדשה.");
   const inserted = await client.query("INSERT INTO mentoring.contacts (id,organization_id,participant_id,actor_id,method,outcome,occurred_at,received_at,notes,revision) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,1) ON CONFLICT (id) DO NOTHING RETURNING id", [entry.id, actor.organizationId, entry.participantId, actor.id, entry.method, entry.outcome, entry.occurredAt, now, entry.notes]);
   if (inserted.rowCount !== 1) return failure("conflict", "מזהה הדיווח כבר קיים. יש לשלוח פעולה חדשה.");
-  if (next) {
+  const appointment = transition.state.nextAppointment;
+  if (appointment && appointment.version !== view.nextAppointment?.version) {
     await recordAppointmentHistory(client, actor.organizationId, view.participant.id, actor.id, now, "prior_state");
-    if (view.nextAppointment) await client.query("UPDATE mentoring.appointments SET scheduled_at = $3, mentor_id = $4, source_contact_id = $5, requires_review = false, version = version + 1 WHERE organization_id = $1 AND id = $2 AND is_current = true", [actor.organizationId, next.id, next.scheduledAt, next.mentorId, entry.id]);
-    else await client.query("INSERT INTO mentoring.appointments (id,organization_id,participant_id,mentor_id,scheduled_at,version,is_current,created_at,source_contact_id,requires_review) VALUES ($1,$2,$3,$4,$5,$6,true,clock_timestamp(),$7,false)", [next.id, actor.organizationId, next.participantId, next.mentorId, next.scheduledAt, next.version, entry.id]);
+    if (view.nextAppointment) await client.query("UPDATE mentoring.appointments SET scheduled_at = $3, mentor_id = $4, source_contact_id = $5, requires_review = false, version = version + 1 WHERE organization_id = $1 AND id = $2 AND is_current = true", [actor.organizationId, appointment.id, appointment.scheduledAt, appointment.mentorId, entry.id]);
+    else await client.query("INSERT INTO mentoring.appointments (id,organization_id,participant_id,mentor_id,scheduled_at,version,is_current,created_at,source_contact_id,requires_review) VALUES ($1,$2,$3,$4,$5,$6,true,clock_timestamp(),$7,false)", [appointment.id, actor.organizationId, appointment.participantId, appointment.mentorId, appointment.scheduledAt, appointment.version, entry.id]);
     await recordAppointmentHistory(client, actor.organizationId, view.participant.id, actor.id, now, "contact_recorded");
     await cancelReminders(client, actor.organizationId, view.participant.id);
   }
   await client.query("UPDATE mentoring.participants SET last_ceo_version = CASE WHEN $5::boolean THEN version + 1 ELSE last_ceo_version END, version = version + 1, manual_color = CASE WHEN $3::text IS NULL THEN manual_color ELSE $3 END, manual_color_at = CASE WHEN $3::text IS NULL THEN manual_color_at ELSE $4::timestamptz END, updated_at = clock_timestamp() WHERE organization_id = $1 AND id = $2", [actor.organizationId, view.participant.id, changedColor ?? null, now, actor.role === "ceo"]);
-  // Each completed contact starts a new cycle. Its original appointment is
-  // retained in immutable history; explicit schedule locks are checked above.
+  // A preparation call can retain the existing future appointment and reminder identities.
   await protect(client, actor, entry.id, 1);
   if (changedColor !== undefined) {
     await protectParticipantField(client, actor, view.participant.id, view.participant.version + 1, "manualColor");

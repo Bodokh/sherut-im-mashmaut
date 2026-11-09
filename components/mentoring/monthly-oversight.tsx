@@ -1208,7 +1208,7 @@ function SettingsEditor({
                   aria-describedby={issues.appointmentReminderMinutesBefore ? "settings-reminder-minutes-error" : undefined}
                   type="number"
                   min={0}
-                  max={1440}
+                  max={4320}
                   step={1}
                   required
                   value={draft.value.appointmentReminderMinutesBefore}
@@ -1223,7 +1223,8 @@ function SettingsEditor({
                 />
                 {issues.appointmentReminderMinutesBefore && <FieldError id="settings-reminder-minutes-error">{issues.appointmentReminderMinutesBefore}</FieldError>}
                 <FieldDescription>
-                  0 שולח במועד שנקבע. אפשר לבחור עד 1,440 דקות מראש.
+                  4,320 דקות הן שלושה ימים מראש. תזכורת נוספת נשלחת במועד שנקבע.
+                  0 שולח במועד שנקבע בלבד.
                 </FieldDescription>
               </Field>
               <Field

@@ -117,6 +117,56 @@ test("contact lifecycle uses real PostgreSQL transactions and revision-specific 
     accept(await run(ceo, { type: "set_ceo_protection", operationId: randomUUID(), participantId: data.participantId, expectedVersion: current.view.participant.version, resourceId: data.participantId, expectedProtectionVersion: protection.version, active: true, fieldPaths: ["lifecycle"], reason: "Allow historical report maintenance while keeping lifecycle protected" }));
   }
 
+  await t.test("recording an advance call retains its accepted reminder and one scheduled-day reminder", async () => {
+    const { rebuildParticipantReminders } = await import("../../../lib/mentoring/features/reminders/server.ts");
+    const { claimReminder, recordReminderResult } = await import("../../../lib/mentoring/features/reminders/dispatcher.ts");
+    const settings = (await database.query("SELECT * FROM mentoring.organization_settings WHERE organization_id=$1", [organizationId])).rows[0];
+    try {
+      await database.query("UPDATE mentoring.organization_settings SET appointment_reminder_minutes_before=4320,overdue_reminders_enabled=false WHERE organization_id=$1", [organizationId]);
+      await database.query("UPDATE mentoring.memberships SET phone='0501234567' WHERE id=$1", [mentor.id]);
+      const data = await fixture();
+      const before = await state(data.participantId);
+      const actor = await withTransaction((client) => requireIdentity(client, ceo.authUserId, ceo.email));
+      const now = new Date().toISOString();
+      const transport = { provider: "test-only", credentialsConfigured: true, sendingEnabled: true, send() { assert.fail("This proof must not send SMS"); } };
+      const rebuild = () => withTransaction((client) => rebuildParticipantReminders(client, organizationId, data.participantId, ceo.id, null, now, transport));
+      const jobs = async () => (await database.query("SELECT * FROM mentoring.reminder_jobs WHERE organization_id=$1 AND participant_id=$2 AND recipient_staff_id=$3 AND kind='appointment' ORDER BY scheduled_at", [organizationId, data.participantId, mentor.id])).rows;
+      await rebuild();
+      const [advance, sameDay] = await jobs();
+      const claim = await withTransaction((client) => claimReminder(client, actor, advance.id, now, transport));
+      assert.ok(claim);
+      await withTransaction((client) => recordReminderResult(client, claim, { state: "provider_accepted", providerReference: "preparation-call-accepted" }, now));
+      const command = { type: "record_contact", operationId: randomUUID(), participantId: data.participantId,
+        expectedVersion: before.view.participant.version, expectedAppointmentVersion: before.view.nextAppointment.version,
+        method: "phone", outcome: "completed", occurredAt: new Date(Date.now() - 60_000).toISOString(), nextAppointmentAt: data.scheduledAt, notes: "Preparation call completed" };
+      resources.push(command.operationId);
+      accept(await run(mentor, command));
+      const after = await state(data.participantId);
+      assert.deepEqual(after.view.nextAppointment, before.view.nextAppointment);
+      assert.deepEqual(after.history.appointmentHistory, before.history.appointmentHistory);
+      assert.equal(after.view.participant.version, before.view.participant.version + 1);
+      assert.ok(after.view.contacts.some((entry) => entry.id === command.operationId));
+      await rebuild();
+      const retained = await jobs();
+      assert.equal(retained.length, 2);
+      assert.equal(retained.find((job) => job.id === advance.id).state, "provider_accepted");
+      assert.equal(retained.find((job) => job.id === sameDay.id).state, "pending");
+      assert.equal(await withTransaction((client) => claimReminder(client, actor, advance.id, now, transport)), null);
+      const dayClaim = await withTransaction((client) => claimReminder(client, actor, sameDay.id, data.scheduledAt, transport));
+      assert.ok(dayClaim);
+      await withTransaction((client) => recordReminderResult(client, dayClaim, { state: "provider_accepted", providerReference: "same-day-after-preparation" }, data.scheduledAt));
+      const moved = { ...command, operationId: randomUUID(), expectedVersion: after.view.participant.version,
+        occurredAt: new Date(Date.now() - 30_000).toISOString(), nextAppointmentAt: new Date(Date.parse(data.scheduledAt) + 86_400_000).toISOString() };
+      resources.push(moved.operationId);
+      accept(await run(mentor, moved));
+      assert.equal((await state(data.participantId)).view.nextAppointment.version, before.view.nextAppointment.version + 1);
+      await rebuild();
+      assert.equal((await jobs()).filter((job) => job.state === "pending").length, 2, "An actual schedule change starts a new reminder pair");
+    } finally {
+      await database.query("UPDATE mentoring.organization_settings SET appointment_reminder_minutes_before=$2,overdue_reminders_enabled=$3 WHERE organization_id=$1", [organizationId, settings.appointment_reminder_minutes_before, settings.overdue_reminders_enabled]);
+    }
+  });
+
   await t.test("a correction leaves approval on original content and preserves original author and receipt", async () => {
     const data = await fixture();
     accept(await run(coordinator, { type: "review_contact", operationId: randomUUID(), participantId: data.participantId, contactId: data.contactId, revision: 1, decision: "approved" }));

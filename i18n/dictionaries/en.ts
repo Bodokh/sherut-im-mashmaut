@@ -51,6 +51,10 @@ export const en: Dictionary = {
       description:
         "Watch lectures, conversations and field stories from Service with Meaning: videos on values, identity and meaningful service for young women in Israel.",
     },
+    gallery: {
+      title: "Photo Gallery of Lectures & Activities | Service with Meaning",
+      description: "Moments from the work of Service with Meaning: photos from lectures, conversations, gatherings and activities.",
+    },
     terms: {
       title: "Terms of Use | Service with Meaning",
       description: "Terms for using the Service with Meaning website, including permitted use, content rights, enquiries, donations, external services and responsibility.",
@@ -78,6 +82,7 @@ export const en: Dictionary = {
     team: "Our team",
     getInvolved: "Donate & partner",
     videos: "Videos",
+    gallery: "Gallery",
     faq: "Frequently asked questions",
     contact: "Contact",
     terms: "Terms of use",
@@ -121,10 +126,21 @@ export const en: Dictionary = {
     guidance: "Guidance",
     getInvolved: "Donate & Partner",
     videos: "Videos",
+    gallery: "Gallery",
     faq: "FAQ",
   },
 
   langName: "עברית",
+
+  gallery: {
+    title: "Moments from our work",
+    lead: "Lectures, conversations and gatherings, captured in photos.",
+    previewLead: "A look at our lectures, gatherings and activities.",
+    viewAll: "View the full gallery",
+    openPhoto: "Enlarge photo",
+    closePhoto: "Close photo",
+    hint: "Select a photo to view it in full.",
+  },
 
   hero: {
     kicker: "Service with Meaning, a nonprofit",

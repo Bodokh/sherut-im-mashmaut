@@ -5,7 +5,7 @@ const origin = "https://www.imashmaut.co.il";
 const localValidation = ["localhost", "127.0.0.1", "[::1]"].includes(new URL(baseUrl).hostname);
 const socialOrigin = process.env.SEO_SOCIAL_ORIGIN ?? (localValidation ? origin : new URL(baseUrl).origin);
 const locales = ["he", "en"];
-const slugs = ["", "about", "lectures", "guidance", "team", "get-involved", "videos", "faq", "contact", "terms", "privacy", "accessibility"];
+const slugs = ["", "about", "lectures", "guidance", "team", "get-involved", "videos", "gallery", "faq", "contact", "terms", "privacy", "accessibility"];
 const routeBySlug = {
   "": "home",
   about: "about",
@@ -14,6 +14,7 @@ const routeBySlug = {
   team: "team",
   "get-involved": "getInvolved",
   videos: "videos",
+  gallery: "gallery",
   faq: "faq",
   contact: "contact",
   terms: "terms",

@@ -2,6 +2,8 @@
 
 Updated 27 October 2026. **Production first-time Google administrator login passed and the user confirmed it works.** Fix `b15cb77eca4cb9ea4e88a9942949d66b4fb48f5f` is pushed, production Ready; 450 tests pass. Testing stopped at the user's request.
 
+**9 November 2026:** the user authorized the latest production release and SMS enablement. The [current SMS rollout](sms-production-2026-11-09.md) records the new release separately from these October checkpoints; activation and delivery verification are still in progress.
+
 ## Scope
 
 - Existing linked `bodokhs-projects/sherut-im-mashmaut`: initial Preview followed by authorized `main` production deployment; preserve public website content.

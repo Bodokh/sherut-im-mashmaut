@@ -299,7 +299,10 @@ export function applyRecordedContact(state: MentoringSnapshot, submission: Recor
     if (submission.expectedAppointmentVersion !== (state.nextAppointment?.version ?? null)) return conflict("appointment_version_conflict");
     const latest = latestCompletedContact({ organizationId: state.participant.organizationId, participantId: state.participant.id, assignedAt: state.assignment.assignedAt, contacts: state.contacts, nextAppointment: state.nextAppointment }, instantMs(now));
     if (latest && occurred < instantMs(latest.occurredAt)) return conflict("stale_completed_contact");
-    nextAppointment = { ...next };
+    const current = state.nextAppointment;
+    const keepsFutureAppointment = current && current.id === next.id && current.mentorId === next.mentorId && !current.requiresReview &&
+      instantMs(current.scheduledAt) > instantMs(now) && instantMs(current.scheduledAt) === instantMs(next.scheduledAt);
+    nextAppointment = keepsFutureAppointment ? current : { ...next };
   }
   return { ok: true, warnings, state: { ...state, contacts: [...state.contacts, { ...entry }].sort((a, b) => instantMs(b.occurredAt) - instantMs(a.occurredAt)), nextAppointment, manualColor: submission.manualColor ?? state.manualColor } };
 }

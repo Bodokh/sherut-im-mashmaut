@@ -7,10 +7,10 @@ import { ORGANIZATION_ID, withTransaction } from "../../server/db";
 import { staffFromRow } from "../../server/repository";
 import { runDispatcher } from "./dispatcher";
 import { evaluateReminders, type ReminderTransaction } from "./server";
+import { hostedReminderSchedulerConfigured, REMINDER_ACTOR_ID_PATTERN } from "./configuration";
 
 const MAX_SCAN_PAGES = 5;
 const SCAN_BUDGET_MS = 20_000;
-const ACTOR_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 type DeliveryOutcome = "provider_accepted" | "delivered" | "failed" | "uncertain";
 const PRIVATE_HEADERS = {
   "Cache-Control": "private, no-store",
@@ -31,7 +31,7 @@ export interface ScheduledReminderResult {
   readonly considered: number;
   readonly claimed: number;
   readonly outcomes: Readonly<Record<DeliveryOutcome, number>>;
-  readonly hostedSchedulerConfigured: false;
+  readonly hostedSchedulerConfigured: boolean;
 }
 
 interface ScheduledDependencies {
@@ -47,7 +47,7 @@ function count(value: number): number {
   return value;
 }
 
-function publicResult(result: ScheduledReminderResult): ScheduledReminderResult {
+function publicResult(result: Omit<ScheduledReminderResult, "hostedSchedulerConfigured">): ScheduledReminderResult {
   if (!["completed", "delivery_blocked", "scan_incomplete"].includes(result.state)
     || typeof result.scanComplete !== "boolean" || typeof result.more !== "boolean"
     || typeof result.deliveryBlocked !== "boolean") throw new Error("Invalid scheduled result.");
@@ -64,8 +64,7 @@ function publicResult(result: ScheduledReminderResult): ScheduledReminderResult 
       failed: count(result.outcomes.failed ?? 0),
       uncertain: count(result.outcomes.uncertain ?? 0),
     },
-    // An implemented caller is not evidence of a configured hosted schedule.
-    hostedSchedulerConfigured: false,
+    hostedSchedulerConfigured: hostedReminderSchedulerConfigured(),
   };
 }
 
@@ -81,7 +80,7 @@ async function currentCeo(client: PoolClient, actorId: string, lock: boolean): P
 
 /** No synthetic system membership, selected tenant or user-session authority. */
 export async function runScheduledReminders(actorId: string, overrides: Partial<ScheduledDependencies> = {}): Promise<ScheduledReminderResult> {
-  if (!ACTOR_ID.test(actorId)) throw new Error("Scheduled actor unavailable.");
+  if (!REMINDER_ACTOR_ID_PATTERN.test(actorId)) throw new Error("Scheduled actor unavailable.");
   const configuredActorId = actorId.toLowerCase();
   const transaction = overrides.transaction ?? withTransaction;
   const evaluate = overrides.evaluate ?? evaluateReminders;
@@ -107,7 +106,7 @@ export async function runScheduledReminders(actorId: string, overrides: Partial<
   const partial = (): ScheduledReminderResult => publicResult({
     state: "scan_incomplete", scanned, planned, pages, scanComplete: false, more: true,
     deliveryBlocked: true, considered: 0, claimed: 0,
-    outcomes: { provider_accepted: 0, delivered: 0, failed: 0, uncertain: 0 }, hostedSchedulerConfigured: false,
+    outcomes: { provider_accepted: 0, delivered: 0, failed: 0, uncertain: 0 },
   });
   // The existing evaluator is a transactional page of at most 200 records.
   // Elapsed time is checked between pages; it cannot interrupt a page already
@@ -131,7 +130,7 @@ export async function runScheduledReminders(actorId: string, overrides: Partial<
           delivered: result.outcomes.delivered ?? 0,
           failed: result.outcomes.failed ?? 0,
           uncertain: result.outcomes.uncertain ?? 0,
-        }, hostedSchedulerConfigured: false,
+        },
       });
     }
     if (!page.nextCursor || cursors.has(page.nextCursor)) return partial();
@@ -166,7 +165,7 @@ export function createScheduledReminderHandler(options: ScheduledHandlerOptions)
       // cannot select a tenant, membership, cursor, recipient or dispatch size.
       if (new URL(request.url).search) return stateResponse("invalid_request", 400);
       const actorId = options.actorId();
-      if (!actorId || !ACTOR_ID.test(actorId)) return stateResponse("not_configured", 503);
+      if (!actorId || !REMINDER_ACTOR_ID_PATTERN.test(actorId)) return stateResponse("not_configured", 503);
       const result = publicResult(await (options.run ?? runScheduledReminders)(actorId));
       return Response.json(result, { status: result.state === "completed" ? 200 : 503, headers: PRIVATE_HEADERS });
     } catch {

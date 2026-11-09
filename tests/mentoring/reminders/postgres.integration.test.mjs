@@ -54,7 +54,7 @@ test("durable reminder claims honor current contact/account scope and retain tru
     await database.query("INSERT INTO mentoring.resource_ids(id,organization_id,kind) VALUES($1,$2,'participant')", [id, organizationId]);
     await database.query("INSERT INTO mentoring.participants(id,organization_id,display_name,phone,profile_notes,created_by) VALUES($1,$2,'Reminder fixture','0529999999','PRIVATE narrative must not enter reminders',$3)", [id, organizationId, ceo.id]);
     await database.query("INSERT INTO mentoring.assignments(id,organization_id,participant_id,mentor_id,coordinator_id,assigned_at,followup_anchor_at) VALUES($1,$2,$3,$4,$5,$6,$6)", [randomUUID(), organizationId, id, mentorId, coordinatorId, new Date(Date.parse(now) - 10 * 86_400_000).toISOString()]);
-    await database.query("INSERT INTO mentoring.appointments(id,organization_id,participant_id,mentor_id,scheduled_at) VALUES($1,$2,$3,$4,$5)", [randomUUID(), organizationId, id, mentorId, new Date(Date.parse(now) - 2 * 86_400_000).toISOString()]);
+    await database.query("INSERT INTO mentoring.appointments(id,organization_id,participant_id,mentor_id,scheduled_at) VALUES($1,$2,$3,$4,$5)", [randomUUID(), organizationId, id, mentorId, tomorrow]);
     await transaction((client) => rebuildParticipantReminders(client, organizationId, id, ceo.id, null, now, accepted));
     return id;
   }

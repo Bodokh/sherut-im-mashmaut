@@ -9,7 +9,8 @@ test("settings use explicit provisional defaults and reject unsafe lease/timing 
   const command = { type: "update_organization_settings", operationId: randomUUID(), expectedVersion: 1, settings: { ...DEFAULT_ORGANIZATION_POLICY }, reason: "Policy decision" };
   const schema = oversightCommandSchemas[0];
   assert.equal(schema.safeParse(command).success, true);
-  for (const settings of [{ ...command.settings, offlineLeaseHours: 0 }, { ...command.settings, offlineLeaseHours: 25 }, { ...command.settings, offlineLeaseHours: 1.5 }, { ...command.settings, appointmentReminderMinutesBefore: 1441 }, { ...command.settings, overdueRepeatHours: 0 }, { ...command.settings, overdueRepeatHours: 169 }, { ...command.settings, reminderAudience: "participants" }, { ...command.settings, providerSecret: "not-accepted" }]) assert.equal(schema.safeParse({ ...command, settings }).success, false);
+  assert.equal(schema.safeParse({ ...command, settings: { ...command.settings, appointmentReminderMinutesBefore: 4320 } }).success, true);
+  for (const settings of [{ ...command.settings, offlineLeaseHours: 0 }, { ...command.settings, offlineLeaseHours: 25 }, { ...command.settings, offlineLeaseHours: 1.5 }, { ...command.settings, appointmentReminderMinutesBefore: 4321 }, { ...command.settings, overdueRepeatHours: 0 }, { ...command.settings, overdueRepeatHours: 169 }, { ...command.settings, reminderAudience: "participants" }, { ...command.settings, providerSecret: "not-accepted" }]) assert.equal(schema.safeParse({ ...command, settings }).success, false);
   assert.equal(schema.safeParse({ ...command, reason: " " }).success, false);
   assert.equal(defaultOrganizationSettings("org", "2026-10-01T00:00:00Z").updatedBy, null);
 });

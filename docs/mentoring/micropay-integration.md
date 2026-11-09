@@ -2,6 +2,8 @@
 
 Updated 27 October 2026. The user selected **Micropay for staff SMS**, with WhatsApp planned for later. The adapter and registry are implemented and independently reviewed. A dedicated token has SMS permission enabled and the other five capabilities disabled; it is stored privately. Existing-account Preview configuration is present; final deployment/authentication acceptance remains in progress. Client-owned production handoff remains separate.
 
+**9 November 2026:** production activation is now explicitly authorized. The [current SMS rollout](sms-production-2026-11-09.md) records migration, policy, scheduler and provider evidence as each step is verified. The provider results below remain their original controlled-send evidence.
+
 ## Confirmed evidence
 
 - The real read-only balance API returned HTTP 200, `status:1`, `message:"OK"`, `action:"credit"`, with available credit.

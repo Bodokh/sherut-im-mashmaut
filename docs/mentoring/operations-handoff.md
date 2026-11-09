@@ -2,6 +2,8 @@
 
 Prepared 27 October 2026. **Production first-admin Google login is user-confirmed working; operational acceptance/restore rehearsal remain open.** See [deployment status](deployment-preview.md), [development commands](development.md#verification-commands) and the [decision register](decision-register.md).
 
+**9 November 2026:** the user authorized production SMS activation and the latest release. Migration `009` is applied; deployment, policy activation and delivery verification are being recorded in the [current SMS rollout](sms-production-2026-11-09.md). The dated production-pause statements below describe the earlier checkpoint.
+
 ## Ownership and configuration
 
 Final production Vercel/Clerk/Neon accounts must be separate and client-owned, including billing/admin control. Distinct production resources/configuration now exist; Development/Preview are preserved and final ownership/handoff is not accepted. Record build/target/migrations, administrators, restore evidence, exceptions and support terms.
@@ -33,7 +35,7 @@ Production live-key DNS/development-key proxy and Google identity signup now wor
 
 Independently verify account owner, environment/project/branch/database and direct endpoint using approved provider records. Record non-secret target IDs and change/backup approval. The [runner](../../scripts/mentoring/migrate.mjs) has **no dry-run, production prohibition or target-identity check**.
 
-Apply `001_initial.sql` through `008_staff_onboarding_resend.sql` in order. Apply `007` and `008` before deploying the staff email feature. The [staff email rollout instructions](development.md#staff-welcome-email-rollout) cover sending configuration and the controlled delivery check.
+Apply `001_initial.sql` through `009_appointment_reminder_timing.sql` in order. Apply `007` and `008` before deploying the staff email feature. The [staff email rollout instructions](development.md#staff-welcome-email-rollout) cover sending configuration and the controlled delivery check. Migration `009` enables the dual contact reminders described below.
 
 Applied SHA-256 history is in `mentoring.schema_migrations`; missing/changed applied files, duplicate versions and older pending versions fail. All pending SQL/registry inserts use one transaction/advisory lock. Failure rolls back that pending batch. Never edit applied SQL/checksums or delete records to force success.
 
@@ -66,6 +68,14 @@ No backup/restore command or down migrations exists in the repo. The named opera
 A failed pending transaction rolls back; a committed migration does not. With no down scripts, use rehearsed restore or reviewed forward migration. Older deployment rollback requires schema compatibility. Preserve history/receipts/claim evidence; logical delete is not backup/hard purge. Never blindly resend uncertain SMS or drain stale offline intent after restore.
 
 ## Scheduler and launch gates
+
+### Three-day and scheduled-day contact reminders
+
+The source supports an advance reminder plus one reminder at the scheduled contact time. Both instruct staff to call the mentee, ask how she is, and record the follow-up and mentee details on the website. Recording a preparation call while retaining the same future appointment preserves its provenance, version and reminder identities; it does not rearm an accepted advance reminder. Actual schedule changes and resolution of an appointment review warning still create a new appointment version. Recipients remain the assigned mentor, assigned coordinator and active unmuted CEOs. The existing seven-day-overdue reminders are separate.
+
+Migration `009` widens the allowed advance setting to `4,320` minutes and relabels existing early reminder delivery identities while preserving their job IDs, states, attempts and provider references. Keep dispatch and provider sending paused through migration, deployment and reminder rebuilding: an older app must not recreate an early reminder under its previous identity. Retain migration `005` unchanged. No saved organization setting or provider/scheduler configuration is changed by `009`.
+
+After deploying the matching source and applying `009` to a verified target, an authorized CEO must use the audited organization settings form to set the advance reminder to **4,320 minutes**. Saving settings rebuilds affected reminder jobs. The retained default and existing `0` setting mean **scheduled-day only** until this policy update is accepted; `0` never creates duplicate scheduled-day jobs. Verify the reminder center shows the advance setting and both planned occurrences before enabling delivery through the existing operational controls. A contact scheduled less than three days ahead has an already-due advance reminder, sent on the next enabled dispatch, followed by its scheduled-time reminder. Advance timing uses elapsed minutes, so `4,320` means 72 hours.
 
 Reviewed `GET /api/internal/mentoring/reminders` checks exact Bearer before DB, rejects HEAD405 and uses a current configured CEO/fixed scope with no query override. Cooperative scan: 5×200 records/20s; incomplete503. Dispatcher: at most five/10s. `scanComplete` is evaluation, not queue drain. Exact existing claim outcomes remain recordable after revocation; fresh work stays guarded.
 

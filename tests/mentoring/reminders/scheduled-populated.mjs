@@ -109,7 +109,7 @@ async function seed(transaction, fixture, original) {
         `${fixture.marker} PRIVATE synthetic narrative`, id === fixture.pausedId ? "paused" : "active", QA_ACTOR]);
     }
     const assignedAt = new Date(Date.now() - 10 * 86_400_000).toISOString();
-    const appointmentAt = new Date(Date.now() - 2 * 86_400_000).toISOString();
+    const appointmentAt = new Date(Date.now() + 86_400_000).toISOString();
     for (const [index, participantId] of [fixture.activeId, fixture.pausedId].entries()) {
       await client.query(`INSERT INTO mentoring.assignments(id,organization_id,participant_id,mentor_id,assigned_at,followup_anchor_at)
         VALUES($1,$2,$3,$4,$5,$5)`, [fixture.assignmentIds[index], ORGANIZATION, participantId, fixture.mentorId, assignedAt]);

@@ -111,6 +111,26 @@ test("completed contact replaces one appointment and preserves prior history wit
   assert.equal(extra.state.manualColor, "orange");
 });
 
+test("a completed preparation call retains an unchanged future appointment and its provenance", () => {
+  const current = { ...appointment, scheduledAt: "2026-10-28T09:00:00.000Z", sourceContactId: "original-scheduling-contact", requiresReview: false };
+  const original = snapshot({ nextAppointment: current });
+  const entry = contact({ id: "preparation-call", occurredAt: "2026-10-26T09:00:00Z" });
+  const proposed = { ...current, scheduledAt: "2026-10-28T11:00:00+02:00", version: current.version + 1, sourceContactId: entry.id };
+  const result = applyRecordedContact(original, { entry, nextAppointment: proposed, expectedAppointmentVersion: current.version }, "2026-10-26T10:00:00Z");
+  assert.equal(result.ok, true);
+  assert.equal(result.state.nextAppointment, current);
+  assert.equal(result.state.contacts.length, original.contacts.length + 1);
+  for (const changed of [
+    { ...proposed, scheduledAt: "2026-10-29T09:00:00Z" },
+    proposed,
+  ]) {
+    const state = changed === proposed ? { ...original, nextAppointment: { ...current, requiresReview: true } } : original;
+    const transition = applyRecordedContact(state, { entry, nextAppointment: changed, expectedAppointmentVersion: current.version }, "2026-10-26T10:00:00Z");
+    assert.equal(transition.ok, true);
+    assert.equal(transition.state.nextAppointment.version, current.version + 1);
+  }
+});
+
 test("attempt appends history but does not replace appointment or successful clock", () => {
   const original = snapshot();
   const result = applyRecordedContact(original, { entry: contact({ id: "attempt-1", outcome: "no_answer", occurredAt: "2026-10-26T09:00:00Z" }), nextAppointment: { ...appointment, scheduledAt: "2026-11-02T09:00:00Z" }, expectedAppointmentVersion: appointment.version }, "2026-10-26T10:00:00Z");
