@@ -139,6 +139,9 @@ export const he = {
     viewAll: "לגלריה המלאה",
     openPhoto: "הגדלת התמונה",
     closePhoto: "סגירת התמונה",
+    previousPhoto: "התמונה הקודמת",
+    nextPhoto: "התמונה הבאה",
+    photoLabel: "תמונה",
     hint: "בחרו תמונה כדי לצפות בה בגודל מלא.",
   },
 

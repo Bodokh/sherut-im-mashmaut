@@ -1,2 +1,20 @@
-.page { padding-block-start: var(--header-h); }
-.hint { margin-block-end: 1.5rem; color: #526b7a; line-height: 1.8; }
+.page { padding-block-start: var(--header-h); background: #f7f9f9; }
+.intro { background: #102d40; color: #fff; }
+.introInner { padding-block: 1.75rem 3.75rem; }
+.introInner nav { color: #c6d8e0; margin-block-end: 2.75rem; }
+.introInner nav a { color: inherit; }
+.introInner nav [aria-current] { color: #fff; }
+.introContent { display: grid; grid-template-columns: 1.2fr .8fr; gap: 3rem; align-items: end; }
+.introContent h1 { max-width: 15ch; color: #fff; font-size: clamp(2.75rem, 5.5vw, 5rem); font-weight: 400; line-height: 1.12; }
+.introContent > p { max-width: 34ch; padding-block-end: .25rem; color: #d2e0e6; font-size: clamp(1rem, 1.5vw, 1.2rem); line-height: 1.8; }
+.collection { padding-block: clamp(2rem, 4vw, 3.5rem) clamp(3rem, 5vw, 5rem); }
+.hint { margin-block-end: 1.5rem; color: #526b7a; font-size: .9rem; line-height: 1.8; }
+.related { padding-block: 0 clamp(3rem, 5vw, 5rem); }
+@media (max-width: 760px) {
+  .introInner { padding-block: 1.25rem 2.5rem; }
+  .introInner nav { margin-block-end: 2rem; }
+  .introContent { grid-template-columns: 1fr; gap: 1.25rem; }
+  .introContent h1 { max-width: 14ch; font-size: clamp(2.5rem, 9vw, 3.5rem); }
+  .introContent > p { max-width: 38ch; padding: 0; }
+  .hint { margin-block-end: 1rem; font-size: .85rem; }
+}

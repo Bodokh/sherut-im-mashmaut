@@ -12,12 +12,12 @@ const previewPhotos = [0, 2, 3, 4, 5, 6].map((index) => galleryPhotos[index]);
 export function GalleryPreview({ locale, dict }: { locale: Locale; dict: Dictionary }) {
   const t = dict.gallery;
   return (
-    <Section id="gallery" tone="surface">
+    <Section id="gallery" tone="surface" className={styles.section}>
       <div className={styles.heading}>
         <div><h2>{t.title}</h2><p>{t.previewLead}</p></div>
         <Button href={localizedPath(locale, "gallery")} variant="outline" arrow>{t.viewAll}</Button>
       </div>
-      <PhotoGrid photos={previewPhotos} locale={locale} openLabel={t.openPhoto} closeLabel={t.closePhoto} />
+      <PhotoGrid photos={previewPhotos} locale={locale} labels={t} />
     </Section>
   );
 }

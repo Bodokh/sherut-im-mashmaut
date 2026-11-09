@@ -139,6 +139,9 @@ export const en: Dictionary = {
     viewAll: "View the full gallery",
     openPhoto: "Enlarge photo",
     closePhoto: "Close photo",
+    previousPhoto: "Previous photo",
+    nextPhoto: "Next photo",
+    photoLabel: "Photo",
     hint: "Select a photo to view it in full.",
   },
 

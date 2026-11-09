@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PhotoGrid } from "@/components/gallery/PhotoGrid";
-import { PublicPageHero } from "@/components/pages/PublicPageHero";
 import { JsonLd } from "@/components/seo/JsonLd";
+import { Breadcrumbs } from "@/components/site/Breadcrumbs";
 import { Footer } from "@/components/site/Footer";
 import { Header, buildHeaderCopy } from "@/components/site/Header";
 import { RelatedLinks } from "@/components/site/RelatedLinks";
@@ -30,12 +30,20 @@ export default async function GalleryPage({ params }: { params: Promise<{ locale
       <Header locale={locale} currentRoute="gallery" copy={buildHeaderCopy(dict)} />
       <JsonLd data={standardPageGraph(locale, "gallery", dict)} />
       <main id="main" className={styles.page}>
-        <PublicPageHero locale={locale} route="gallery" dict={dict} title={t.title} lead={t.lead} compact />
-        <Section>
+        <section className={styles.intro} data-theme="dark">
+          <div className={`shell ${styles.introInner}`}>
+            <Breadcrumbs locale={locale} route="gallery" dict={dict} />
+            <div className={styles.introContent}>
+              <h1>{t.title}</h1>
+              <p>{t.lead}</p>
+            </div>
+          </div>
+        </section>
+        <Section className={styles.collection}>
           <p className={styles.hint}>{t.hint}</p>
-          <PhotoGrid photos={galleryPhotos} locale={locale} openLabel={t.openPhoto} closeLabel={t.closePhoto} />
+          <PhotoGrid photos={galleryPhotos} locale={locale} labels={t} />
         </Section>
-        <Section className="py-14 sm:py-16">
+        <Section className={styles.related}>
           <RelatedLinks locale={locale} dict={dict} routes={["lectures", "videos", "contact"]} />
         </Section>
       </main>
