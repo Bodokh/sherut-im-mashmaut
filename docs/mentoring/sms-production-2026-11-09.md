@@ -1,10 +1,10 @@
 # SMS production rollout — 9 November 2026
 
-**Status: migration applied; activation and delivery verification are in progress.** The user explicitly authorized pushing the latest version and enabling production SMS. Final deployment, policy and provider results will be recorded here when verified.
+**Status: production SMS is enabled and deployed.** The user explicitly authorized pushing the latest version and enabling production SMS. The scheduled production path ran and Micropay accepted two overdue reminders. Handset delivery is unconfirmed.
 
 ## Release scope
 
-- Integrate the gallery and dual contact reminders with `main` at `8c53651`, preserving the staff subdomain, staff invitations and existing onboarding cron.
+- The gallery and dual contact reminders are pushed to `main` as `db2f378768a9124208ab86b50d69affd94a8a5b8`, on top of `8c53651`, preserving the staff subdomain, staff invitations and existing onboarding cron.
 - Send an advance reminder three days before the scheduled contact and another at the scheduled time. Both ask staff to call the mentee and record the follow-up.
 - Preserve an unchanged future appointment when the preparation call is recorded, so its accepted advance reminder cannot be rearmed.
 - Expire advance notices after the scheduled instant and scheduled-day notices after their Israel calendar day. Existing seven-day-overdue reminders retain their policy.
@@ -26,9 +26,21 @@ Migration `009` expands the allowed advance interval to 4,320 minutes and relabe
 
 ## Activation sequence and evidence
 
-Keep dispatch disabled through the matching source deployment and reminder reconciliation. Set the advance interval to **4,320 minutes** through the existing validated, audited settings handler, preserving the other policy values. The administrative update must retain its operation receipt, settings history and explicit rollout attribution. The scheduler uses an existing active, identity-bound CEO membership.
+| Step | Verified result |
+| --- | --- |
+| Source checks | Full local quality command and production build passed. The expiry change passed 65 targeted tests and an independent 27-check policy review. |
+| Reminder reconciliation | Five past appointment jobs are cancelled as `superseded`. There were still zero attempts before live activation. Advance notices expire after the scheduled instant; scheduled-day notices remain valid until Israel midnight. |
+| Audited policy operation | `77058b22-2229-4b08-812a-027bc5b36258` was accepted through the existing settings handler, with its operation receipt, settings history and administrative-rollout audit. |
+| Saved policy | Version 3: advance interval **4,320 minutes**. `responsible_team`, overdue reminders enabled and the 60-hour repeat are unchanged. |
+| Production environment | `MENTORING_SMS_SENDING_ENABLED=true` was saved for Production only. `MENTORING_REMINDER_ACTOR_ID` identifies an existing active, identity-bound CEO. Micropay token, sender and shared `CRON_SECRET` are unchanged. |
+| Production deployment | [Feature deployment](https://sherut-im-mashmaut-6kkgjnbo7-bodokhs-projects.vercel.app), ID `dpl_8GxmtnP8E6UB75VSy4umpMyrb4VU`, is Ready and aliased to `www.imashmaut.co.il`. Its `codexReleaseSha` metadata matches `db2f378768a9124208ab86b50d69affd94a8a5b8`. The Git push had not queued a deployment, so the release used an explicit CLI production deployment. |
+| Registered schedules | Vercel reports cron enabled, with both `/api/internal/mentoring/staff-onboarding` and `/api/internal/mentoring/reminders` set to `*/5 * * * *` on the exact feature deployment host. No undeployed or modified cron definitions remained. |
+| Live routes | `/gallery` and `/en/gallery` returned 200 with eight photos each; a static gallery image and staff login returned 200. Anonymous workspace access remained 401. Unauthenticated reminder GET remained 401 and HEAD remained 405. SEO validation passed for all 26 localized pages. |
+| Scheduled execution | `vercel crons run /api/internal/mentoring/reminders` triggered at `2026-11-09T09:50:49.404Z`. Production claims followed at `09:51:04Z` and `09:51:14Z`. |
+| Provider outcome | Two overdue reminder attempts reached `provider_accepted`, each retaining a Micropay provider reference. At this checkpoint there were no `failed`, `uncertain` or `delivered` outcomes. |
+| Remaining queue at the checkpoint | The five expired appointment jobs remained cancelled. There were 21 pending overdue jobs, including future work, and 18 jobs blocked by staff phone validation. The existing five-message batch continues on subsequent five-minute runs; future jobs wait until due. |
 
-The release still needs the pushed commit, Ready production deployment, accepted policy operation, production sending flag, registered reminder cron, and authenticated scheduled-run result recorded. Separate provider acceptance from handset delivery; an enabled flag or configured cron alone does not establish either result.
+The live provider check exercised overdue reminders. Future three-day and scheduled-day deliveries were not due in this check; their timing and expiry have local regression coverage. Provider acceptance is separate from handset delivery. The earlier October controlled SMS and confirmed receipt retain their own evidence in the [Micropay contract](micropay-integration.md#confirmed-evidence).
 
 ## Pause and rollback
 
