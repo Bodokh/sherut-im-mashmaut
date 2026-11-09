@@ -5,6 +5,10 @@ import { serverFailure } from "@/lib/mentoring/server/db";
 import { accountBindingFailure, privateFailure, privateHeaders, readCommandBody, unauthenticated } from "@/lib/mentoring/server/http";
 import { dispatchStaffOnboardingEmails } from "@/lib/mentoring/server/staff-onboarding";
 import { staffOnboardingSender } from "@/lib/mentoring/server/staff-onboarding-email";
+import { runStaffSmsDispatcher } from "@/lib/mentoring/features/staff-messages/dispatcher";
+import { ORGANIZATION_ID } from "@/lib/mentoring/server/db";
+
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
   try {
@@ -27,6 +31,12 @@ export async function POST(request: Request) {
       const staffId = result.staffId;
       if (send) after(() => dispatchStaffOnboardingEmails(send, staffId).catch(() => {
         console.error("Staff onboarding email could not be processed after approval.");
+      }));
+    }
+    if (result.staffSmsBatchId && command && typeof command === "object" && "type" in command && command.type === "send_staff_sms" && !result.replayed) {
+      const batchId = result.staffSmsBatchId;
+      after(() => runStaffSmsDispatcher({ organizationId: ORGANIZATION_ID, batchId, limit: 5, timeoutMs: 10_000 }).catch(() => {
+        console.error("Staff SMS batch could not be processed after approval.");
       }));
     }
     return Response.json(result, { headers: privateHeaders });

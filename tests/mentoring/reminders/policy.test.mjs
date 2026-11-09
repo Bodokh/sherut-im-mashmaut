@@ -143,7 +143,7 @@ test("repeats are disabled by default and explicit repetition schedules only bas
   assert.equal(planReminderOccurrences(current, settings({ overdueRemindersEnabled: false, overdueRepeatHours: 12 }), now).length, 0);
 });
 
-test("messages request a call and follow-up recording without including private narrative or phones", () => {
+test("messages request a call and follow-up recording without including private narrative", () => {
   const occurrence = planReminderOccurrences(view({ contacts: [contact({ notes: "SECRET-NARRATIVE" })] }), settings(), now)[0];
   const text = reminderMessage("שם\nחניכה", occurrence);
   assert.match(text, /שם חניכה/);
@@ -154,4 +154,19 @@ test("messages request a call and follow-up recording without including private 
   assert.doesNotMatch(text, /SECRET|050|\n/);
   assert.ok(text.length < 500);
   assert.match(reminderMessage("שם", { kind: "seven_day_overdue", referenceAt: now }), /נדרש קשר/);
+});
+
+test("reminders include only a normalized supplied mentee phone for either kind", () => {
+  for (const kind of ["appointment", "seven_day_overdue"]) {
+    const occurrence = { kind, referenceAt: now };
+    for (const [input, normalized] of [["050-123 4567", "+972501234567"], ["02-5313333", "+97225313333"], ["+1 202-555-0123", "+12025550123"]]) {
+      const text = reminderMessage("שם", occurrence, input);
+      assert.ok(text.includes(`שם (טלפון: ${normalized})`));
+      assert.doesNotMatch(text, /[\r\n\t\u0000]/);
+    }
+    const withoutPhone = reminderMessage("שם", occurrence);
+    for (const input of [null, "", "invalid", "0501234567 ext 2", "0501234567\nInjected content", "\u00000501234567"]) {
+      assert.equal(reminderMessage("שם", occurrence, input), withoutPhone);
+    }
+  }
 });

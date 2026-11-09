@@ -31,6 +31,7 @@ const commands = {
   update_organization_settings: () => ({ operationId: id(), expectedVersion: 1, settings: { offlineLeaseHours: 24, reminderAudience: "responsible_team", appointmentReminderMinutesBefore: 0, overdueRemindersEnabled: true, overdueRepeatHours: null }, reason }),
   save_monthly_review: () => ({ operationId: id(), month: "2026-10", scopeStaffId: null, expectedVersion: null, summary: "סיכום", reviewed: true }),
   evaluate_reminders: () => ({ operationId: id(), afterParticipantId: null }),
+  send_staff_sms: () => ({ operationId: id(), message: "הודעה לצוות", recipients: [{ staffId: id(), expectedVersion: 1 }] }),
   set_sms_muted: () => ({ operationId: id(), muted: true }),
   resolve_conflict: () => ({ operationId: id(), conflictId: id(), decision: "keep_ceo" }),
 };

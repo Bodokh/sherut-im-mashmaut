@@ -1,5 +1,6 @@
 import type { ParticipantView, StaffProfile } from "../../contracts";
 import { computeFollowup, DEFAULT_CADENCE_POLICY, type ContactEntry } from "../../domain";
+import { normalizePhoneNumber } from "../../../phone";
 import type { OrganizationSettings } from "../oversight/contracts";
 
 const appointmentDayFormatter = new Intl.DateTimeFormat("en-CA", {
@@ -92,7 +93,7 @@ export function planReminderOccurrences(view: ParticipantView, settings: Organiz
   return occurrences;
 }
 
-/** Agreed Israeli staff-mobile formats only; participant phones are never read. */
+/** Staff recipient addresses only; a mentee phone must never become a destination. */
 export function normalizeStaffMobile(phone: string | null): string | null {
   if (phone == null || !/^[+\d\s().-]+$/.test(phone)) return null;
   const compact = phone.replace(/[\s().-]/g, "");
@@ -118,10 +119,12 @@ export function selectReminderRecipients(view: ParticipantView, staff: readonly 
 
 const dateFormatter = new Intl.DateTimeFormat("he-IL", { dateStyle: "short", timeStyle: "short", timeZone: DEFAULT_CADENCE_POLICY.timeZone });
 
-/** Only the participant name, relevant date/time, and standard contact instructions. */
-export function reminderMessage(participantName: string, occurrence: Pick<ReminderOccurrence, "kind" | "referenceAt">): string {
+/** The caller supplies a mentee phone only after verifying the recipient's view access. */
+export function reminderMessage(participantName: string, occurrence: Pick<ReminderOccurrence, "kind" | "referenceAt">, participantPhone: string | null = null): string {
   const name = participantName.replace(/[\r\n\t\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 200);
+  const phone = normalizePhoneNumber(participantPhone);
+  const contact = phone ? `${name} (טלפון: ${phone})` : name;
   const when = dateFormatter.format(new Date(occurrence.referenceAt));
-  return occurrence.kind === "appointment" ? `תזכורת לקשר עם ${name}: ${when}. יש להתקשר לחניכה ולהתעניין בשלומה. לאחר השיחה יש למלא באתר את פרטי המעקב והחניכה.` :
-    `נדרש קשר עם ${name}. מועד שבעת הימים: ${when}.`;
+  return occurrence.kind === "appointment" ? `תזכורת לקשר עם ${contact}: ${when}. יש להתקשר לחניכה ולהתעניין בשלומה. לאחר השיחה יש למלא באתר את פרטי המעקב והחניכה.` :
+    `נדרש קשר עם ${contact}. מועד שבעת הימים: ${when}.`;
 }

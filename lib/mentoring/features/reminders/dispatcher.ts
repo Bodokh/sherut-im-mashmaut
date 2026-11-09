@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import type { StaffProfile } from "../../contracts";
-import { iso, loadParticipant, staffFromRow } from "../../server/repository";
+import { canAccessParticipant } from "../../domain";
+import { iso, loadActorGrants, loadParticipant, staffFromRow } from "../../server/repository";
 import { getOrganizationSettings } from "../oversight/server";
 import { normalizeStaffMobile, planReminderOccurrences, reminderMessage, selectReminderRecipients } from "./policy";
 import { rebuildParticipantReminders, reminderTransaction, type ReminderTransaction } from "./server";
@@ -56,6 +57,8 @@ export async function claimReminder(client: PoolClient, actor: StaffProfile, job
   const members = await client.query("SELECT * FROM mentoring.memberships WHERE organization_id=$1 ORDER BY id FOR SHARE", [actor.organizationId]);
   const recipients = selectReminderRecipients(view, members.rows.map(staffFromRow), settings);
   const recipient = recipients.find((member) => member.id === job.rows[0].recipient_staff_id);
+  // Grant locks can wait too; acquire them before the authoritative claim clock.
+  const grants = recipient ? await loadActorGrants(client, recipient, participantId) : [];
   // A contact may have committed while the participant lock was waiting. Its
   // occurrence must not be excluded by the caller's earlier clock snapshot.
   // The supplied clock remains a lower bound for deterministic future tests.
@@ -72,6 +75,7 @@ export async function claimReminder(client: PoolClient, actor: StaffProfile, job
   const occurrence = planReminderOccurrences(view, settings, claimNow).find((item) => item.occurrenceKey === current.occurrence_key && item.generation === current.generation && Date.parse(item.scheduledAt) <= Date.parse(claimNow));
   const phone = normalizeStaffMobile(recipient.phone);
   if (!occurrence || !phone) return null;
+  const participantPhone = canAccessParticipant(recipient, view.participant, view.assignment, grants, claimNow) ? view.participant.phone : null;
   const claimToken = randomUUID();
   const attemptId = randomUUID();
   const leaseExpiresAt = new Date(Date.parse(claimNow) + 60_000).toISOString();
@@ -79,11 +83,11 @@ export async function claimReminder(client: PoolClient, actor: StaffProfile, job
   await client.query(`INSERT INTO mentoring.reminder_attempts(id,organization_id,job_id,participant_id,claim_token,attempt_number,state,claimed_at,lease_expires_at,provider,generation,scheduled_at,reference_at,recipient_version,claimed_by_staff_id)
     VALUES($1,$2,$3,$4,$5,$6,'dispatching',$7,$8,$9,$10,$11,$12,$13,$14)`, [attemptId, actor.organizationId, jobId, participantId, claimToken, Number(sequence.rows[0].number), claimNow, leaseExpiresAt, transport.provider, current.generation, current.scheduled_at, current.reference_at, recipient.version, currentActor.id]);
   await client.query("UPDATE mentoring.reminder_jobs SET state='dispatching',reason=NULL,claim_token=$3,lease_expires_at=$4,updated_at=$5 WHERE organization_id=$1 AND id=$2", [actor.organizationId, jobId, claimToken, leaseExpiresAt, claimNow]);
-  return { organizationId: actor.organizationId, jobId, attemptId, claimToken, recipient: phone, message: reminderMessage(view.participant.displayName, occurrence), provider: transport.provider, idempotencyKey: `mentoring-reminder:${jobId}` };
+  return { organizationId: actor.organizationId, jobId, attemptId, claimToken, recipient: phone, message: reminderMessage(view.participant.displayName, occurrence, participantPhone), provider: transport.provider, idempotencyKey: `mentoring-reminder:${jobId}` };
 }
 
 /** Bounded provider wait; even a transport ignoring AbortSignal cannot hang a run. */
-export async function invokeReminderTransport(transport: ReminderTransport, claim: ReminderClaim, timeoutMs = 15_000, reconcileReference?: string | null): Promise<TransportResult> {
+export async function invokeReminderTransport(transport: ReminderTransport, claim: Pick<ReminderClaim, "recipient" | "message" | "idempotencyKey">, timeoutMs = 15_000, reconcileReference?: string | null): Promise<TransportResult> {
   const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {

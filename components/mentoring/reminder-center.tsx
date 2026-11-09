@@ -12,6 +12,7 @@ import { Spinner } from "@/components/staff/ui/spinner";
 import type { ReminderJobView, ReminderReadiness, ReminderReason, ReminderState } from "@/lib/mentoring/features/reminders/contracts";
 import { useWorkspace } from "@/lib/mentoring/workspace-client";
 import { AccessDenied, InlineError, PageHeading, readableError, SectionEmpty, useCommandIntent } from "./common";
+import { StaffSmsComposer } from "./staff-sms-composer";
 
 const stateNames: Record<ReminderState, string> = {
   pending: "ממתינה לשליחה",
@@ -52,7 +53,7 @@ function Readiness({ readiness }: { readiness: ReminderReadiness | undefined }) 
     <Card>
       <CardHeader>
         <CardTitle>הגדרות התזכורות</CardTitle>
-        <CardDescription>התזכורות מיועדות לצוות בלבד. מספרי הטלפון של החניכות ותוכן הדיווחים אינם נכללים בהודעות.</CardDescription>
+        <CardDescription>התזכורות מיועדות לצוות בלבד. מספר הטלפון של החניכה נכלל רק לנמענים עם הרשאת צפייה עדכנית בכרטיס שלה. תוכן הדיווחים אינו נכלל בהודעות.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
         <dl className="grid gap-4 text-sm sm:grid-cols-2">
@@ -110,7 +111,7 @@ function ReminderCard({ reminder }: { reminder: ReminderJobView }) {
 }
 
 export function ReminderCenter() {
-  const { snapshot, isOnline, submit } = useWorkspace();
+  const { snapshot, isOnline, submit, submitOnline, refresh } = useWorkspace();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -166,6 +167,7 @@ export function ReminderCenter() {
       {!isOnline && <Alert><WifiOff /><AlertTitle>מוצג המידע האחרון שנשמר במכשיר</AlertTitle><AlertDescription>מצב השליחה עשוי להשתנות בינתיים. בקשת סריקה תישמר ותמתין לחיבור.</AlertDescription></Alert>}
       <div aria-live="polite" aria-atomic="true">{messageScope === scope && <>{message && <Alert><CheckCircle2 /><AlertTitle>מצב הסריקה</AlertTitle><AlertDescription>{message}</AlertDescription></Alert>}<InlineError message={error} /></>}</div>
       <Readiness readiness={readiness} />
+      <StaffSmsComposer snapshot={snapshot} isOnline={isOnline} submitOnline={submitOnline} refresh={refresh} />
       {readiness?.diagnosticsTruncated && <Alert><AlertCircle /><AlertTitle>היסטוריית התזכורות מוגבלת</AlertTitle><AlertDescription>כל התזכורות שטרם נמסרו, לרבות ניסיונות שנכשלו, מוצגות בתחום האחריות שלך, לצד 200 העדכונים האחרונים של תזכורות שנמסרו או בוטלו.</AlertDescription></Alert>}
       <section aria-label="מצב התזכורות" className="space-y-4">
         <div className="flex items-center gap-2"><Bell className="size-5 text-muted-foreground" aria-hidden="true" /><h2 className="text-lg font-semibold">תזכורות ומצב שליחה</h2><Badge variant="secondary">{reminders.length}</Badge></div>

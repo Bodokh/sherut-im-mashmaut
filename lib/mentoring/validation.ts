@@ -20,6 +20,13 @@ export const commandSchema = z.discriminatedUnion("type", [
   ...contactCommandSchemas,
   ...authorityCommandSchemas,
   ...oversightCommandSchemas,
+  z.strictObject({
+    ...operation, type: z.literal("send_staff_sms"), message: textSchema("תוכן ההודעה", 1_000, 1),
+    recipients: z.array(z.strictObject({ staffId: recordIdSchema, expectedVersion: versionSchema }, strictObjectError), { error: "יש לבחור נמענים מרשימת הצוות." })
+      .min(1, { error: "יש לבחור לפחות נמען אחד." })
+      .max(500, { error: "אפשר לבחור עד 500 נמענים בשליחה אחת." })
+      .refine((recipients) => recipients.every((recipient, index) => index === 0 || recipients[index - 1].staffId < recipient.staffId), { error: "יש לבחור כל נמען פעם אחת ולמיין את הרשימה לפי המזהה." }),
+  }, strictObjectError),
   z.strictObject({ ...operation, type: z.literal("evaluate_reminders"), afterParticipantId: recordIdSchema.nullable().optional() }, strictObjectError),
   z.strictObject({ ...operation, type: z.literal("create_staff"), fields: z.strictObject({
     displayName: staffNameSchema, email: emailSchema,

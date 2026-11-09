@@ -16,6 +16,7 @@ import type { ContactCommand, ContactHistory } from "./features/contacts/contrac
 import type { AuthorityCommand, AuthorityExtras, ParticipantDeletionState } from "./features/authority/contracts";
 import type { OversightCommand, OrganizationSettings, MonthlyReview } from "./features/oversight/contracts";
 import type { ReminderCommand, ReminderJobView, ReminderReadiness } from "./features/reminders/contracts";
+import type { SendStaffSmsCommand, StaffSmsBatchView } from "./features/staff-messages/contracts";
 
 export interface StaffProfile extends StaffMember {
   readonly localPending?: boolean;
@@ -75,6 +76,7 @@ export interface WorkspaceSnapshot {
   readonly monthlyReviews?: readonly MonthlyReview[];
   readonly reminders?: readonly ReminderJobView[];
   readonly reminderReadiness?: ReminderReadiness;
+  readonly staffSmsBatches?: readonly StaffSmsBatchView[];
   readonly capabilities: {
     readonly smsConfigured: boolean;
     readonly smsSendingEnabled: boolean;
@@ -107,6 +109,7 @@ export type MentoringCommand = Operation & (
   | AuthorityCommand
   | OversightCommand
   | ReminderCommand
+  | SendStaffSmsCommand
   | { readonly type: "create_staff"; readonly fields: NewStaffFields }
   | { readonly type: "resend_staff_invite"; readonly staffId: string; readonly expectedVersion: number }
   | { readonly type: "set_staff_active"; readonly staffId: string; readonly expectedVersion: number; readonly active: boolean }
@@ -159,6 +162,7 @@ export interface CommandSuccess {
   readonly acceptance: "queued" | "accepted";
   readonly participantId?: string;
   readonly staffId?: string;
+  readonly staffSmsBatchId?: string;
   readonly reminderScan?: { readonly scanned: number; readonly planned: number; readonly nextCursor: string | null };
 }
 

@@ -21,12 +21,16 @@ const now = "2026-10-26T12:00:00.000Z";
  * provider acceptance claim. Actual production claim/rebuild/result functions
  * execute their queries; the model supplies fixture rows and atomic rollback.
  */
-function fixture({ singleOccurrence = false, leadMinutes = 0, scheduledAt = "2026-10-26T11:00:00Z" } = {}) {
+function fixture({ singleOccurrence = false, leadMinutes = 0, scheduledAt = "2026-10-26T11:00:00Z", participantPhone = null, audience = "responsible_team", unrelatedRecipient = false, grant = null, grantReadAt = null } = {}) {
   const actor = { id: actorId, organization_id: ORGANIZATION_ID, auth_user_id: "synthetic-ceo", role: "ceo", active: true,
     display_name: "Synthetic CEO", phone: null, email: null, coordinator_id: null, sms_muted: true, version: 1 };
   const mentor = { ...actor, id: mentorId, auth_user_id: "synthetic-mentor", role: "mentor", display_name: "Synthetic mentor",
     phone: "0501234567", sms_muted: false };
-  const participant = { id: participantId, organization_id: ORGANIZATION_ID, display_name: "Synthetic participant", phone: null,
+  const outsider = { ...mentor, id: id(6), auth_user_id: "synthetic-outsider", display_name: "Synthetic unrelated mentor", phone: "0507654321" };
+  const members = unrelatedRecipient ? [actor, mentor, outsider] : [actor, mentor];
+  const grants = grant ? [{ id: id(7), organization_id: ORGANIZATION_ID, participant_id: participantId, staff_id: outsider.id,
+    actions: ["view"], active: true, expires_at: null, ...grant }] : [];
+  const participant = { id: participantId, organization_id: ORGANIZATION_ID, display_name: "Synthetic participant", phone: participantPhone,
     service_type: "national", service_place: null, service_role: null, profile_notes: null, lifecycle: "active", version: 1,
     created_at: "2026-10-01T12:00:00Z", created_by: actorId, deleted_at: null, deleted_by: null, deletion_reason: null,
     deleted_previous_lifecycle: null, manual_color: null, manual_color_at: null };
@@ -37,20 +41,21 @@ function fixture({ singleOccurrence = false, leadMinutes = 0, scheduledAt = "202
     coordinator_id: actorId, assigned_at: "2026-10-18T12:00:00Z", followup_anchor_at: "2026-10-18T12:00:00Z", version: 1 };
   const appointment = { id: id(5), organization_id: ORGANIZATION_ID, participant_id: participantId, mentor_id: mentorId,
     scheduled_at: scheduledAt, version: 1, source_contact_id: null, is_current: true };
-  const settings = { organization_id: ORGANIZATION_ID, version: 1, offline_lease_hours: 24, reminder_audience: "responsible_team",
+  const settings = { organization_id: ORGANIZATION_ID, version: 1, offline_lease_hours: 24, reminder_audience: audience,
     appointment_reminder_minutes_before: leadMinutes, overdue_reminders_enabled: !singleOccurrence, overdue_repeat_hours: null, updated_at: now, updated_by: null };
   let jobs = new Map();
   let attempts = new Map();
   let inTransaction = false;
   let nextJob = 100;
+  let databaseNow = now;
   const copy = (value) => structuredClone(value);
   const rows = (value) => ({ rows: copy(value), rowCount: value.length });
   const client = { query: async (original, values = []) => {
     const sql = original.replace(/\s+/g, " ").trim();
-    if (sql.startsWith("SELECT clock_timestamp()")) return rows([{ now }]);
+    if (sql.startsWith("SELECT clock_timestamp()")) return rows([{ now: databaseNow }]);
     if (sql.startsWith("SELECT") && sql.includes("FROM mentoring.memberships")) {
-      if (values.length === 1) return rows([actor, mentor]);
-      const member = [actor, mentor].find((entry) => entry.organization_id === values[0] && entry.id === values[1]);
+      if (values.length === 1) return rows(members);
+      const member = members.find((entry) => entry.organization_id === values[0] && entry.id === values[1]);
       const allowed = member && (!/active\s*=\s*true/i.test(sql) || member.active)
         && (!/role\s*=\s*'ceo'/i.test(sql) || member.role === "ceo")
         && (!/role\s+IN/i.test(sql) || ["ceo", "coordinator"].includes(member.role));
@@ -71,6 +76,10 @@ function fixture({ singleOccurrence = false, leadMinutes = 0, scheduledAt = "202
     if (sql.startsWith("SELECT") && sql.includes("FROM mentoring.participants WHERE")) return rows(values[0] === ORGANIZATION_ID && values[1] === participantId ? [participant] : []);
     if (sql.startsWith("SELECT") && sql.includes("FROM mentoring.assignments")) return rows([assignment]);
     if (sql.startsWith("SELECT") && sql.includes("FROM mentoring.appointments")) return rows([appointment]);
+    if (sql.startsWith("SELECT") && sql.includes("FROM mentoring.grants")) {
+      if (grantReadAt && values[1] === outsider.id) databaseNow = grantReadAt;
+      return rows(grants.filter((entry) => entry.organization_id === values[0] && entry.staff_id === values[1] && entry.participant_id === values[2] && entry.active));
+    }
     if (sql.startsWith("SELECT") && /FROM mentoring\.(contacts|reviews|ceo_protections)/.test(sql)) return rows([]);
     if (sql.startsWith("SELECT") && sql.includes("FROM mentoring.organization_settings")) return rows([settings]);
     if (sql.startsWith("SELECT id,participant_id FROM mentoring.reminder_jobs")) return rows([...jobs.values()].filter((job) => job.state === "dispatching" && Date.parse(job.lease_expires_at) <= Date.parse(values[1])));
@@ -140,10 +149,63 @@ async function seededModel(options) {
   const transport = { provider: "unit-only", credentialsConfigured: true, sendingEnabled: true,
     send: async () => { throw new Error("The seed phase must never send"); } };
   await model.transaction((client) => rebuildParticipantReminders(client, ORGANIZATION_ID, participantId, actorId, null, now, transport));
-  assert.equal(model.jobs.length, (options?.singleOccurrence ? 1 : 2) + (options?.leadMinutes > 0 ? 1 : 0));
+  assert.equal(model.jobs.length, ((options?.singleOccurrence ? 1 : 2) + (options?.leadMinutes > 0 ? 1 : 0)) * (options?.unrelatedRecipient && options?.audience === "all_staff" ? 2 : 1));
   assert.equal(model.jobs.every((job) => job.state === "pending"), true);
   return model;
 }
+
+test("claim-time phone content follows recipient view access without changing the staff destination", async (context) => {
+  for (const [label, grant, allowed, grantReadAt] of [["no grant", null, false], ["view grant", {}, true], ["expired grant", { expires_at: now }, false], ["inactive grant", { active: false }, false],
+    ["grant expires during claim", { expires_at: "2026-10-26T12:00:00.005Z" }, false, "2026-10-26T12:00:00.010Z"]]) {
+    await context.test(label, async () => {
+      const model = await seededModel({ singleOccurrence: true, participantPhone: "052-9999999", audience: "all_staff", unrelatedRecipient: true, grant, grantReadAt });
+      const sent = [];
+      const transport = { provider: "unit-only", credentialsConfigured: true, sendingEnabled: true,
+        send: async (input) => { sent.push(input); return { state: "provider_accepted", providerReference: `unit-phone-${sent.length}` }; } };
+      const result = await runDispatcher({ actor: { id: actorId, organizationId: ORGANIZATION_ID }, transport, transaction: model.transaction, now: () => now });
+      assert.equal(result.claimed, 2);
+      assert.equal(sent.length, 2);
+      const responsible = sent.find((item) => item.recipient === "+972501234567");
+      const outsider = sent.find((item) => item.recipient === "+972507654321");
+      assert.ok(responsible.message.includes("+972529999999"));
+      assert.equal(outsider.message.includes("+972529999999"), allowed);
+      assert.equal(sent.some((item) => item.recipient === "+972529999999"), false, "The mentee phone is content, never an SMS recipient");
+    });
+  }
+});
+
+test("a grant-lock wait cannot carry an expired appointment occurrence into dispatch", async (context) => {
+  for (const scenario of [
+    { label: "advance expires at appointment", leadMinutes: 4320, scheduledAt: "2026-10-26T12:00:01.000Z", dispatchAt: now, grantReadAt: "2026-10-26T12:00:02.000Z" },
+    { label: "scheduled day expires at Israel midnight", leadMinutes: 0, scheduledAt: "2026-10-26T11:00:00.000Z", dispatchAt: "2026-10-26T21:59:59.000Z", grantReadAt: "2026-10-26T22:00:00.000Z" },
+  ]) {
+    await context.test(scenario.label, async () => {
+      const model = await seededModel({ singleOccurrence: true, audience: "all_staff", unrelatedRecipient: true, ...scenario });
+      const sent = [];
+      const transport = { provider: "unit-only", credentialsConfigured: true, sendingEnabled: true,
+        send: async (input) => { sent.push(input); return { state: "provider_accepted", providerReference: "unit-before-expiry" }; } };
+      const result = await runDispatcher({ actor: { id: actorId, organizationId: ORGANIZATION_ID }, transport, transaction: model.transaction, now: () => scenario.dispatchAt });
+      assert.equal(result.claimed, 1, "only the mentor claimed before the grant wait may dispatch");
+      assert.equal(sent.length, 1);
+      assert.equal(sent[0].recipient, "+972501234567");
+      assert.equal(model.attempts.length, 1, "the expired occurrence must never gain a durable claim");
+      assert.equal(model.jobs.filter((job) => job.recipient_staff_id === id(6) && Date.parse(job.scheduled_at) <= Date.parse(scenario.dispatchAt)).every((job) => job.state === "cancelled"), true);
+    });
+  }
+});
+
+test("a durable claim and its full lease start after the grant-lock wait", async () => {
+  const grantReadAt = "2026-10-26T12:00:30.000Z";
+  const model = await seededModel({ singleOccurrence: true, audience: "all_staff", unrelatedRecipient: true, grantReadAt });
+  const transport = { provider: "unit-only", credentialsConfigured: true, sendingEnabled: true,
+    send: async () => ({ state: "provider_accepted", providerReference: "unit-fresh-lease" }) };
+  assert.equal((await runDispatcher({ actor: { id: actorId, organizationId: ORGANIZATION_ID }, transport, transaction: model.transaction, now: () => now })).claimed, 2);
+  const job = model.jobs.find((job) => job.recipient_staff_id === id(6));
+  const attempt = model.attempts.find((attempt) => attempt.job_id === job.id);
+  assert.equal(attempt.claimed_at, grantReadAt);
+  assert.equal(attempt.lease_expires_at, "2026-10-26T12:01:30.000Z");
+  assert.equal(job.lease_expires_at, attempt.lease_expires_at);
+});
 
 test("a contact scheduled within three days sends one advance reminder now and one at the scheduled time", async () => {
   const scheduledAt = "2026-10-28T12:00:00.000Z";

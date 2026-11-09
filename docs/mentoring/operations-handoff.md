@@ -35,7 +35,7 @@ Production live-key DNS/development-key proxy and Google identity signup now wor
 
 Independently verify account owner, environment/project/branch/database and direct endpoint using approved provider records. Record non-secret target IDs and change/backup approval. The [runner](../../scripts/mentoring/migrate.mjs) has **no dry-run, production prohibition or target-identity check**.
 
-Apply `001_initial.sql` through `009_appointment_reminder_timing.sql` in order. Apply `007` and `008` before deploying the staff email feature. The [staff email rollout instructions](development.md#staff-welcome-email-rollout) cover sending configuration and the controlled delivery check. Migration `009` enables the dual contact reminders described below.
+Apply checked-in migrations in numeric order. Apply `007` and `008` before deploying the staff email feature; the [staff email rollout instructions](development.md#staff-welcome-email-rollout) cover sending configuration and the controlled delivery check. Migration `009` enables the dual contact reminders described below. Apply `010_staff_messages.sql` before deploying the manual staff-SMS feature; the [follow-up rollout](sms-production-2026-11-09.md#staff-message-and-reminder-phone-update) records its actual migration and deployment status.
 
 Applied SHA-256 history is in `mentoring.schema_migrations`; missing/changed applied files, duplicate versions and older pending versions fail. All pending SQL/registry inserts use one transaction/advisory lock. Failure rolls back that pending batch. Never edit applied SQL/checksums or delete records to force success.
 
@@ -80,6 +80,14 @@ After deploying the matching source and applying `009` to a verified target, an 
 Reviewed `GET /api/internal/mentoring/reminders` checks exact Bearer before DB, rejects HEAD405 and uses a current configured CEO/fixed scope with no query override. Cooperative scan: 5×200 records/20s; incomplete503. Dispatcher: at most five/10s. `scanComplete` is evaluation, not queue drain. Exact existing claim outcomes remain recordable after revocation; fresh work stays guarded.
 
 Recorded direct-route/PostgreSQL checks used blocked delivery. Micropay is configured in Preview; Production SMS stays paused/brand-restricted and **no automatic cron** is configured. First-admin Google login is accepted as above. Provider delivery/reconciliation, hosted scheduling, strict every-login OTP/client decisions and final client-owned handoff remain open. CEO self-mute is not an organizational delivery pause. Deployment used CLI65.4.0 via `npx`; no global tool change is claimed.
+
+### Manual staff SMS and reminder phone details
+
+The follow-up source adds a CEO-only composer to the reminders page. Choose active eligible staff individually or select all available staff, enter up to 1,000 characters, then review the frozen message and recipient list before confirming. Missing or invalid staff mobiles, locally pending staff changes and muted CEO accounts are unavailable. A shared normalized phone receives one message per batch.
+
+`send_staff_sms` requires an online request and never enters the browser's offline queue. An accepted request creates a durable, audited server batch. Initial dispatch is scheduled after command acceptance, and `/api/internal/mentoring/staff-messages` provides the five-minute continuation alongside the existing crons. Before each external handoff, the dispatcher rechecks sender and recipient eligibility against the stored destination. Pending, provider-accepted, failed, uncertain and cancelled results remain visible in recent CEO message history. An ambiguous request can be checked with its same immutable operation ID; unknown provider outcomes are not automatically resent.
+
+Automatic reminders keep staff mobiles as their destination. The mentee phone may appear in the body only when that recipient has current access to the participant; the claim checks scope and timed grants immediately before preparing the message. See the [follow-up rollout](sms-production-2026-11-09.md#staff-message-and-reminder-phone-update) for the source, migration and live-proof boundary.
 
 ## Incident handoff
 

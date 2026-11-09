@@ -182,11 +182,12 @@ The agreed CEO-conflict flow is: preserve both versions → retain the CEO versi
 
 - SMS is mandatory for ordinary staff accounts. The CEO can mute messages sent to their own account without muting organizational reminders.
 - No participant or developer is a recipient merely because their details exist in a profile or project.
-- Messages include only agreed minimal contact-reminder information: participant reference/name and appointment date/time. Notes, personal difficulties, and meeting summaries are not proposed SMS content.
+- Automatic reminders include the participant name, relevant date/time and contact instructions. A valid mentee phone appears only for staff who currently have access to that participant; the staff mobile remains the SMS destination. Automatic content excludes narrative notes, personal difficulties and meeting summaries. The CEO can separately compose manual staff messages, review selected or all available recipients, and confirm the exact text before sending.
 - Staff mobile numbers are required for the SMS flow. Missing or invalid staff numbers need an administrative action, not silent delivery success.
 - Exact recipients remain open: relevant mentor/coordinator/CEO versus organization-wide broadcasts. The proposed baseline routes by assignment and oversight scope.
 - Reminder offsets, overdue repetition, escalation timing, additional channels, quiet periods, and delivery failure handling are open. Reminders cannot be snoozed to change a contact obligation.
 - Central scheduling requires connectivity. The UI must distinguish queued, provider-accepted, delivered where verifiable, and failed states. Provider acceptance is not proof of handset receipt.
+- Manual staff SMS requires connectivity and is never saved as offline sending intent. A centrally accepted batch is durable, deduplicates shared phones within that batch and exposes per-delivery results. An ambiguous response is checked with the original request identity; an uncertain provider handoff is not automatically retried.
 - OTP delivery, expiry/retry/recovery, and whether a code is required on every sign-in must be specified before authentication implementation.
 
 No SMS/authentication provider is selected or provisioned by this specification.

@@ -31,6 +31,13 @@ async function setup(snapshot = fixture()) {
 const update = (operationId = crypto.randomUUID(), expectedVersion = 1, text = "הערה מקומית") => ({ type: "update_participant", operationId, participantId: "participant_1", expectedVersion, fields: { profileNotes: text } });
 const accepted = (command) => ({ ok: true, acceptance: "accepted", operationId: command.operationId, replayed: false, participantId: command.participantId });
 
+test("manual staff SMS cannot enter a local queue even for a CEO", async () => {
+  const { store, scope } = await setup(fixture("sms-admin", "ceo"));
+  await assert.rejects(store.enqueue(scope, { type: "send_staff_sms", operationId: crypto.randomUUID(), message: "הודעה לצוות", recipients: [{ staffId: crypto.randomUUID(), expectedVersion: 1 }] }), { code: "invalid_command" });
+  assert.deepEqual(await store.operations(scope), []);
+  assert.equal(await store.unsyncedCount(), 0);
+});
+
 test("every field draft survives reopening its account-scoped store", async () => {
   const { store, scope } = await setup();
   await store.writeDraft(scope, "contact:participant_1", { notes: "שיחה עם החניכה", next: "2026-10-28T16:00" });

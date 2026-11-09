@@ -163,6 +163,7 @@ function commandAllowed(snapshot: WorkspaceSnapshot, command: MentoringCommand, 
     return view.allowedActions ? view.allowedActions.includes(action) : canPerformParticipantAction(actor, view.participant, view.acceptedAssignment ?? view.assignment, action, view.accessGrants ?? []);
   }
   switch (command.type) {
+    case "send_staff_sms": return false;
     case "create_participant": return actor.role !== "mentor";
     case "create_staff": return actor.role === "ceo" || (actor.role === "coordinator" && command.fields.role === "mentor" && command.fields.coordinatorId === actor.id);
     case "resend_staff_invite": return canSendStaffInvite(actor, snapshot.staff.find((member) => member.id === command.staffId));
@@ -359,6 +360,7 @@ export function createMentoringOfflineStore(databaseName = MENTORING_OFFLINE_DAT
   }
 
   async function enqueue(scope: OfflineScope, command: MentoringCommand, now = Date.now()): Promise<OfflineOperation> {
+    if (command.type === "send_staff_sms") throw new OfflineStorageError("invalid_command", "שליחת SMS לצוות דורשת חיבור פעיל ואישור שליחה. ההודעה לא נשמרה בתור המקומי.");
     if (!command.operationId || command.operationId.length > 128) throw new OfflineStorageError("invalid_command", "חסר מזהה תקין לפעולה. יש לפתוח מחדש את הטופס.");
     const signature = canonical(command);
     const connection = await db();

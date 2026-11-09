@@ -4,6 +4,8 @@ Updated 27 October 2026. The user selected **Micropay for staff SMS**, with What
 
 **9 November 2026:** production SMS is enabled and deployed after explicit user authorization. The registered five-minute reminder path ran and Micropay accepted two overdue reminders; handset delivery is unconfirmed. The [current SMS rollout](sms-production-2026-11-09.md) records the migration, policy, scheduler and provider evidence. The provider results below remain their original October controlled-send evidence.
 
+The follow-up source update adds authorized mentee phone details to reminders and a CEO staff-message composer. Its migration, deployment and acceptance are recorded separately in the [follow-up rollout](sms-production-2026-11-09.md#staff-message-and-reminder-phone-update); no live acceptance is claimed for that update yet.
+
 ## Confirmed evidence
 
 - The real read-only balance API returned HTTP 200, `status:1`, `message:"OK"`, `action:"credit"`, with available credit.
@@ -12,11 +14,13 @@ Updated 27 October 2026. The user selected **Micropay for staff SMS**, with What
 
 ## SMS boundary
 
-The [Micropay adapter](../../lib/mentoring/features/reminders/micropay.ts) implements [ReminderTransport](../../lib/mentoring/features/reminders/transport.ts) with one immediate request per canonical staff reminder:
+The [Micropay adapter](../../lib/mentoring/features/reminders/micropay.ts) implements [ReminderTransport](../../lib/mentoring/features/reminders/transport.ts) with one immediate request per durable staff delivery, covering automatic reminders and CEO-authored staff messages:
 
 `POST https://www.micropay.co.il/extApi/scheduleSms.php`
 
-Use `Content-Type: application/json` and body fields `token`, `from`, `msg`, `list`. `list` contains one validated staff phone; `msg` uses the minimal reminder. JSON requires no `post=2`. The token stays server-only; the adapter prevents redirects, retries and secret/payload logging. Provider-side scheduling and distribution lists are excluded. Sender permissions require account confirmation. [Authentication](https://site.micropay.co.il/api/auth.php), [JSON conventions](https://site.micropay.co.il/api/conventions.php), [SMS contract](https://site.micropay.co.il/api/send-sms.php)
+Use `Content-Type: application/json` and body fields `token`, `from`, `msg`, `list`. `list` contains one validated staff phone. Automatic reminder text contains the participant name, relevant date/time and contact instructions; a normalized mentee phone is included only after current recipient view access is checked at claim time. Missing, invalid or unauthorized mentee phones are omitted. The destination remains the staff mobile. Automatic reminders do not include narrative notes or meeting summaries. Manual messages use the CEO's reviewed text, up to 1,000 characters. JSON requires no `post=2`. The token stays server-only; the adapter prevents redirects, retries and secret/payload logging. Provider-side scheduling and distribution lists are excluded. Sender permissions require account confirmation. [Authentication](https://site.micropay.co.il/api/auth.php), [JSON conventions](https://site.micropay.co.il/api/conventions.php), [SMS contract](https://site.micropay.co.il/api/send-sms.php)
+
+The [manual-message handler](../../lib/mentoring/features/staff-messages/server.ts) validates current CEO authority and selected staff revisions, then creates the audited batch and durable deliveries in the command transaction. One normalized staff phone receives one delivery per batch even when several selected accounts share it. Identical operation replay reuses the receipt; it does not create another batch. This local deduplication does not add provider-side idempotency.
 
 Require `status:1`, `message:"OK"` and a valid `data.taskId` for `provider_accepted`; this does not prove delivery. Explicit parameter rejection can be `failed`. Timeout, malformed/missing reference, or an unrecognized response remains `uncertain`.
 
@@ -24,7 +28,7 @@ No provider idempotency/client-reference field is documented; the dispatcher's l
 
 ## Delivery receipts
 
-Callbacks are not implemented/configured. Future DLRs should use POST JSON, correlate `msgid` and the original dispatch `phone`, and deduplicate retries. Status is `ok` or `nd`. Existing attempts lack a phone snapshot; settle historical-recipient correlation. Account-level settings may affect other integrations. Authentication is undocumented and must be confirmed before trusting receipts. [DLR contract](https://site.micropay.co.il/api/webhook-dlr.php)
+Callbacks are not implemented/configured. Future DLRs should use POST JSON, correlate `msgid` and the original dispatch `phone`, and deduplicate retries. Status is `ok` or `nd`. Reminder attempts lack a phone snapshot; settle their historical-recipient correlation. Manual staff-message deliveries retain a server-side destination snapshot and provider reference. Account-level settings may affect other integrations. Authentication is undocumented and must be confirmed before trusting receipts. [DLR contract](https://site.micropay.co.il/api/webhook-dlr.php)
 
 Current [dispatcher reconciliation](../../lib/mentoring/features/reminders/dispatcher.ts) only advances known acceptance to delivery. Negative receipts require a reviewed distinction between delivery failure and send rejection. The confirmed test receipt does not establish automated DLR support.
 

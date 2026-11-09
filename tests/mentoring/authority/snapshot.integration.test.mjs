@@ -20,7 +20,7 @@ test("real snapshots redact CEO administration and deny a tombstoned creator's r
   const { getDatabasePool } = await import("../../../lib/mentoring/server/db.ts");
   const database = new Pool({ connectionString: process.env.MENTORING_DATABASE_URL_UNPOOLED ?? process.env.MENTORING_DATABASE_URL, max: 1, connectionTimeoutMillis: 10_000 });
   try {
-    const preflight = await database.query("SELECT (SELECT count(*)::int FROM mentoring.participants) AS participants, to_regclass('mentoring.reminder_attempts') IS NOT NULL AS migrated");
+    const preflight = await database.query("SELECT (SELECT count(*)::int FROM mentoring.participants) AS participants, to_regclass('mentoring.reminder_attempts') IS NOT NULL AND to_regclass('mentoring.staff_sms_batches') IS NOT NULL AND to_regclass('mentoring.staff_sms_deliveries') IS NOT NULL AS migrated");
     assert.equal(preflight.rows[0].participants, 0, "Requires the reserved empty participant baseline.");
     assert.equal(preflight.rows[0].migrated, true);
   } catch {
@@ -89,6 +89,7 @@ test("real snapshots redact CEO administration and deny a tombstoned creator's r
       assert.ok(view, "Each role is authorized to view the exact same participant.");
       const serialized = JSON.stringify(snapshot);
       if (actor === ceo) {
+        assert.ok(Array.isArray(snapshot.staffSmsBatches));
         assert.equal(view.accessGrants.length, 3);
         assert.ok(view.accessGrants.every((grant) => grant.reason === grantReason));
         assert.equal(view.protectionStates[0].reason, protectionReason);
@@ -96,6 +97,7 @@ test("real snapshots redact CEO administration and deny a tombstoned creator's r
         assert.ok(serialized.includes(grantReason));
         assert.ok(serialized.includes(protectionReason));
       } else {
+        assert.equal(Object.hasOwn(snapshot, "staffSmsBatches"), false, "Manual staff SMS history is private to the CEO.");
         assert.deepEqual(view.accessGrants.map((grant) => grant.staffId), [actor.id], "Other staff members' grants must stay private.");
         assert.ok(view.accessGrants.every((grant) => grant.reason == null), "Even a person's own grant must not disclose the CEO reason.");
         assert.ok(view.protectionStates.every((protection) => protection.reason == null));

@@ -24,6 +24,7 @@ interface WorkspaceState {
 export interface WorkspaceContextValue extends WorkspaceState {
   readonly refresh: () => Promise<void>;
   readonly submit: (command: MentoringCommand) => Promise<CommandResult>;
+  readonly submitOnline: (command: Extract<MentoringCommand, { type: "send_staff_sms" }>) => Promise<CommandResult>;
   readonly readDraft: <T>(key: string) => Promise<T | null>;
   readonly writeDraft: <T>(key: string, value: T) => Promise<void>;
   readonly clearDraft: (key: string) => Promise<void>;
@@ -62,7 +63,7 @@ const apiFailureMessages: Record<ApiFailure["error"]["code"], string> = {
 };
 const validationLabels: Record<string, string> = {
   displayName: "השם", email: "כתובת הדוא״ל", phone: "מספר הטלפון", role: "התפקיד", coordinatorId: "הרכז/ת", mentorId: "החונך/ת",
-  serviceType: "סוג השירות", servicePlace: "מקום השירות", serviceRole: "התפקיד בשירות", profileNotes: "המידע הנוסף", notes: "תוכן הדיווח", reason: "הסיבה", method: "אופן הקשר", outcome: "תוצאת הקשר", occurredAt: "מועד הקשר", nextAppointmentAt: "מועד הפגישה", scheduledAt: "המועד", actions: "ההרשאות", expiresAt: "תוקף ההרשאה", summary: "הסיכום",
+  serviceType: "סוג השירות", servicePlace: "מקום השירות", serviceRole: "התפקיד בשירות", profileNotes: "המידע הנוסף", notes: "תוכן הדיווח", reason: "הסיבה", method: "אופן הקשר", outcome: "תוצאת הקשר", occurredAt: "מועד הקשר", nextAppointmentAt: "מועד הפגישה", scheduledAt: "המועד", actions: "ההרשאות", expiresAt: "תוקף ההרשאה", summary: "הסיכום", message: "תוכן ההודעה", recipients: "הנמענים",
 };
 
 /** Only recognized, well-formed failures are definitive; never surface server text. */
@@ -333,6 +334,7 @@ class WorkspaceController {
   };
 
   submit = (command: MentoringCommand, accountId: string | null = this.scope?.accountId ?? null): Promise<CommandResult> => {
+    if (command.type === "send_staff_sms") return this.submitOnline(command, accountId);
     const submittedScope = this.scope;
     const submittedEpoch = this.epoch;
     const intent = structuredClone(command);
@@ -362,6 +364,40 @@ class WorkspaceController {
         this.update({ error: errorFor(error) });
         return failure(error instanceof OfflineStorageError && error.code === "expired" ? "not_authenticated" : "unavailable", errorFor(error).message);
       }
+    });
+    this.submitTask = task;
+    return task;
+  };
+
+  submitOnline = (command: Extract<MentoringCommand, { type: "send_staff_sms" }>, accountId: string | null = this.scope?.accountId ?? null): Promise<CommandResult> => {
+    const submittedScope = this.scope;
+    const submittedEpoch = this.epoch;
+    const intent = structuredClone(command);
+    const task = this.submitTask.catch(() => undefined).then(async (): Promise<CommandResult> => {
+      const scope = this.scope;
+      if (!scope || !submittedScope || scope.accountId !== accountId || scope.key !== submittedScope.key || !this.isCurrent(submittedEpoch) || !this.auth.loaded || this.auth.userId !== scope.accountId || this.authorizedEpoch !== submittedEpoch) return failure("not_authenticated", "החשבון השתנה או נדרש אימות מחדש. יש לפתוח מחדש את מסך ההודעות עם חיבור.");
+      if (!this.state.snapshot?.actor.active || this.state.snapshot.actor.role !== "ceo") return failure("forbidden", "שליחת הודעות לצוות זמינה להנהלה בלבד.");
+      if (!this.reachable || (typeof navigator !== "undefined" && !navigator.onLine)) return failure("unavailable", "נדרש חיבור לשליחת הודעה. ההודעה לא נשמרה לשליחה מאוחרת.");
+      try {
+        // Manual messages never enter the offline queue, even after a lost response.
+        const response = await fetch("/api/mentoring/commands", { method: "POST", credentials: "same-origin", cache: "no-store", headers: { "Content-Type": "application/json", Accept: "application/json", "X-Mentoring-Account": scope.accountId }, body: JSON.stringify(intent) });
+        const payload: unknown = await response.json().catch(() => null);
+        if (!this.isCurrent(submittedEpoch) || this.scope?.key !== scope.key) return failure("not_authenticated", "החשבון השתנה לפני שהתקבלה תשובה. יש לבדוק את היסטוריית ההודעות בחשבון המקורי.");
+        const responseFailure = parseFailure(payload);
+        if (response.status === 401 || response.status === 403 || (responseFailure && (responseFailure.error.code === "not_authenticated" || responseFailure.error.code === "not_staff"))) {
+          const result = responseFailure ?? failure("not_authenticated", "תוקף הכניסה או ההרשאות השתנה. יש להיכנס מחדש.");
+          await this.invalidate(result);
+          return result;
+        }
+        if (response.status < 500 && response.status !== 408 && response.status !== 429 && responseFailure) return responseFailure;
+        if (response.ok && payload && typeof payload === "object" && "ok" in payload && payload.ok === true && "operationId" in payload && payload.operationId === intent.operationId && "acceptance" in payload && payload.acceptance === "accepted" && "staffSmsBatchId" in payload && payload.staffSmsBatchId === intent.operationId) {
+          void this.refresh();
+          return payload as CommandResult;
+        }
+      } catch {
+        if (!this.isCurrent(submittedEpoch) || this.scope?.key !== scope.key) return failure("not_authenticated", "החשבון השתנה לפני שהתקבלה תשובה. יש לבדוק את היסטוריית ההודעות בחשבון המקורי.");
+      }
+      return failure("unavailable", "לא התקבל אישור לבקשה. ייתכן שהיא כבר התקבלה; יש לבדוק את היסטוריית ההודעות או לבדוק שוב את אותה בקשה. לא יתבצע ניסיון חוזר אוטומטי.");
     });
     this.submitTask = task;
     return task;
@@ -475,6 +511,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   // so an old form's delayed write cannot enter the next signed-in account.
   const drafts = useMemo(() => ({
     submit: (command: MentoringCommand) => controller.submit(command, accountId),
+    submitOnline: (command: Extract<MentoringCommand, { type: "send_staff_sms" }>) => controller.submitOnline(command, accountId),
     readDraft: <T,>(key: string) => controller.readDraft<T>(accountId, key, accessKey),
     writeDraft: <T,>(key: string, value: T) => controller.writeDraft(accountId, key, value, accessKey),
     clearDraft: (key: string) => controller.clearDraft(accountId, key, accessKey),

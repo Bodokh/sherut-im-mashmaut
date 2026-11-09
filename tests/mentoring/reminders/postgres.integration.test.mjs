@@ -34,7 +34,7 @@ test("durable reminder claims honor current contact/account scope and retain tru
     // One isolated organization and exact generated IDs; never wildcard-delete
     // records from the development organization or any other test suite.
     try { await transaction(async (client) => {
-      for (const table of ["reminder_attempts", "reminder_jobs", "contacts", "appointments", "assignments", "participants", "resource_ids", "organization_settings", "memberships"]) await client.query(`DELETE FROM mentoring.${table} WHERE organization_id=$1`, [organizationId]);
+      for (const table of ["reminder_attempts", "reminder_jobs", "contacts", "appointments", "assignments", "grants", "participants", "resource_ids", "organization_settings", "memberships"]) await client.query(`DELETE FROM mentoring.${table} WHERE organization_id=$1`, [organizationId]);
       await client.query("DELETE FROM mentoring.organizations WHERE id=$1", [organizationId]);
     }); } finally { await database.end(); }
   });
@@ -99,6 +99,7 @@ test("durable reminder claims honor current contact/account scope and retain tru
     assert.equal(claims.filter(Boolean).length, 1);
     const claim = claims.find(Boolean);
     assert.equal(claim.recipient, mentor.phone);
+    assert.ok(claim.message.includes("+972529999999"));
     assert.equal(claim.message.includes("PRIVATE"), false);
     const generationBefore = (await stateFor(queued.id)).generation;
     await database.query("UPDATE mentoring.participants SET version=version+1 WHERE organization_id=$1 AND id=$2", [organizationId, id]);
@@ -113,6 +114,29 @@ test("durable reminder claims honor current contact/account scope and retain tru
     assert.equal((await job(id)).state, "delivered");
     assert.equal(Number((await database.query("SELECT count(*) FROM mentoring.reminder_attempts WHERE organization_id=$1 AND job_id=$2", [organizationId, queued.id])).rows[0].count), 1);
     await pause(id);
+  });
+
+  await t.test("all-staff delivery discloses a mentee phone only with current view access", async (context) => {
+    const previousAudience = (await database.query("SELECT reminder_audience FROM mentoring.organization_settings WHERE organization_id=$1", [organizationId])).rows[0].reminder_audience;
+    await database.query("UPDATE mentoring.organization_settings SET reminder_audience='all_staff' WHERE organization_id=$1", [organizationId]);
+    try {
+      for (const [label, grant] of [["no grant", null], ["active grant", { active: true, expiresAt: null }], ["expired grant", { active: true, expiresAt: now }], ["inactive grant", { active: false, expiresAt: null }]]) {
+        await context.test(label, async () => {
+          const id = await fixture();
+          if (grant) await database.query("INSERT INTO mentoring.grants(id,organization_id,staff_id,participant_id,actions,active,expires_at) VALUES($1,$2,$3,$4,ARRAY['view'],$5,$6)", [randomUUID(), organizationId, outsider.id, id, grant.active, grant.expiresAt]);
+          const queued = await job(id, outsider.id);
+          const claim = await transaction((client) => claimReminder(client, ceo, queued.id, now, accepted));
+          assert.ok(claim);
+          assert.equal(claim.recipient, outsider.phone);
+          assert.equal(claim.message.includes("+972529999999"), label === "active grant");
+          assert.equal(claim.message.includes("PRIVATE"), false);
+          await transaction((client) => recordReminderResult(client, claim, { state: "provider_accepted", providerReference: "test-view-access" }, now));
+          await pause(id);
+        });
+      }
+    } finally {
+      await database.query("UPDATE mentoring.organization_settings SET reminder_audience=$2 WHERE organization_id=$1", [organizationId, previousAudience]);
+    }
   });
 
   await t.test("contact committed before a waiting claim cancels stale overdue occurrence", async () => {

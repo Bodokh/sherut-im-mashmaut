@@ -10,6 +10,7 @@ import { handleAuthorityCommand, isAuthorityCommand } from "../features/authorit
 import { handleOversightCommand } from "../features/oversight/server";
 import { canReviewMonthlyScope } from "../features/oversight/selectors";
 import { handleReminderCommand, rebuildParticipantReminders } from "../features/reminders/server";
+import { createStaffSmsBatch } from "../features/staff-messages/server";
 import { canSendStaffInvite } from "../staff-invites";
 import { MentoringServerError, serverFailure, withTransaction } from "./db";
 import { iso, loadActorGrants, loadParticipant, ownsUnassignedParticipant, requireIdentity, staffFromRow } from "./repository";
@@ -253,6 +254,7 @@ export async function executeCommand(authUserId: string, verifiedEmail: string |
       }
       if (isAuthorityCommand(command) && actor.role !== "ceo") return failure("forbidden", "הפעולה זמינה למנכ״ל בלבד.");
       if (command.type === "update_organization_settings" && actor.role !== "ceo") return failure("forbidden", "שינוי מדיניות זמין למנכ״ל בלבד.");
+      if (command.type === "send_staff_sms" && actor.role !== "ceo") return failure("forbidden", "שליחת הודעות לצוות זמינה למנכ״ל בלבד.");
       if (command.type === "save_monthly_review" && !canReviewMonthlyScope(actor, command.scopeStaffId)) return failure("forbidden", "אין הרשאה לסקירה החודשית שנבחרה.");
       if ((command.type === "invalidate_contact" || command.type === "evaluate_reminders") && actor.role === "mentor") return failure("forbidden", "הפעולה זמינה להנהלה ולרכזים ולרכזות בלבד.");
       if (command.type === "create_staff" && actor.role === "coordinator" && (command.fields.role !== "mentor" || command.fields.coordinatorId !== actor.id)) return failure("forbidden", "אפשר לצרף חונכים וחונכות לצוות שלך בלבד.");
@@ -348,6 +350,11 @@ export async function executeCommand(authUserId: string, verifiedEmail: string |
         protect: (resourceId, revision, fieldPaths) => protect(client, actor, resourceId, revision, fieldPaths),
         refreshReminders: async (participantId) => { await rebuildParticipantReminders(client, actor.organizationId, participantId, actor.id, command.operationId, now); },
       };
+      if (command.type === "send_staff_sms") {
+        const batch = await createStaffSmsBatch(client, actor, command, now);
+        await audit(client, actor, command, undefined, { staffSmsBatchId: batch.batchId, recipientCount: batch.recipientCount, deliveryCount: batch.deliveryCount });
+        return finish({ ...success(command), staffSmsBatchId: batch.batchId });
+      }
       for (const handler of [handleContactCommand, handleAuthorityCommand, handleOversightCommand, handleReminderCommand]) {
         const result = await handler(context, command);
         if (result !== null) return finish(result);

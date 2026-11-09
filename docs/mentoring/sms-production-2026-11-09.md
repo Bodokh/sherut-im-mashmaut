@@ -42,6 +42,16 @@ Migration `009` expands the allowed advance interval to 4,320 minutes and relabe
 
 The live provider check exercised overdue reminders. Future three-day and scheduled-day deliveries were not due in this check; their timing and expiry have local regression coverage. Provider acceptance is separate from handset delivery. The earlier October controlled SMS and confirmed receipt retain their own evidence in the [Micropay contract](micropay-integration.md#confirmed-evidence).
 
+## Staff-message and reminder-phone update
+
+**Follow-up source work; migration, deployment and acceptance remain pending.** A fresh private `before-staff-messages.dump` backup was created before this update. The existing enabled reminder release above retains its own proof.
+
+The source adds an optional normalized mentee phone to automatic reminder text only after checking that the staff recipient currently has participant view access, including timed grants. SMS destinations remain validated staff mobiles; unauthorized or invalid mentee phones are omitted.
+
+The CEO-only reminders-page composer supports selected staff or all available staff, a reviewed message of up to 1,000 characters, and explicit confirmation. `send_staff_sms` bypasses the offline queue and creates an audited central batch with one delivery per normalized destination phone. The same operation identity reuses its receipt; uncertain handoffs are not automatically replayed. Sender/recipient eligibility is rechecked at claim time, and recent CEO history distinguishes pending, provider-accepted and uncertain outcomes.
+
+`010_staff_messages.sql` adds the durable batch and delivery tables. The source appends the sibling `/api/internal/mentoring/staff-messages` five-minute cron while preserving both existing crons and their shared authentication secret. Final source review, checks, production migration, Ready deployment, registered schedule and controlled delivery evidence will be recorded after verification.
+
 ## Pause and rollback
 
 1. Set production `MENTORING_SMS_SENDING_ENABLED=false` and redeploy the matching source. Verify the deployed runtime reports delivery blocked before treating dispatch as paused.

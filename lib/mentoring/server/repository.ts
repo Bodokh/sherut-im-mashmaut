@@ -168,6 +168,9 @@ export async function getWorkspace(authUserId: string, verifiedEmail?: string | 
     const authority = await loadAuthorityExtras(client, actor.organizationId, ids);
     const oversight = await loadOversightExtras(client, actor, serverTime);
     const reminderData = await loadReminderExtras(client, actor, ids);
+    const staffSmsBatches = actor.role === "ceo"
+      ? await (await import("../features/staff-messages/server")).loadStaffSmsBatches(client, actor)
+      : undefined;
     const grantRows = await client.query("SELECT * FROM mentoring.grants WHERE organization_id = $1 AND staff_id = $2 AND active = true", [actor.organizationId, actor.id]);
     const currentGrants = grantRows.rows.map(grantFromRow);
     const participants = baseParticipants.map((view): ParticipantView => {
@@ -199,6 +202,6 @@ export async function getWorkspace(authUserId: string, verifiedEmail?: string | 
       const expiry = await client.query("SELECT min(expires_at) AS expires_at FROM mentoring.grants WHERE organization_id = $1 AND staff_id = $2 AND active = true AND expires_at > $3::timestamptz", [actor.organizationId, actor.id, serverTime]);
       if (expiry.rows[0].expires_at != null) offlineDeadline = Math.min(offlineDeadline, Date.parse(iso(expiry.rows[0].expires_at)));
     }
-    return { actor, staff, participants, conflicts, ...oversight, ...reminderData, serverTime, offlineValidUntil: new Date(offlineDeadline).toISOString(), capabilities: { smsConfigured: reminderData.reminderReadiness.smsProviderConfigured && reminderData.reminderReadiness.smsCredentialsConfigured, smsSendingEnabled: reminderData.reminderReadiness.smsSendingEnabled } };
+    return { actor, staff, participants, conflicts, ...oversight, ...reminderData, ...(staffSmsBatches ? { staffSmsBatches } : {}), serverTime, offlineValidUntil: new Date(offlineDeadline).toISOString(), capabilities: { smsConfigured: reminderData.reminderReadiness.smsProviderConfigured && reminderData.reminderReadiness.smsCredentialsConfigured, smsSendingEnabled: reminderData.reminderReadiness.smsSendingEnabled } };
   }, { repeatableRead: true });
 }

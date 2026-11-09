@@ -42,7 +42,7 @@ Populate `.env.local` from the project's development integrations. The applicati
 | `CLERK_SECRET_KEY` | Server verification of Clerk identity. |
 | `MENTORING_DATABASE_URL` | Pooled PostgreSQL application connection. |
 | `MENTORING_DATABASE_URL_UNPOOLED` | Direct PostgreSQL connection for migrations and owner setup. |
-| `CRON_SECRET` | Exact Bearer secret for the internal scheduled reminder GET endpoint. Configure privately in the intended hosted environment; no secret value belongs in documentation. |
+| `CRON_SECRET` | Exact Bearer secret shared by the internal reminder, staff-onboarding and manual staff-message GET endpoints. Configure privately in the intended hosted environment; no secret value belongs in documentation. |
 | `MENTORING_REMINDER_ACTOR_ID` | UUID of an existing real active CEO membership in the fixed organization. It is centrally revalidated; no synthetic system account or request-selected actor. |
 | `NEXT_PUBLIC_STAFF_HOST` | Production hostname `staff.imashmaut.co.il`, with no scheme or path. Leave unset for local development and Preview so `/staff` stays on the current host. The cutover order is in [staff subdomain](staff-subdomain.md). |
 
@@ -132,9 +132,9 @@ See the [domain policy notes](../../lib/mentoring/domain/README.md) and [technic
 
 ## Offline behavior and recovery
 
-The client requires **all authorized application reads and edits to work offline**. The implementation supports the prepared authorized working set, durable mentoring form drafts and offline intent for all domain commands, including review, staff membership/authority, grants, protection, lifecycle/delete/restore, settings, monthly notes and conflict decisions. First-time sign-in/OTP, authentication-provider account enrollment, central acceptance and enforcement on other devices require a connection.
+The client requires **all authorized application reads and edits to work offline**. The implementation supports the prepared authorized working set, durable mentoring form drafts and offline intent for domain commands, including review, staff membership/authority, grants, protection, lifecycle/delete/restore, settings, monthly notes and conflict decisions. CEO manual SMS (`send_staff_sms`) is an explicit online-only action: it never enters the offline queue, including after an ambiguous response. Once accepted centrally, its server-side batch and per-phone deliveries are durable. First-time sign-in/OTP, authentication-provider account enrollment, central acceptance and enforcement on other devices require a connection.
 
-Durable autosave uses the shared form-draft path for mentoring inputs, including administrative forms and selected action intent. Authentication passwords and one-time codes are not persisted as mentoring drafts. A draft is editable input; a finalized operation has an immutable ID/payload. Reopening an incomplete draft must not submit it. An uncertain prior submission reconciles its original operation before a new action is allowed.
+Durable autosave uses the shared form-draft path for mentoring inputs, including administrative forms and selected action intent. The manual staff-SMS composer keeps unsubmitted text in its current page state; it has no persisted offline draft, so reloading can discard that text. Authentication passwords and one-time codes are not persisted as mentoring drafts. A draft is editable input; a finalized operation has an immutable ID/payload. Reopening an incomplete draft must not submit it. An uncertain prior submission reconciles its original operation before a new action is allowed.
 
 After a successful online authorization, IndexedDB stores the authorized snapshot, field drafts, immutable pending commands and receipts scoped to the Clerk account, organization and staff membership. The provisional server-issued lease lasts at most 24 hours and settings can shorten it. Pending grants, staff activation/role changes, assignment changes and protection unlocks do not expand accepted readable or editable authority. An expired lease requires renewed online authorization.
 
