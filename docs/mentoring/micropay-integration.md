@@ -2,7 +2,7 @@
 
 Updated 27 October 2026. The user selected **Micropay for staff SMS**, with WhatsApp planned for later. The adapter and registry are implemented and independently reviewed. A dedicated token has SMS permission enabled and the other five capabilities disabled; it is stored privately. Existing-account Preview configuration is present; final deployment/authentication acceptance remains in progress. Client-owned production handoff remains separate.
 
-**9 November 2026:** production activation is now explicitly authorized. The [current SMS rollout](sms-production-2026-11-09.md) records migration, policy, scheduler and provider evidence as each step is verified. The provider results below remain their original controlled-send evidence.
+**9 November 2026:** production SMS is enabled and deployed after explicit user authorization. The registered five-minute reminder path ran and Micropay accepted two overdue reminders; handset delivery is unconfirmed. The [current SMS rollout](sms-production-2026-11-09.md) records the migration, policy, scheduler and provider evidence. The provider results below remain their original October controlled-send evidence.
 
 ## Confirmed evidence
 

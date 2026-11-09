@@ -2,7 +2,7 @@
 
 Updated 27 October 2026. **Production first-time Google administrator login passed and the user confirmed it works.** Fix `b15cb77eca4cb9ea4e88a9942949d66b4fb48f5f` is pushed, production Ready; 450 tests pass. Testing stopped at the user's request.
 
-**9 November 2026:** the user authorized the latest production release and SMS enablement. The [current SMS rollout](sms-production-2026-11-09.md) records the new release separately from these October checkpoints; activation and delivery verification are still in progress.
+**9 November 2026:** feature commit `db2f378768a9124208ab86b50d69affd94a8a5b8` is pushed and its production deployment is Ready. Production SMS is enabled, both five-minute crons are registered, and Micropay accepted two overdue reminders through the production scheduled path. Handset delivery is unconfirmed. See the [current SMS rollout](sms-production-2026-11-09.md) for this release's evidence, separate from these October checkpoints.
 
 ## Scope
 

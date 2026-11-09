@@ -2,7 +2,7 @@
 
 Prepared 27 October 2026. **Production first-admin Google login is user-confirmed working; operational acceptance/restore rehearsal remain open.** See [deployment status](deployment-preview.md), [development commands](development.md#verification-commands) and the [decision register](decision-register.md).
 
-**9 November 2026:** the user authorized production SMS activation and the latest release. Migration `009` is applied; deployment, policy activation and delivery verification are being recorded in the [current SMS rollout](sms-production-2026-11-09.md). The dated production-pause statements below describe the earlier checkpoint.
+**9 November 2026:** production SMS is enabled and deployed, migration `009` is applied, and policy version 3 uses 4,320 minutes plus the scheduled-day reminder. Both five-minute crons are registered; the production reminder path ran and Micropay accepted two overdue reminders. Handset delivery is unconfirmed. See the [current SMS rollout](sms-production-2026-11-09.md) for deployment, audit, queue and rollback evidence. The dated production-pause statements below describe the earlier checkpoint.
 
 ## Ownership and configuration
 
