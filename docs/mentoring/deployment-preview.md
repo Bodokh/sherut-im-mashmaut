@@ -4,6 +4,8 @@ Updated 27 October 2026. **Production first-time Google administrator login pass
 
 **9 November 2026:** feature commit `db2f378768a9124208ab86b50d69affd94a8a5b8` is pushed and its production deployment is Ready. Production SMS is enabled, both five-minute crons are registered, and Micropay accepted two overdue reminders through the production scheduled path. Handset delivery is unconfirmed. See the [current SMS rollout](sms-production-2026-11-09.md) for this release's evidence, separate from these October checkpoints.
 
+The later reminder-phone and manual staff-message update `d36ef33` is also pushed and Ready on both public and staff domains after migration `010`. Three five-minute crons are registered, and the native staff-message path produced seven Micropay-accepted deliveries for the controlled administrative batch. Handset receipt and interactive composer/mobile acceptance remain unconfirmed; see the [follow-up record](sms-production-2026-11-09.md#staff-message-and-reminder-phone-update).
+
 ## Scope
 
 - Existing linked `bodokhs-projects/sherut-im-mashmaut`: initial Preview followed by authorized `main` production deployment; preserve public website content.

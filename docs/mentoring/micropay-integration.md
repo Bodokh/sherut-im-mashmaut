@@ -4,7 +4,7 @@ Updated 27 October 2026. The user selected **Micropay for staff SMS**, with What
 
 **9 November 2026:** production SMS is enabled and deployed after explicit user authorization. The registered five-minute reminder path ran and Micropay accepted two overdue reminders; handset delivery is unconfirmed. The [current SMS rollout](sms-production-2026-11-09.md) records the migration, policy, scheduler and provider evidence. The provider results below remain their original October controlled-send evidence.
 
-The follow-up source update adds authorized mentee phone details to reminders and a CEO staff-message composer. Its migration, deployment and acceptance are recorded separately in the [follow-up rollout](sms-production-2026-11-09.md#staff-message-and-reminder-phone-update); no live acceptance is claimed for that update yet.
+The follow-up update adding authorized mentee phone details and a CEO staff-message composer is deployed as `d36ef33` after migration `010`. Micropay accepted the controlled administrative batch for seven unique staff destinations, with seven task references and no pending, failed or uncertain deliveries in that batch. Handset receipt is unconfirmed. Its [follow-up rollout](sms-production-2026-11-09.md#staff-message-and-reminder-phone-update) records source, checks, native cron execution and the production deployment.
 
 ## Confirmed evidence
 

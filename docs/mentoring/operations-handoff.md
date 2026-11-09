@@ -2,7 +2,7 @@
 
 Prepared 27 October 2026. **Production first-admin Google login is user-confirmed working; operational acceptance/restore rehearsal remain open.** See [deployment status](deployment-preview.md), [development commands](development.md#verification-commands) and the [decision register](decision-register.md).
 
-**9 November 2026:** production SMS is enabled and deployed, migration `009` is applied, and policy version 3 uses 4,320 minutes plus the scheduled-day reminder. Both five-minute crons are registered; the production reminder path ran and Micropay accepted two overdue reminders. Handset delivery is unconfirmed. See the [current SMS rollout](sms-production-2026-11-09.md) for deployment, audit, queue and rollback evidence. The dated production-pause statements below describe the earlier checkpoint.
+**9 November 2026:** production SMS is enabled and deployed, migrations `009` and `010` are applied, and policy version 3 uses 4,320 minutes plus the scheduled-day reminder. Three five-minute crons are registered. The reminder path has provider-acceptance proof; Micropay also accepted the controlled manual staff-message batch for seven unique destinations. Handset delivery is unconfirmed. See the [current SMS rollout](sms-production-2026-11-09.md) for deployment, audit, queue and rollback evidence. The dated production-pause statements below describe the earlier checkpoint.
 
 ## Ownership and configuration
 
@@ -24,7 +24,7 @@ Store values privately; never in docs/screenshots/logs. Preserve unrelated publi
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY` | Selected Clerk instance browser/server configuration. |
 | `MENTORING_DATABASE_URL` | Runtime PostgreSQL connection. |
 | `MENTORING_DATABASE_URL_UNPOOLED` | Required direct migration/bootstrap connection, without `-pooler`. |
-| `CRON_SECRET` | Exact Bearer secret for the internal scheduled reminder and staff email endpoints. |
+| `CRON_SECRET` | Exact Bearer secret shared by the internal reminder, staff-onboarding and staff-message endpoints. |
 | `MENTORING_REMINDER_ACTOR_ID` | Existing real active CEO membership in the fixed organization. |
 | `NODE_ENV`, `VERCEL_ENV` | Environment guards; not independent database-target verification. |
 | `NEXT_PUBLIC_STAFF_HOST` | Production-only hostname `staff.imashmaut.co.il`. Unset in Preview and Development. Manual DNS, Vercel, Clerk, and Google steps are in [staff subdomain](staff-subdomain.md). |
@@ -83,7 +83,7 @@ Recorded direct-route/PostgreSQL checks used blocked delivery. Micropay is confi
 
 ### Manual staff SMS and reminder phone details
 
-The follow-up source adds a CEO-only composer to the reminders page. Choose active eligible staff individually or select all available staff, enter up to 1,000 characters, then review the frozen message and recipient list before confirming. Missing or invalid staff mobiles, locally pending staff changes and muted CEO accounts are unavailable. A shared normalized phone receives one message per batch.
+The deployed follow-up adds a CEO-only composer to the reminders page after migration `010`. A controlled administrative batch passed through the queue and native cron to seven Micropay-accepted deliveries; interactive composer/mobile use and handset receipt remain unconfirmed in the [rollout record](sms-production-2026-11-09.md#staff-message-and-reminder-phone-update). Choose active eligible staff individually or select all available staff, enter up to 1,000 characters, then review the frozen message and recipient list before confirming. Missing or invalid staff mobiles, locally pending staff changes and muted CEO accounts are unavailable. A shared normalized phone receives one message per batch.
 
 `send_staff_sms` requires an online request and never enters the browser's offline queue. An accepted request creates a durable, audited server batch. Initial dispatch is scheduled after command acceptance, and `/api/internal/mentoring/staff-messages` provides the five-minute continuation alongside the existing crons. Before each external handoff, the dispatcher rechecks sender and recipient eligibility against the stored destination. Pending, provider-accepted, failed, uncertain and cancelled results remain visible in recent CEO message history. An ambiguous request can be checked with its same immutable operation ID; unknown provider outcomes are not automatically resent.
 

@@ -1,6 +1,6 @@
 # SMS production rollout — 9 November 2026
 
-**Status: production SMS is enabled and deployed.** The user explicitly authorized pushing the latest version and enabling production SMS. The scheduled production path ran and Micropay accepted two overdue reminders. Handset delivery is unconfirmed.
+**Status: production SMS is enabled and deployed.** The user explicitly authorized pushing the latest version and enabling production SMS. The reminder and manual staff-message paths have recorded Micropay acceptance. Handset delivery is unconfirmed.
 
 ## Release scope
 
@@ -44,13 +44,28 @@ The live provider check exercised overdue reminders. Future three-day and schedu
 
 ## Staff-message and reminder-phone update
 
-**Follow-up source work; migration, deployment and acceptance remain pending.** A fresh private `before-staff-messages.dump` backup was created before this update. The existing enabled reminder release above retains its own proof.
+**Follow-up deployed; Micropay accepted the controlled staff-message batch for all seven unique destinations.** Migration `010` was applied after a verified private `before-staff-messages.dump` backup. The earlier enabled reminder release above retains its own proof. Handset delivery remains unconfirmed.
 
 The source adds an optional normalized mentee phone to automatic reminder text only after checking that the staff recipient currently has participant view access, including timed grants. SMS destinations remain validated staff mobiles; unauthorized or invalid mentee phones are omitted.
 
 The CEO-only reminders-page composer supports selected staff or all available staff, a reviewed message of up to 1,000 characters, and explicit confirmation. `send_staff_sms` bypasses the offline queue and creates an audited central batch with one delivery per normalized destination phone. The same operation identity reuses its receipt; uncertain handoffs are not automatically replayed. Sender/recipient eligibility is rechecked at claim time, and recent CEO history distinguishes pending, provider-accepted and uncertain outcomes.
 
-`010_staff_messages.sql` adds the durable batch and delivery tables. The source appends the sibling `/api/internal/mentoring/staff-messages` five-minute cron while preserving both existing crons and their shared authentication secret. Final source review, checks, production migration, Ready deployment, registered schedule and controlled delivery evidence will be recorded after verification.
+`010_staff_messages.sql` adds the durable batch and delivery tables. The source appends the sibling `/api/internal/mentoring/staff-messages` five-minute cron while preserving both existing crons and their shared authentication secret.
+
+| Follow-up evidence | Verified result |
+| --- | --- |
+| Source and production deployment | `d36ef33b62c597feb6000a13369121b662359c55` is pushed to `main`. Deployment `dpl_HZTV1Gsx8pbWRDS3Z7WMNjSkuRJa` was Ready and aliased to both `www.imashmaut.co.il` and `staff.imashmaut.co.il` at `2026-11-09T13:46Z`. |
+| Policy | Version 3 remains at 4,320 minutes, `responsible_team`, overdue reminders enabled and a 60-hour repeat. |
+| Local checks | All 598 mentoring unit tests passed: 294 client and 304 server. An additional final eight-composer-test run, whole-repository lint, TypeScript and production build passed. |
+| Focused PostgreSQL checks | Seven manual-queue cases and five reminder-phone cases passed. The full reminder PostgreSQL contention suite encountered local timeouts and did not pass; the focused cases are the retained database proof for this update. |
+| UI evidence | HTTP/SSR fixture checks returned 200. Repeated browser-control timeouts prevented fresh interactive or mobile acceptance. The temporary QA fixture returned 404 in production. |
+| Registered schedules | All three `*/5 * * * *` jobs are registered: staff onboarding, reminders and staff messages. Existing schedules and shared authentication are preserved. |
+| Manual-message endpoint | The native cron preflight reached this exact deployment at `2026-11-09T13:47:16.654Z`, with `vercel-cron/1.0` and GET HTTP 200. Unauthenticated GET remained 401. |
+| Controlled batch | Audited administrative rollout batch `9747ebde-115c-4f7c-989b-094fb26410f7` used a real bound CEO and the queue-creation helper, with explicit administrative attribution. No browser identity was fabricated; the provider token remained in Vercel. Two CEO accounts without mobiles were excluded. |
+| Provider outcome | The manually triggered native run at `13:49:35.750Z` processed five deliveries. The registered schedule ran at `13:50:13.109Z` and completed the remaining two before a later manual trigger at `13:50:31.083Z`; each invocation returned HTTP 200. All seven unique staff destinations reached Micropay `provider_accepted` between `13:49:39Z` and `13:50:18Z`, with seven distinct task references and zero pending, failed or uncertain deliveries in this batch. |
+| Receipt follow-up | Daniel was updated through WhatsApp at `13:51:30Z` and asked to confirm his and the staff's receipt. Missing staff numbers had been requested earlier. No handset-delivery confirmation was recorded at this checkpoint. |
+
+The controlled send verifies the durable administrative batch and native production dispatch path. Interactive composer/mobile acceptance and handset receipt remain separate, unconfirmed checks.
 
 ## Pause and rollback
 
