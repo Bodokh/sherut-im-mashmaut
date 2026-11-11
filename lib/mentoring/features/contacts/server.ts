@@ -29,12 +29,6 @@ async function bumpParticipant(ctx: CommandContext, view: ParticipantView): Prom
   await ctx.client.query("UPDATE mentoring.participants SET last_ceo_version = CASE WHEN $3::boolean THEN version + 1 ELSE last_ceo_version END, version = version + 1, updated_at = $4 WHERE organization_id = $1 AND id = $2", [ctx.actor.organizationId, view.participant.id, ctx.actor.role === "ceo", ctx.now]);
 }
 
-/** Merge field protection without weakening a pre-existing whole-record lock. */
-async function protectParticipantField(ctx: CommandContext, view: ParticipantView, field: "manualColor" | "appointment"): Promise<void> {
-  if (ctx.actor.role !== "ceo") return;
-  await ctx.client.query("INSERT INTO mentoring.ceo_protections (organization_id,resource_id,protected_by_staff_id,protected_revision,active,field_paths,created_at,updated_at) VALUES ($1,$2,$3,$4,true,ARRAY[$5]::text[],$6,$6) ON CONFLICT (organization_id,resource_id) DO UPDATE SET protected_by_staff_id = EXCLUDED.protected_by_staff_id, protected_revision = EXCLUDED.protected_revision, active = true, field_paths = CASE WHEN NOT mentoring.ceo_protections.active THEN EXCLUDED.field_paths WHEN mentoring.ceo_protections.field_paths IS NULL OR cardinality(mentoring.ceo_protections.field_paths) = 0 THEN mentoring.ceo_protections.field_paths ELSE ARRAY(SELECT DISTINCT unnest(mentoring.ceo_protections.field_paths || EXCLUDED.field_paths)) END, version = mentoring.ceo_protections.version + 1, reason = NULL, updated_at = EXCLUDED.updated_at, unlocked_by_staff_id = NULL, unlocked_at = NULL", [ctx.actor.organizationId, view.participant.id, ctx.actor.id, view.participant.version + 1, field, ctx.now]);
-}
-
 async function snapshotContact(ctx: CommandContext, entry: ContactEntry, kind: ContactRevision["changeKind"], reason: string | null, operationId: string | null): Promise<void> {
   await ctx.client.query("INSERT INTO mentoring.contact_revisions (organization_id,contact_id,participant_id,revision,actor_id,method,outcome,occurred_at,received_at,notes,invalidated_at,revised_by_staff_id,revised_at,reason,change_kind,operation_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) ON CONFLICT (organization_id,contact_id,revision) DO NOTHING", [ctx.actor.organizationId, entry.id, entry.participantId, entry.revision, entry.actorId, entry.method, entry.outcome, entry.occurredAt, entry.receivedAt, entry.notes ?? "", entry.invalidatedAt ?? null, kind === "initial" ? entry.actorId : ctx.actor.id, kind === "initial" ? entry.receivedAt : ctx.now, reason, kind, operationId]);
 }
@@ -87,10 +81,8 @@ async function reviseContact(ctx: CommandContext, command: Extract<ContactComman
   await snapshotContact(ctx, changed, command.type === "revise_contact" ? "correction" : "invalidation", command.reason, command.operationId);
   if (effect !== "retain") {
     await changeAppointment(ctx, view, { kind: command.type === "revise_contact" ? "contact_correction" : "contact_invalidation", reason: command.reason, ...(effect === "replace" && command.type === "revise_contact" ? { scheduledAt: command.nextAppointmentAt, sourceContactId: entry.id } : { warning: true }) });
-    await protectParticipantField(ctx, view, "appointment");
   }
   await bumpParticipant(ctx, view);
-  await ctx.protect(entry.id, revision);
   await ctx.refreshReminders(view.participant.id);
   await ctx.audit(command, view.participant.id, { contactId: entry.id, previousRevision: entry.revision, revision, reason: command.reason, appointmentEffect: effect, version: view.participant.version + 1 });
   return ctx.success(command, view.participant.id);
@@ -103,7 +95,6 @@ async function rescheduleAppointment(ctx: CommandContext, command: Extract<Conta
   if (!Number.isFinite(Date.parse(command.scheduledAt)) || Date.parse(command.scheduledAt) <= Date.parse(ctx.now)) return ctx.failure("validation", "יש לבחור מועד עתידי לפגישה הבאה.", "scheduledAt");
   await changeAppointment(ctx, view, { kind: "rescheduled", reason: command.reason, scheduledAt: command.scheduledAt });
   await bumpParticipant(ctx, view);
-  await protectParticipantField(ctx, view, "appointment");
   await ctx.refreshReminders(view.participant.id);
   await ctx.audit(command, view.participant.id, { appointmentId: view.nextAppointment.id, previousAppointmentVersion: view.nextAppointment.version, appointmentVersion: view.nextAppointment.version + 1, reason: command.reason, version: view.participant.version + 1 });
   return ctx.success(command, view.participant.id);
@@ -116,7 +107,6 @@ async function setManualColor(ctx: CommandContext, command: Extract<ContactComma
   await ctx.client.query("UPDATE mentoring.participants SET manual_color = $3, manual_color_at = $4 WHERE organization_id = $1 AND id = $2", [ctx.actor.organizationId, view.participant.id, command.color, ctx.now]);
   await recordManualColorHistory(ctx.client, ctx.actor.organizationId, view.participant.id, ctx.actor.id, ctx.now, command.color, view.participant.version + 1, command.reason ?? null);
   await bumpParticipant(ctx, view);
-  await protectParticipantField(ctx, view, "manualColor");
   await ctx.refreshReminders(view.participant.id);
   await ctx.audit(command, view.participant.id, { color: command.color, previousColor: view.manualColor, reason: command.reason ?? null, version: view.participant.version + 1 });
   return ctx.success(command, view.participant.id);

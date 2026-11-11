@@ -48,8 +48,11 @@ async function baselineRows(client, lock = false) {
   ensure(members.length === 1 && actor.id === QA_ACTOR && actor.auth_user_id === QA_AUTH_USER
     && actor.email === QA_EMAIL && actor.active === true && actor.role === "ceo" && actor.version === 6,
   "Original approved development CEO version6 is required.");
-  ensure(settings.length === 1 && settings[0].version === 1 && settings[0].overdue_reminders_enabled === true
-    && settings[0].overdue_repeat_hours === null, "Original settings version1 without repeating-overdue intervals is required.");
+  ensure(settings.length === 1 && Number.isInteger(settings[0].version) && settings[0].version >= 1
+    && Number.isInteger(settings[0].appointment_reminder_minutes_before)
+    && settings[0].appointment_reminder_minutes_before >= 0 && settings[0].appointment_reminder_minutes_before <= 4320
+    && settings[0].overdue_reminders_enabled === true && settings[0].overdue_repeat_hours === null,
+  "Existing saved settings without repeating-overdue intervals are required.");
   return { actor, settings: settings[0] };
 }
 
@@ -77,12 +80,16 @@ async function allJobs(client, lock = false) {
 }
 
 function assertBlockedJobs(jobs, fixture, original) {
-  const recipients = new Set([fixture.mentorId, ...(original.actor.sms_muted ? [] : [QA_ACTOR])]);
-  ensure(jobs.length === recipients.size * 2, "Only the active assigned participant may produce appointment and overdue jobs.");
+  const recipients = new Set([fixture.mentorId]);
+  const expectedOccurrences = original.settings.appointment_reminder_minutes_before > 0 ? 3 : 2;
+  ensure(jobs.length === recipients.size * expectedOccurrences, "Only the active assigned participant and its assigned mentor may produce appointment and overdue jobs.");
   ensure(new Set(jobs.map((row) => `${row.participant_id}|${row.recipient_staff_id}|${row.occurrence_key}`)).size === jobs.length, "Canonical reminder occurrences must be unique.");
   for (const recipient of recipients) {
     const own = jobs.filter((row) => row.recipient_staff_id === recipient);
-    ensure(own.length === 2 && own.some((row) => row.kind === "appointment") && own.some((row) => row.kind === "seven_day_overdue"), "Each responsible recipient needs the expected two canonical occurrences.");
+    ensure(own.length === expectedOccurrences
+      && own.filter((row) => row.kind === "appointment").length === expectedOccurrences - 1
+      && own.filter((row) => row.kind === "seven_day_overdue").length === 1,
+    "The assigned mentor needs the scheduled-day, configured advance, and overdue occurrences.");
   }
   for (const row of jobs) {
     ensure(row.participant_id === fixture.activeId && recipients.has(row.recipient_staff_id)
@@ -129,7 +136,7 @@ async function cleanup(transaction, fixture, original, seededRows) {
       && current.participants.length === 3 && current.participants.every((row) => row.created_by === QA_ACTOR && row.display_name.startsWith(fixture.marker)), "Fixture attribution is not proven.");
     const jobs = await allJobs(client, true);
     ensure(jobs.every((row) => fixture.participantIds.includes(row.participant_id)
-      && [QA_ACTOR, fixture.mentorId].includes(row.recipient_staff_id) && row.last_evaluated_by === QA_ACTOR
+      && row.recipient_staff_id === fixture.mentorId && row.last_evaluated_by === QA_ACTOR
       && row.state === "blocked" && row.claim_token === null && row.lease_expires_at === null), "Unexpected reminder evidence must not be deleted.");
     const counts = await counters(client);
     const expected = { resource_ids: 3, participants: 3, assignments: 2, appointments: 2, reminder_jobs: jobs.length, other_memberships: 2 };
@@ -198,7 +205,7 @@ async function run() {
     const request = () => new Request(target, { headers: { authorization: `Bearer ${localBearer}` } });
     ensure((await HEAD(new Request(target, { method: "HEAD" }))).status === 405 && (await GET(new Request(target))).status === 401, "Method and secret gates must reject before evaluation.");
     ensure((await withTransaction((client) => allJobs(client))).length === 0, "Unauthenticated requests must not plan populated records.");
-    const planned = 2 * (original.actor.sms_muted ? 1 : 2);
+    const planned = original.settings.appointment_reminder_minutes_before > 0 ? 3 : 2;
     const expected = { state: "delivery_blocked", scanned: 3, planned, pages: 1, scanComplete: true, more: false,
       deliveryBlocked: true, considered: 0, claimed: 0, outcomes: { provider_accepted: 0, delivered: 0, failed: 0, uncertain: 0 }, hostedSchedulerConfigured: false };
     let firstJobs;
@@ -244,7 +251,7 @@ async function run() {
         report.zeroCountersAfter = 22;
         report.originalMembershipAndSettingsUnchanged = true;
         report.membershipVersion = 6;
-        report.settingsVersion = 1;
+        report.settingsVersion = original.settings.version;
       }
     } catch {
       failure = true;

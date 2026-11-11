@@ -136,6 +136,40 @@ function cacheToken(session: OfflineSession | undefined): string | null {
   return session ? JSON.stringify([session.cacheIdentity ?? `legacy:${session.scope.key}`, session.cacheRevision ?? 0]) : null;
 }
 function participantCommand(command: MentoringCommand): boolean { return "participantId" in command; }
+function participantIdFor(command: MentoringCommand): string | null {
+  return "participantId" in command ? command.participantId : command.type === "create_participant" ? command.operationId : null;
+}
+
+/** A purge signal is authoritative; a merely missing/revoked card is not. */
+function withoutDeletedParticipants(snapshot: WorkspaceSnapshot, deleted: ReadonlySet<string>): WorkspaceSnapshot {
+  return { ...snapshot, ...(deleted.size || snapshot.permanentlyDeletedParticipantIds ? { permanentlyDeletedParticipantIds: [...deleted] } : {}),
+    participants: snapshot.participants.filter((view) => !deleted.has(view.participant.id)),
+    conflicts: snapshot.conflicts.filter((conflict) => !deleted.has(conflict.participantId)),
+    ...(snapshot.reminders ? { reminders: snapshot.reminders.filter((reminder) => !deleted.has(reminder.participantId)) } : {}) };
+}
+
+function draftReferencesParticipant(draft: DraftRecord, deleted: ReadonlySet<string>): boolean {
+  const key = draft.draftKey ?? (JSON.parse(draft.key) as string[])[1];
+  const participantId = /^(?:contact|participant-profile|assignment):([^:]+)/.exec(key)?.[1]
+    ?? /^(?:authority|contact-action):[^:]+:([^:]+)/.exec(key)?.[1];
+  if (participantId && deleted.has(participantId)) return true;
+  const references = (value: unknown): boolean => {
+    if (!value || typeof value !== "object") return false;
+    if ("participantId" in value && typeof value.participantId === "string" && deleted.has(value.participantId)) return true;
+    if ("type" in value && value.type === "create_participant" && "operationId" in value && typeof value.operationId === "string" && deleted.has(value.operationId)) return true;
+    // useFormDraft stores a payload signature beside (rather than inside) its
+    // operation ID. A crash after create acknowledgement can leave this envelope.
+    if ("operationId" in value && typeof value.operationId === "string" && "signature" in value && typeof value.signature === "string") {
+      try {
+        const payload: unknown = JSON.parse(value.signature);
+        if (payload && typeof payload === "object" && "type" in payload && payload.type === "create_participant" && deleted.has(value.operationId)) return true;
+        if (references(payload)) return true;
+      } catch { /* Malformed signatures are not inferred to reference a card. */ }
+    }
+    return Object.values(value).some(references);
+  };
+  return references(draft.value);
+}
 export function offlineDraftAccessKey(snapshot: WorkspaceSnapshot | null): string {
   return snapshot ? JSON.stringify([snapshot.actor.authUserId, snapshot.actor.organizationId, snapshot.actor.id, snapshot.actor.role,
     snapshot.participants.map((view) => [view.participant.id, [...(view.allowedActions ?? [])].sort()]).sort((a, b) => String(a[0]).localeCompare(String(b[0])))]) : "locked";
@@ -154,17 +188,19 @@ export function isOfflineDraftAccessCurrent(snapshot: WorkspaceSnapshot | null, 
 
 function commandAllowed(snapshot: WorkspaceSnapshot, command: MentoringCommand, localCreates: ReadonlySet<string> = new Set()): boolean {
   const actor = snapshot.actor;
+  if (command.type === "permanently_delete_participant" || snapshot.permanentlyDeletedParticipantIds?.includes(participantIdFor(command) ?? "")) return false;
   if (participantCommand(command) && "participantId" in command) {
     const view = snapshot.participants.find((item) => item.participant.id === command.participantId);
-    if (!view) return localCreates.has(command.participantId) && actor.role !== "mentor";
+    if (!view && !localCreates.has(command.participantId)) return false;
     if (["set_access_grant", "set_ceo_protection", "set_participant_lifecycle", "delete_participant", "restore_participant"].includes(command.type)) return actor.role === "ceo";
     if (command.type === "invalidate_contact" && actor.role === "mentor") return false;
+    if (!view) return actor.role !== "mentor" || !["review_contact", "assign_participant"].includes(command.type);
     const action = command.type === "review_contact" ? "approve" : "edit";
     return view.allowedActions ? view.allowedActions.includes(action) : canPerformParticipantAction(actor, view.participant, view.acceptedAssignment ?? view.assignment, action, view.accessGrants ?? []);
   }
   switch (command.type) {
     case "send_staff_sms": return false;
-    case "create_participant": return actor.role !== "mentor";
+    case "create_participant": return true;
     case "create_staff": return actor.role === "ceo" || (actor.role === "coordinator" && command.fields.role === "mentor" && command.fields.coordinatorId === actor.id);
     case "resend_staff_invite": return canSendStaffInvite(actor, snapshot.staff.find((member) => member.id === command.staffId));
     case "evaluate_reminders": return actor.role !== "mentor";
@@ -195,7 +231,8 @@ function draftAuthority(snapshot: WorkspaceSnapshot, key: string, value?: unknow
 }
 function draftAllowed(snapshot: WorkspaceSnapshot, draft: DraftRecord): boolean {
   const authority = draft.authority;
-  if (!authority || authority.role !== snapshot.actor.role || (authority.newParticipant && snapshot.actor.role === "mentor")) return false;
+  if (!authority || authority.role !== snapshot.actor.role) return false;
+  if (snapshot.permanentlyDeletedParticipantIds?.length && draftReferencesParticipant(draft, new Set(snapshot.permanentlyDeletedParticipantIds))) return false;
   return authority.participantIds.every((id) => {
     const view = snapshot.participants.find((item) => item.participant.id === id);
     return Boolean(view && (view.allowedActions ? view.allowedActions.includes("view") : canPerformParticipantAction(snapshot.actor, view.participant, view.acceptedAssignment ?? view.assignment, "view", view.accessGrants ?? [])));
@@ -293,6 +330,64 @@ export function createMentoringOfflineStore(databaseName = MENTORING_OFFLINE_DAT
     await transaction.objectStore("session").delete("active");
   }
 
+  async function purgeInTransaction(transaction: import("idb").IDBPTransaction<OfflineDatabase, ["session", "operations", "drafts", "receipts", "vaults"], "readwrite">, organizationId: string, deleted: ReadonlySet<string>) {
+    if (!deleted.size) return;
+    const vaults = await transaction.objectStore("vaults").getAll();
+    const active = await transaction.objectStore("session").get("active");
+    const conflictIds = new Set(active?.scope.organizationId === organizationId ? active.snapshot.conflicts.filter((conflict) => deleted.has(conflict.participantId)).map((conflict) => conflict.id) : []);
+    const organizationFor = (key: string): string | undefined => {
+      const vault = vaults.find((entry) => entry.id === key);
+      if (vault) return vault.scope.organizationId;
+      try { return (JSON.parse(key) as string[])[1]; } catch { return undefined; }
+    };
+    for (const operation of await transaction.objectStore("operations").getAll()) {
+      if (organizationFor(operation.scopeKey) === organizationId && (deleted.has(participantIdFor(operation.command) ?? "") || (operation.command.type === "resolve_conflict" && conflictIds.has(operation.command.conflictId)))) await transaction.objectStore("operations").delete(operation.key);
+    }
+    for (const draft of await transaction.objectStore("drafts").getAll()) {
+      if (organizationFor(draft.scopeKey) !== organizationId) continue;
+      if (draftReferencesParticipant(draft, deleted)) await transaction.objectStore("drafts").delete(draft.key);
+      else if (draft.authority?.participantIds.some((id) => deleted.has(id))) await transaction.objectStore("drafts").put({ ...draft, authority: { ...draft.authority, participantIds: draft.authority.participantIds.filter((id) => !deleted.has(id)) } });
+    }
+    for (const receipt of await transaction.objectStore("receipts").getAll()) {
+      const [key] = JSON.parse(receipt.key) as string[];
+      if (organizationFor(key) !== organizationId) continue;
+      let participantId = receipt.result.participantId;
+      try { participantId ??= participantIdFor(JSON.parse(receipt.signature) as MentoringCommand) ?? undefined; } catch { /* The accepted result still identifies its card. */ }
+      if (participantId && deleted.has(participantId)) await transaction.objectStore("receipts").delete(receipt.key);
+    }
+    for (const vault of vaults) {
+      if (vault.scope.organizationId !== organizationId) continue;
+      const hasOperations = await transaction.objectStore("operations").index("scope").count(vault.id);
+      const hasDrafts = await transaction.objectStore("drafts").index("scope").count(vault.id);
+      const hasReceipts = (await transaction.objectStore("receipts").getAll()).some((receipt) => (JSON.parse(receipt.key) as string[])[0] === vault.id);
+      if (!hasOperations && !hasDrafts && !hasReceipts) await transaction.objectStore("vaults").delete(vault.id);
+    }
+  }
+
+  /** Block an irreversible request while this account still has unsaved work for its card. */
+  async function assertParticipantReadyForPurge(scope: OfflineScope, participantId: string): Promise<void> {
+    const transaction = (await db()).transaction(["session", "operations", "drafts"]);
+    assertSession(await transaction.objectStore("session").get("active"), scope, Date.now());
+    const operations = await transaction.objectStore("operations").index("scope").getAll(scope.key);
+    const drafts = await transaction.objectStore("drafts").index("scope").getAll(scope.key);
+    await transaction.done;
+    const deleted = new Set([participantId]);
+    if (operations.some((operation) => operation.status !== "acknowledged" && participantIdFor(operation.command) === participantId) || drafts.some((draft) => draftReferencesParticipant(draft, deleted))) {
+      throw new OfflineStorageError("superseded", "בכרטיס יש עבודה מקומית שלא הושלמה. יש לשמור או להסיר את הטיוטות והעדכונים הממתינים לפני מחיקה לצמיתות.");
+    }
+  }
+
+  /** Called only after a matching accepted server receipt, never as an optimistic change. */
+  async function purgeParticipant(scope: OfflineScope, participantId: string): Promise<void> {
+    const transaction = (await db()).transaction(["session", "operations", "drafts", "receipts", "vaults"], "readwrite");
+    const session = await transaction.objectStore("session").get("active");
+    assertSession(session, scope, Date.now());
+    const deleted = new Set([...(session.snapshot.permanentlyDeletedParticipantIds ?? []), participantId]);
+    await purgeInTransaction(transaction, scope.organizationId, deleted);
+    await transaction.objectStore("session").put({ ...session, snapshot: withoutDeletedParticipants(session.snapshot, deleted), cacheRevision: session.cacheRevision + 1 }, "active");
+    await transaction.done;
+  }
+
   async function saveSnapshot(snapshot: WorkspaceSnapshot, accountId: string, now = Date.now(), isCurrent: () => boolean = () => true, expectedCacheRevision?: string | null): Promise<OfflineSession> {
     const accessWasLocked = typeof window !== "undefined" && !isMentoringOfflineAccessPrepared();
     if (snapshot.actor.authUserId !== accountId || !snapshot.actor.active) throw new OfflineStorageError("account_changed", "זהות החשבון אינה תואמת לסביבת הליווי.");
@@ -308,6 +403,9 @@ export function createMentoringOfflineStore(databaseName = MENTORING_OFFLINE_DAT
       transaction.abort(); await transaction.done.catch(() => undefined);
       throw new OfflineStorageError("superseded", "המידע במכשיר עודכן בזמן הטעינה. נדרשת טעינה חדשה מהמערכת.");
     }
+    const deleted = new Set([...(snapshot.permanentlyDeletedParticipantIds ?? []), ...(previous?.scope.organizationId === scope.organizationId ? previous.snapshot.permanentlyDeletedParticipantIds ?? [] : [])]);
+    snapshot = withoutDeletedParticipants(snapshot, deleted);
+    await purgeInTransaction(transaction, scope.organizationId, deleted);
     if (previous) {
       const queued = await transaction.objectStore("operations").index("scope").getAll(previous.scope.key);
       const drafts = await transaction.objectStore("drafts").index("scope").getAll(previous.scope.key);
@@ -317,7 +415,7 @@ export function createMentoringOfflineStore(databaseName = MENTORING_OFFLINE_DAT
         await quarantineInTransaction(transaction, previous, accessWasLocked ? "access_locked" : previous.scope.key !== scope.key ? "account_changed" : "authority_changed");
       }
     }
-    const next = { ...candidate, cacheIdentity: previous?.scope.key === scope.key ? previous.cacheIdentity ?? candidate.cacheIdentity : candidate.cacheIdentity, sequence: previous?.scope.key === scope.key ? previous.sequence : 0, cacheRevision: (previous?.cacheRevision ?? 0) + 1 };
+    const next = { ...candidate, snapshot: structuredClone(snapshot), cacheIdentity: previous?.scope.key === scope.key ? previous.cacheIdentity ?? candidate.cacheIdentity : candidate.cacheIdentity, sequence: previous?.scope.key === scope.key ? previous.sequence : 0, cacheRevision: (previous?.cacheRevision ?? 0) + 1 };
     await store.put(next, "active");
     await transaction.done;
     return next;
@@ -360,6 +458,7 @@ export function createMentoringOfflineStore(databaseName = MENTORING_OFFLINE_DAT
   }
 
   async function enqueue(scope: OfflineScope, command: MentoringCommand, now = Date.now()): Promise<OfflineOperation> {
+    if (command.type === "permanently_delete_participant") throw new OfflineStorageError("invalid_command", "מחיקה לצמיתות דורשת חיבור פעיל ואישור מפורש. היא אינה נשמרת בתור המקומי.");
     if (command.type === "send_staff_sms") throw new OfflineStorageError("invalid_command", "שליחת SMS לצוות דורשת חיבור פעיל ואישור שליחה. ההודעה לא נשמרה בתור המקומי.");
     if (!command.operationId || command.operationId.length > 128) throw new OfflineStorageError("invalid_command", "חסר מזהה תקין לפעולה. יש לפתוח מחדש את הטופס.");
     const signature = canonical(command);
@@ -368,6 +467,7 @@ export function createMentoringOfflineStore(databaseName = MENTORING_OFFLINE_DAT
     const sessions = transaction.objectStore("session");
     const session = await sessions.get("active");
     assertSession(session, scope, now);
+    if (session.snapshot.permanentlyDeletedParticipantIds?.includes(participantIdFor(command) ?? "")) throw new OfflineStorageError("invalid_command", "הכרטיס נמחק לצמיתות. אין אפשרות לשמור או לשחזר עבורו עדכון מקומי.");
     const store = transaction.objectStore("operations");
     const key = resourceKey(scope, command.operationId);
     const receipt = await transaction.objectStore("receipts").get(key);
@@ -585,7 +685,7 @@ export function createMentoringOfflineStore(databaseName = MENTORING_OFFLINE_DAT
     await transaction.done;
   }
 
-  return { clear, quarantine, saveSnapshot, cacheRevision, activeCacheRevision, readSession, operations, enqueue, settle, readReceipt, acknowledgeLocalFailure, readDraft, writeDraft, clearDraft, clearRecoveredDraft, unsyncedCount, recoveryMetadata, recoverLocalWork, recoveredDrafts, discardLocalRecovery };
+  return { clear, quarantine, saveSnapshot, cacheRevision, activeCacheRevision, readSession, operations, enqueue, settle, readReceipt, acknowledgeLocalFailure, readDraft, writeDraft, clearDraft, clearRecoveredDraft, unsyncedCount, recoveryMetadata, recoverLocalWork, recoveredDrafts, discardLocalRecovery, assertParticipantReadyForPurge, purgeParticipant };
 }
 
 export function projectWorkspace(snapshot: WorkspaceSnapshot, operations: readonly OfflineOperation[]): WorkspaceSnapshot {

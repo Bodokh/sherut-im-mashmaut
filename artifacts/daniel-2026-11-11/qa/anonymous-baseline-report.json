@@ -1,0 +1,119 @@
+{
+  "baseURL": "http://localhost:3117",
+  "checkedAt": "2026-11-11T16:38:13.958Z",
+  "results": [
+    {
+      "name": "Public home, about, and contact remain accessible without staff identity",
+      "status": "passed",
+      "durationMs": 3994,
+      "pages": [
+        {
+          "path": "/",
+          "title": "שירות עם משמעות | ערכים, זהות ושליחות לצעירות",
+          "headings": 1
+        },
+        {
+          "path": "/about",
+          "title": "אודות העמותה, המטרות ופרטי הרישום | שירות עם משמעות",
+          "headings": 1
+        },
+        {
+          "path": "/contact",
+          "title": "הזמנת הרצאה ויצירת קשר | שירות עם משמעות",
+          "headings": 1
+        }
+      ],
+      "screenshot": "/tmp/sherut-daniel-qa-20261111/anonymous-final/public-contact-desktop.png"
+    },
+    {
+      "name": "Hebrew-prefixed public URL retains its canonical redirect",
+      "status": "passed",
+      "durationMs": 23,
+      "httpStatus": 308,
+      "destination": "/about"
+    },
+    {
+      "name": "Unauthenticated staff routes redirect to the fixed login page",
+      "status": "passed",
+      "durationMs": 39,
+      "routes": [
+        "/staff",
+        "/staff/participants",
+        "/staff/team",
+        "/staff/reviews"
+      ]
+    },
+    {
+      "name": "Private APIs reject anonymous reads and commands without HTML redirects",
+      "status": "passed",
+      "durationMs": 236,
+      "workspace": 401,
+      "sameOriginCommand": 401,
+      "externalOriginCommand": 403
+    },
+    {
+      "name": "Only the generic anonymous offline entry is eligible for explicit shell caching",
+      "status": "passed",
+      "durationMs": 460,
+      "genericShellStatus": 200,
+      "privateDataEmbedded": false,
+      "authPagesMarkedCacheable": false
+    },
+    {
+      "name": "Login and password recovery controls work by keyboard without submitting a credential",
+      "status": "passed",
+      "durationMs": 1529,
+      "screenshot": "/tmp/sherut-daniel-qa-20261111/anonymous-final/staff-login-desktop.png",
+      "credentialSubmitted": false
+    },
+    {
+      "name": "Mobile public and login pages fit a 390px viewport",
+      "status": "passed",
+      "durationMs": 1183,
+      "pages": [
+        {
+          "path": "/",
+          "width": 390,
+          "scrollWidth": 390
+        },
+        {
+          "path": "/about",
+          "width": 390,
+          "scrollWidth": 390
+        },
+        {
+          "path": "/contact",
+          "width": 390,
+          "scrollWidth": 390
+        },
+        {
+          "path": "/staff/login",
+          "width": 390,
+          "scrollWidth": 390
+        }
+      ],
+      "screenshot": "/tmp/sherut-daniel-qa-20261111/anonymous-final/staff-login-mobile.png"
+    },
+    {
+      "name": "Anonymous browser journeys have no uncaught or console errors",
+      "status": "failed",
+      "durationMs": 38,
+      "message": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n+ [\n+   \"Initialization error: undefined - Cannot read properties of null (reading 'invalidAccountId')\",\n+   \"A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:\\n\" +\n+     '\\n' +\n+     \"- A server/client branch `if (typeof window !== 'undefined')`.\\n\" +\n+     \"- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.\\n\" +\n+     \"- Date formatting in a user's locale which doesn't match the server.\\n\" +\n+     '- External changing data without sending a snapshot of it along with the HTML.\\n' +\n+     '- Invalid HTML tag nesting.\\n' +\n+     '\\n' +\n+     'It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.\\n' +\n+     '\\n' +\n+     '%s%s [URL omitted] \\n' +\n+     '\\n' +\n+     '  ...\\n' +\n+     '    <AuthFrame variant=\"login\" title=\"טוב לראות ...\" description=\"נכנסים עם ...\" footer={<p>}>\\n' +\n+     '      <LoginFrame title=\"טוב לראות ...\" description=\"נכנסים עם ...\" footer={<p>}>\\n' +\n+     '        <main className=\"login-fram...\">\\n' +\n+     '          <div className=\"login-fram...\">\\n' +\n+     '            <section className=\"login-fram...\" dir=\"rtl\" aria-labelledby=\"login-title\">\\n' +\n+     '              <header>\\n' +\n+     '              <div className=\"login-fram...\">\\n' +\n+     '                <div>\\n' +\n+     '                <div className=\"login-fram...\">\\n' +\n+     '                  <form method=\"post\" onSubmit={function submit} noValidate={true} aria-busy={true}>\\n' +\n+     '                    <FieldGroup>\\n' +\n+     '                      <div data-slot=\"field-group\" className=\"group/fiel...\">\\n' +\n+     '                        <Button>\\n' +\n+     '                        <FieldDescription>\\n' +\n+     '                        <FieldSeparator>\\n' +\n+     '                        <Field>\\n' +\n+     '                        <Field data-auth-password-field={true} data-invalid={undefined}>\\n' +\n+     '                          <div role=\"group\" data-slot=\"field\" data-orientation=\"vertical\" className={\"group/fi...\"} ...>\\n' +\n+     '                            <FieldLabel>\\n' +\n+     '                            <Input id=\"staff-pass...\" type=\"password\" dir=\"ltr\" autoComplete=\"current-pa...\" value=\"\" ...>\\n' +\n+     '                              <Input type=\"password\" data-slot=\"input\" className=\"h-11 w-ful...\" id=\"staff-pass...\" ...>\\n' +\n+     '                                <FieldControl ref={null} type=\"password\" data-slot=\"input\" className=\"h-11 w-ful...\" ...>\\n' +\n+     '                                  <input\\n' +\n+     '                                    data-disabled=\"\"\\n' +\n+     '                                    id=\"staff-password\"\\n' +\n+     '                                    disabled={true}\\n' +\n+     '                                    name={undefined}\\n' +\n+     '                                    ref={function}\\n' +\n+     '                                    aria-labelledby={undefined}\\n' +\n+     '                                    autoFocus={false}\\n' +\n+     '                                    value=\"\"\\n' +\n+     '                                    onChange={function}\\n' +\n+     '                                    onFocus={function}\\n' +\n+     '                                    onBlur={function}\\n' +\n+     '                                    onKeyDown={function}\\n' +\n+     '                                    type=\"password\"\\n' +\n+     '                                    data-slot=\"input\"\\n' +\n+     '                                    dir=\"ltr\"\\n' +\n+     '                                    autoComplete=\"current-password\"\\n' +\n+     '                                    aria-invalid={false}\\n' +\n+     '                                    aria-describedby={undefined}\\n' +\n+     '                                    minLength={undefined}\\n' +\n+     '                                    maxLength={512}\\n' +\n+     '                                    required={true}\\n' +\n+     '                                    className=\"h-11 w-full min-w-0 rounded-lg border border-input bg-card px-3.5 py-2 ...\"\\n' +\n+     '-                                   style={{caret-color:\"transparent\"}}\\n' +\n+     '                                  >\\n' +\n+     '                            ...\\n' +\n+     '                        ...\\n' +\n+     '                ...\\n' +\n+     '              ...\\n' +\n+     '            ...\\n'\n+ ]\n- []\n",
+      "screenshot": "/tmp/sherut-daniel-qa-20261111/anonymous-final/failure-8.png"
+    },
+    {
+      "name": "Signed-in provider, staff, participant/contact, and offline reconnect journeys",
+      "status": "not_tested",
+      "reason": "Awaiting explicit approval for the development-only Clerk QA account; no credential creation was attempted."
+    }
+  ],
+  "consoleErrors": [
+    "Initialization error: undefined - Cannot read properties of null (reading 'invalidAccountId')",
+    "A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:\n\n- A server/client branch `if (typeof window !== 'undefined')`.\n- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.\n- Date formatting in a user's locale which doesn't match the server.\n- External changing data without sending a snapshot of it along with the HTML.\n- Invalid HTML tag nesting.\n\nIt can also happen if the client has a browser extension installed which messes with the HTML before React loaded.\n\n%s%s [URL omitted] \n\n  ...\n    <AuthFrame variant=\"login\" title=\"טוב לראות ...\" description=\"נכנסים עם ...\" footer={<p>}>\n      <LoginFrame title=\"טוב לראות ...\" description=\"נכנסים עם ...\" footer={<p>}>\n        <main className=\"login-fram...\">\n          <div className=\"login-fram...\">\n            <section className=\"login-fram...\" dir=\"rtl\" aria-labelledby=\"login-title\">\n              <header>\n              <div className=\"login-fram...\">\n                <div>\n                <div className=\"login-fram...\">\n                  <form method=\"post\" onSubmit={function submit} noValidate={true} aria-busy={true}>\n                    <FieldGroup>\n                      <div data-slot=\"field-group\" className=\"group/fiel...\">\n                        <Button>\n                        <FieldDescription>\n                        <FieldSeparator>\n                        <Field>\n                        <Field data-auth-password-field={true} data-invalid={undefined}>\n                          <div role=\"group\" data-slot=\"field\" data-orientation=\"vertical\" className={\"group/fi...\"} ...>\n                            <FieldLabel>\n                            <Input id=\"staff-pass...\" type=\"password\" dir=\"ltr\" autoComplete=\"current-pa...\" value=\"\" ...>\n                              <Input type=\"password\" data-slot=\"input\" className=\"h-11 w-ful...\" id=\"staff-pass...\" ...>\n                                <FieldControl ref={null} type=\"password\" data-slot=\"input\" className=\"h-11 w-ful...\" ...>\n                                  <input\n                                    data-disabled=\"\"\n                                    id=\"staff-password\"\n                                    disabled={true}\n                                    name={undefined}\n                                    ref={function}\n                                    aria-labelledby={undefined}\n                                    autoFocus={false}\n                                    value=\"\"\n                                    onChange={function}\n                                    onFocus={function}\n                                    onBlur={function}\n                                    onKeyDown={function}\n                                    type=\"password\"\n                                    data-slot=\"input\"\n                                    dir=\"ltr\"\n                                    autoComplete=\"current-password\"\n                                    aria-invalid={false}\n                                    aria-describedby={undefined}\n                                    minLength={undefined}\n                                    maxLength={512}\n                                    required={true}\n                                    className=\"h-11 w-full min-w-0 rounded-lg border border-input bg-card px-3.5 py-2 ...\"\n-                                   style={{caret-color:\"transparent\"}}\n                                  >\n                            ...\n                        ...\n                ...\n              ...\n            ...\n"
+  ],
+  "summary": {
+    "passed": 7,
+    "failed": 1,
+    "notTested": 1
+  }
+}

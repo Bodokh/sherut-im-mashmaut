@@ -81,10 +81,13 @@ test("real PostgreSQL mentoring transactions and current authorization", { skip:
   }
   async function contactCommand(participantId, overrides = {}) {
     const current = await state(participantId);
+    // The accepting transaction uses PostgreSQL time. Disposable VM clocks can
+    // drift briefly from the host; actual-contact fixtures use the same clock.
+    const occurredAt = (await database.query("SELECT clock_timestamp() AS now")).rows[0].now.toISOString();
     return {
       type: "record_contact", operationId: randomUUID(), participantId,
       expectedVersion: current.participant.version, expectedAppointmentVersion: current.appointment?.version ?? null,
-      method: "phone", outcome: "completed", occurredAt: new Date().toISOString(),
+      method: "phone", outcome: "completed", occurredAt,
       nextAppointmentAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), notes: `בדיקת קשר ${suffix}`,
       ...overrides,
     };
@@ -206,7 +209,7 @@ test("real PostgreSQL mentoring transactions and current authorization", { skip:
     const ceoRow = (await database.query("SELECT * FROM mentoring.memberships WHERE id = $1", [ceo.id])).rows[0];
     failed(await run(ceo, { ...deactivate, operationId: randomUUID(), staffId: ceo.id, expectedVersion: ceoRow.version }), "forbidden");
     const ownCreate = { type: "create_participant", operationId: randomUUID(), fields: {} };
-    failed(await run(member, ownCreate), "forbidden");
+    accepted(await run(member, ownCreate));
     accepted(await run(ceo, deactivate));
     assert.equal(await resolveStaffIdentity(member.authUserId, member.email), null);
     failed(await run(member, ownCreate), "not_staff");
@@ -418,30 +421,89 @@ test("real PostgreSQL mentoring transactions and current authorization", { skip:
     assert.equal(Date.parse(owner.offlineValidUntil) - Date.parse(owner.serverTime), 24 * 60 * 60 * 1000);
   });
 
-  await t.test("CEO-created profile and assignment fields stay protected without blocking a new mentor contact or locking an empty profile", async () => {
-    const ceoNotes = "ערך פרופיל שסיפק המנכ״ל ונשאר מוגן";
-    const participantId = await create(ceo, { profileNotes: ceoNotes });
-    let protection = (await database.query("SELECT * FROM mentoring.ceo_protections WHERE organization_id = $1 AND resource_id = $2", [organizationId, participantId])).rows[0];
-    assert.ok(Array.isArray(protection.field_paths) && protection.field_paths.length > 0, "Automatic CEO profile protection must name supplied fields rather than silently lock the whole resource.");
-    assert.deepEqual([...protection.field_paths].sort(), ["displayName", "profileNotes"]);
-    await assign(ceo, participantId, mentorA, coordinatorA);
-    protection = (await database.query("SELECT * FROM mentoring.ceo_protections WHERE organization_id = $1 AND resource_id = $2", [organizationId, participantId])).rows[0];
-    assert.deepEqual([...protection.field_paths].sort(), ["assignment", "displayName", "profileNotes"], "Assignment protection must merge with the existing supplied profile fields.");
-    const contact = await contactCommand(participantId);
-    accepted(await run(mentorA, contact));
-    let current = await state(participantId);
-    assert.equal(current.participant.profile_notes, ceoNotes);
-    assert.equal(current.appointment.version, 1);
-    assert.equal((await database.query("SELECT actor_id FROM mentoring.contacts WHERE organization_id = $1 AND id = $2", [organizationId, contact.operationId])).rows[0].actor_id, mentorA.id);
-    failed(await run(mentorA, { type: "update_participant", operationId: randomUUID(), participantId, expectedVersion: current.participant.version, fields: { profileNotes: "שינוי שאסור להחיל על הערך של המנכ״ל" } }), "ceo_protected");
-    current = await state(participantId);
-    assert.equal(current.participant.profile_notes, ceoNotes, "Accepting a new contact must not unlock the CEO's supplied profile value.");
+  await t.test("a coordinator can create, assign and report for their own team without replacing the primary mentor", async () => {
+    const participantId = await create(coordinatorA);
+    const unassigned = await state(participantId);
+    assert.equal(unassigned.assignment, null);
+    const prematureReport = await contactCommand(participantId);
+    failed(await run(coordinatorA, prematureReport), "validation");
+    assert.equal((await database.query("SELECT count(*)::int AS count FROM mentoring.contacts WHERE id=$1", [prematureReport.operationId])).rows[0].count, 0, "An unassigned card cannot accept a completed report.");
 
-    const emptyCreate = { type: "create_participant", operationId: randomUUID(), fields: {} };
-    assert.equal(accepted(await run(ceo, emptyCreate)).participantId, emptyCreate.operationId);
-    const emptyProtections = await database.query("SELECT * FROM mentoring.ceo_protections WHERE organization_id = $1 AND resource_id = $2", [organizationId, emptyCreate.operationId]);
-    assert.equal(emptyProtections.rows.length, 0, "An empty CEO create must not turn an empty field list into whole-record protection.");
-    assert.equal((await state(emptyCreate.operationId)).participant.version, 1);
+    await assign(coordinatorA, participantId, mentorA, coordinatorA);
+    let current = await state(participantId);
+    accepted(await run(coordinatorA, { type: "update_participant", operationId: randomUUID(), participantId, expectedVersion: current.participant.version, fields: { profileNotes: "פרטים שהשלימה הרכזת" } }));
+    current = await state(participantId);
+    assert.equal(current.participant.profile_notes, "פרטים שהשלימה הרכזת");
+    assert.equal(current.assignment.mentor_id, mentorA.id);
+    assert.equal(current.assignment.coordinator_id, coordinatorA.id);
+    failed(await run(coordinatorB, { type: "update_participant", operationId: randomUUID(), participantId, expectedVersion: current.participant.version, fields: { profileNotes: "שינוי מצוות אחר" } }), "forbidden");
+    const foreignReport = await contactCommand(participantId);
+    failed(await run(coordinatorB, foreignReport), "forbidden");
+    assert.equal((await database.query("SELECT count(*)::int AS count FROM mentoring.contacts WHERE id=$1", [foreignReport.operationId])).rows[0].count, 0);
+
+    const report = await contactCommand(participantId, { notes: "דוח מעקב שהרכזת מילאה עבור חניכה בצוות שלה" });
+    accepted(await run(coordinatorA, report));
+    const contact = (await database.query("SELECT actor_id,outcome,notes FROM mentoring.contacts WHERE organization_id=$1 AND id=$2", [organizationId, report.operationId])).rows[0];
+    assert.deepEqual(contact, { actor_id: coordinatorA.id, outcome: "completed", notes: report.notes });
+    const after = await state(participantId);
+    assert.deepEqual(after.assignment, current.assignment, "The coordinator's report preserves the primary mentor assignment.");
+    assert.equal(after.appointment.mentor_id, mentorA.id, "The next appointment belongs to the primary mentor, not the report author.");
+    assert.equal(after.appointment.source_contact_id, report.operationId);
+    assert.equal(after.appointment.scheduled_at.toISOString(), report.nextAppointmentAt);
+  });
+
+  await t.test("mentor creation self-assigns within the current team and cannot expose a new card to another team", async () => {
+    const command = { type: "create_participant", operationId: randomUUID(), fields: { displayName: `בדיקת שרת ${suffix} mentor-created`, profileNotes: "פרטים ראשוניים" } };
+    const result = accepted(await run(mentorA, command));
+    assert.equal(result.participantId, command.operationId);
+    const current = await state(command.operationId);
+    assert.equal(current.participant.created_by, mentorA.id);
+    assert.equal(current.assignment.mentor_id, mentorA.id);
+    assert.equal(current.assignment.coordinator_id, coordinatorA.id);
+    assert.equal(current.assignment.version, 1);
+    assert.equal(current.participant.version, 1);
+    const own = await getWorkspace(mentorA.authUserId, mentorA.email);
+    assert.deepEqual([...own.participants.find((view) => view.participant.id === command.operationId).allowedActions].sort(), ["edit", "view"]);
+    const coordinator = await getWorkspace(coordinatorA.authUserId, coordinatorA.email);
+    assert.ok(coordinator.participants.some((view) => view.participant.id === command.operationId));
+    for (const other of [mentorB, coordinatorB]) {
+      const workspace = await getWorkspace(other.authUserId, other.email);
+      assert.ok(!workspace.participants.some((view) => view.participant.id === command.operationId));
+      failed(await run(other, { type: "update_participant", operationId: randomUUID(), participantId: command.operationId, expectedVersion: 1, fields: { profileNotes: "אין גישה" } }), "forbidden");
+    }
+    assert.equal(accepted(await run(mentorA, command)).replayed, true);
+    assert.equal((await database.query("SELECT count(*)::int AS count FROM mentoring.assignments WHERE organization_id=$1 AND participant_id=$2", [organizationId, command.operationId])).rows[0].count, 1);
+    accepted(await run(mentorA, await contactCommand(command.operationId)));
+    const after = await state(command.operationId);
+    assert.equal(after.appointment.mentor_id, mentorA.id);
+    failed(await run(mentorA, { type: "assign_participant", operationId: randomUUID(), participantId: command.operationId, expectedVersion: after.participant.version, mentorId: mentorB.id, coordinatorId: coordinatorB.id }), "forbidden");
+  });
+
+  await t.test("routine CEO creation and assignment leave profiles editable while explicit protection still applies", async () => {
+    const ceoNotes = "פרטים ראשוניים של המנכ״ל";
+    const participantId = await create(ceo, { profileNotes: ceoNotes });
+    await assign(ceo, participantId, mentorA, coordinatorA);
+    assert.equal((await database.query("SELECT count(*)::int AS count FROM mentoring.ceo_protections WHERE organization_id=$1 AND resource_id=$2", [organizationId, participantId])).rows[0].count, 0);
+    let current = await state(participantId);
+    accepted(await run(mentorA, { type: "update_participant", operationId: randomUUID(), participantId, expectedVersion: current.participant.version, fields: { profileNotes: "פרטים שהשלימה החונכת" } }));
+    accepted(await run(mentorA, await contactCommand(participantId)));
+    current = await state(participantId);
+    assert.equal(current.participant.profile_notes, "פרטים שהשלימה החונכת");
+    const lock = { type: "set_ceo_protection", operationId: randomUUID(), participantId, expectedVersion: current.participant.version, resourceId: participantId, expectedProtectionVersion: null, active: true, fieldPaths: ["profileNotes"], reason: "הגנה מפורשת לבדיקה" };
+    accepted(await run(ceo, lock));
+    const before = (await database.query("SELECT * FROM mentoring.ceo_protections WHERE organization_id=$1 AND resource_id=$2", [organizationId, participantId])).rows[0];
+    current = await state(participantId);
+    accepted(await run(ceo, { type: "update_participant", operationId: randomUUID(), participantId, expectedVersion: current.participant.version, fields: { displayName: `בדיקת שרת ${suffix} updated` } }));
+    assert.deepEqual((await database.query("SELECT * FROM mentoring.ceo_protections WHERE organization_id=$1 AND resource_id=$2", [organizationId, participantId])).rows[0], before, "Routine CEO edits preserve the explicit lock fields, reason and concurrency token.");
+    current = await state(participantId);
+    failed(await run(mentorA, { type: "update_participant", operationId: randomUUID(), participantId, expectedVersion: current.participant.version, fields: { profileNotes: "ערך חסום" } }), "ceo_protected");
+    accepted(await run(mentorA, await contactCommand(participantId)));
+    current = await state(participantId);
+    accepted(await run(ceo, { ...lock, operationId: randomUUID(), expectedVersion: current.participant.version, expectedProtectionVersion: before.version, active: false, fieldPaths: null, reason: "פתיחת ההגנה במפורש" }));
+    const unlocked = (await database.query("SELECT * FROM mentoring.ceo_protections WHERE organization_id=$1 AND resource_id=$2", [organizationId, participantId])).rows[0];
+    current = await state(participantId);
+    accepted(await run(ceo, { type: "update_participant", operationId: randomUUID(), participantId, expectedVersion: current.participant.version, fields: { profileNotes: "עדכון לאחר פתיחה" } }));
+    assert.deepEqual((await database.query("SELECT * FROM mentoring.ceo_protections WHERE organization_id=$1 AND resource_id=$2", [organizationId, participantId])).rows[0], unlocked, "Routine writes must not reactivate an explicit unlock.");
   });
 
   await t.test("CEO versions preserve a rejected submission exactly once while current contact append stays allowed", async () => {
@@ -468,6 +530,8 @@ test("real PostgreSQL mentoring transactions and current authorization", { skip:
     accepted(await run(mentorA, sameColorAttempt));
     const colorAfterAttempt = await state(participantId);
     assert.equal(colorAfterAttempt.participant.manual_color_at.toISOString(), colorBeforeAttempt.participant.manual_color_at.toISOString(), "An unchanged color must not alter the CEO's timestamp.");
+    const beforeProtection = await state(participantId);
+    accepted(await run(ceo, { type: "set_ceo_protection", operationId: randomUUID(), participantId, expectedVersion: beforeProtection.participant.version, resourceId: participantId, expectedProtectionVersion: null, active: true, fieldPaths: ["profileNotes", "manualColor"], reason: "הגנה מפורשת על הפרטים והצבע" }));
     const current = await state(participantId);
     const protectedUpdate = { type: "update_participant", operationId: randomUUID(), participantId, expectedVersion: current.participant.version, fields: { profileNotes: "אין להחליף את גרסת המנכ״ל" } };
     failed(await run(mentorA, protectedUpdate), "ceo_protected");

@@ -272,6 +272,100 @@ test("real PostgreSQL authority, lifecycle and tombstone boundaries", { skip: !e
     assert.ok(extras.get(id).authorityHistory.some((event) => event.action === "restore_participant"));
   });
 
+  await t.test("permanent deletion purges all related data, preserves other cards and safely replays a lost response", async () => {
+    const id = await participant(coordinator, mentor, coordinator);
+    const unrelated = await participant(coordinator, mentor, coordinator);
+    const unrelatedBefore = await state(unrelated);
+    const completed = await contact(id, { manualColor: "orange" });
+    accepted(await run(mentor, completed));
+    accepted(await run(coordinator, { type: "review_contact", operationId: randomUUID(), participantId: id, contactId: completed.operationId, revision: 1, decision: "approved" }));
+    accepted(await run(ceo, await authority(id, "set_access_grant", { staffId: outsider.id, expectedGrantVersion: null, actions: ["view", "edit"], expiresAt: null })));
+    accepted(await run(ceo, await authority(id, "set_ceo_protection", { resourceId: id, expectedProtectionVersion: null, active: true, fieldPaths: ["profileNotes"] })));
+    denied(await run(mentor, { type: "update_participant", operationId: randomUUID(), participantId: id, expectedVersion: (await state(id)).participant.version, fields: { profileNotes: `מידע למחיקה ${runId}` } }), "ceo_protected");
+    const before = await state(id);
+    const removal = await authority(id, "permanently_delete_participant", { confirmationName: before.participant.display_name });
+    denied(await run(mentor, removal), "forbidden");
+    denied(await run(coordinator, { ...removal, operationId: randomUUID() }), "forbidden");
+    denied(await run(ceo, { ...removal, operationId: randomUUID(), expectedVersion: before.participant.version - 1 }), "conflict");
+    assert.equal(denied(await run(ceo, { ...removal, operationId: randomUUID(), confirmationName: "שם שונה" }), "validation").field, "confirmationName");
+    const job = (await database.query("SELECT * FROM mentoring.reminder_jobs WHERE organization_id=$1 AND participant_id=$2 ORDER BY id LIMIT 1", [organizationId, id])).rows[0];
+    assert.ok(job, "A related reminder must exist for the dispatch race and relational purge.");
+    const lock = await database.connect();
+    const claimToken = randomUUID();
+    let waiting;
+    try {
+      await lock.query("BEGIN");
+      await lock.query("SELECT id FROM mentoring.participants WHERE organization_id=$1 AND id=$2 FOR UPDATE", [organizationId, id]);
+      const lockerPid = (await lock.query("SELECT pg_backend_pid() AS pid")).rows[0].pid;
+      waiting = run(ceo, { ...removal, operationId: randomUUID() });
+      let observedWait = false;
+      const deadline = Date.now() + 5_000;
+      while (Date.now() < deadline) {
+        const blocked = await database.query("SELECT 1 FROM pg_stat_activity WHERE $1::integer=ANY(pg_blocking_pids(pid)) AND query LIKE 'SELECT * FROM mentoring.participants%'", [lockerPid]);
+        if (blocked.rowCount) { observedWait = true; break; }
+        await delay(25);
+      }
+      assert.ok(observedWait, "Purge must wait for the same participant barrier used by a reminder claim.");
+      await lock.query("UPDATE mentoring.reminder_jobs SET state='dispatching',reason=NULL,claim_token=$3,lease_expires_at=clock_timestamp()+interval '1 minute' WHERE organization_id=$1 AND id=$2", [organizationId, job.id, claimToken]);
+      await lock.query(`INSERT INTO mentoring.reminder_attempts
+        (id,organization_id,job_id,participant_id,claim_token,attempt_number,state,claimed_at,lease_expires_at,provider,generation,scheduled_at,reference_at,recipient_version,claimed_by_staff_id)
+        VALUES($1,$2,$3,$4,$5,1,'dispatching',clock_timestamp(),clock_timestamp()+interval '1 minute','fixture',$6,$7,$8,1,$9)`,
+      [randomUUID(), organizationId, job.id, id, claimToken, job.generation, job.scheduled_at, job.reference_at, ceo.id]);
+      await lock.query("COMMIT");
+    } finally {
+      await lock.query("ROLLBACK").catch(() => undefined);
+      lock.release();
+    }
+    denied(await waiting, "conflict");
+    assert.ok((await state(id)).participant, "A send claimed while purge was waiting must prevent deletion.");
+    const { expireReminderLeases } = await import("../../../lib/mentoring/features/reminders/dispatcher.ts");
+    assert.equal(await expireReminderLeases(database, organizationId, new Date(Date.now() + 120_000).toISOString()), 1);
+    assert.equal((await database.query("SELECT state FROM mentoring.reminder_jobs WHERE organization_id=$1 AND id=$2", [organizationId, job.id])).rows[0].state, "uncertain");
+    denied(await run(ceo, { ...removal, operationId: randomUUID() }), "conflict");
+    assert.ok((await state(id)).participant, "An expired/unknown committed claim may still resume; its evidence must remain.");
+    await database.query("UPDATE mentoring.reminder_attempts SET state='failed',reason='provider_rejected' WHERE organization_id=$1 AND job_id=$2", [organizationId, job.id]);
+    await database.query("UPDATE mentoring.reminder_jobs SET state='failed',reason='provider_rejected' WHERE organization_id=$1 AND id=$2", [organizationId, job.id]);
+    await database.query(`INSERT INTO mentoring.outbox(id,organization_id,actor_id,operation_id,recipient_staff_id,participant_id,scheduled_at,payload,status)
+      VALUES($1,$2,$3,$4,$3,$5,clock_timestamp(),$6::jsonb,'cancelled')`, [randomUUID(), organizationId, mentor.id, completed.operationId, id, JSON.stringify({ message: `מידע למחיקה ${runId}` })]);
+    const delayed = await contact(id);
+    const result = accepted(await run(ceo, removal));
+    assert.equal(result.participantId, id);
+    assert.equal((await state(id)).participant, undefined);
+    for (const table of ["assignments", "contacts", "appointments", "grants", "conflicts", "audit", "outbox", "contact_revisions", "review_events", "appointment_history", "manual_color_history", "reminder_jobs", "reminder_attempts"]) {
+      assert.equal((await database.query(`SELECT count(*)::int AS count FROM mentoring.${table} WHERE organization_id=$1 AND participant_id=$2`, [organizationId, id])).rows[0].count, 0, table);
+    }
+    assert.equal((await database.query("SELECT count(*)::int AS count FROM mentoring.reviews WHERE organization_id=$1 AND contact_id=$2", [organizationId, completed.operationId])).rows[0].count, 0);
+    assert.equal((await database.query("SELECT count(*)::int AS count FROM mentoring.ceo_protections WHERE organization_id=$1 AND resource_id=ANY($2::uuid[])", [organizationId, [id, completed.operationId]])).rows[0].count, 0);
+    assert.equal((await database.query("SELECT count(*)::int AS count FROM mentoring.resource_ids WHERE organization_id=$1 AND id=ANY($2::uuid[])", [organizationId, [id, completed.operationId]])).rows[0].count, 2);
+    assert.equal(accepted(await run(ceo, removal)).replayed, true);
+    denied(await run(ceo, { ...removal, reason: "תוכן אחר באותו מזהה" }), "conflict");
+    denied(await run(mentor, delayed), "not_found");
+    denied(await run(coordinator, { type: "create_participant", operationId: id, fields: { displayName: `בדיקת סמכות ${runId}` } }), "not_found");
+    denied(await run(mentor, completed), "not_found");
+    denied(await run(ceo, { type: "create_participant", operationId: id, fields: { displayName: "לא לשחזור" } }), "conflict");
+    assert.deepEqual(await state(unrelated), unrelatedBefore);
+    const snapshot = await getWorkspace(mentor.authUserId, mentor.email);
+    assert.equal(snapshot.participants.some((item) => item.participant.id === id), false);
+    assert.equal(snapshot.permanentlyDeletedParticipantIds.includes(id), true);
+    assert.equal(snapshot.permanentlyDeletedParticipantIds.includes(unrelated), false);
+    const audit = (await database.query("SELECT participant_id,details FROM mentoring.audit WHERE organization_id=$1 AND actor_id=$2 AND operation_id=$3", [organizationId, ceo.id, removal.operationId])).rows[0];
+    assert.equal(audit.participant_id, null);
+    assert.deepEqual(audit.details, { purgedParticipantId: id, version: before.participant.version });
+    assert.equal((await database.query("SELECT count(*)::int AS count FROM mentoring.operations WHERE organization_id=$1 AND actor_id=$2 AND operation_id=$3", [organizationId, ceo.id, removal.operationId])).rows[0].count, 1);
+  });
+
+  await t.test("permanent deletion accepts a trashed card and denies a former CEO's receipt replay", async () => {
+    const formerCeo = await addStaff("ceo");
+    const id = await participant(coordinator, mentor, coordinator);
+    accepted(await run(ceo, await authority(id, "delete_participant")));
+    const current = await state(id);
+    const removal = await authority(id, "permanently_delete_participant", { confirmationName: current.participant.display_name });
+    accepted(await run(formerCeo, removal));
+    assert.equal((await state(id)).participant, undefined);
+    await database.query("UPDATE mentoring.memberships SET role='coordinator',version=version+1 WHERE organization_id=$1 AND id=$2", [organizationId, formerCeo.id]);
+    denied(await run(formerCeo, removal), "forbidden");
+  });
+
   await t.test("staff edits preserve identity and cannot invalidate active ownership or CEO role", async () => {
     const id = await participant(coordinator, mentor, coordinator);
     const member = (await database.query("SELECT * FROM mentoring.memberships WHERE id=$1", [mentor.id])).rows[0];
@@ -281,7 +375,7 @@ test("real PostgreSQL authority, lifecycle and tombstone boundaries", { skip: !e
     const updated = (await database.query("SELECT * FROM mentoring.memberships WHERE id=$1", [mentor.id])).rows[0];
     assert.equal(updated.auth_user_id, member.auth_user_id);
     assert.equal(updated.email, member.email);
-    assert.equal(updated.phone, "0520000000");
+    assert.equal(updated.phone, "+972520000000");
     assert.equal(updated.version, member.version + 1);
     denied(await run(ceo, { ...change, operationId: randomUUID(), expectedVersion: member.version, fields: { phone: "0530000000" } }), "conflict");
     denied(await run(ceo, { ...change, operationId: randomUUID(), expectedVersion: updated.version, fields: { role: "coordinator", coordinatorId: null } }));

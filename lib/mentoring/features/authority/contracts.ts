@@ -11,6 +11,7 @@ export type AuthorityCommand = Operation & (
   | (ParticipantOperation & { readonly type: "set_ceo_protection"; readonly resourceId: string; readonly expectedProtectionVersion: number | null; readonly active: boolean; readonly fieldPaths: readonly string[] | null })
   | (ParticipantOperation & { readonly type: "set_participant_lifecycle"; readonly lifecycle: ParticipantLifecycle })
   | (ParticipantOperation & { readonly type: "delete_participant" })
+  | (ParticipantOperation & { readonly type: "permanently_delete_participant"; readonly confirmationName: string })
   | (ParticipantOperation & { readonly type: "restore_participant" })
   | { readonly type: "update_staff"; readonly staffId: string; readonly expectedVersion: number; readonly fields: { readonly displayName?: string; readonly phone?: string | null; readonly role?: "mentor" | "coordinator"; readonly coordinatorId?: string | null } }
 );

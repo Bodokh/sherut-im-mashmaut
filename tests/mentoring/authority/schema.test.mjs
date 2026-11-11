@@ -9,6 +9,14 @@ import { isParticipantDeleted } from "../../../lib/mentoring/features/authority/
 const schema = z.discriminatedUnion("type", authorityCommandSchemas);
 const participant = () => ({ operationId: randomUUID(), participantId: randomUUID(), expectedVersion: 7, reason: "  שינוי מאושר  " });
 const grant = (overrides = {}) => ({ ...participant(), type: "set_access_grant", staffId: randomUUID(), expectedGrantVersion: null, actions: ["view", "edit"], expiresAt: null, ...overrides });
+
+test("permanent deletion requires an explicit nonempty confirmation name and normal authority metadata", () => {
+  const command = { ...participant(), type: "permanently_delete_participant", confirmationName: "  חניכה לאישור  " };
+  assert.equal(schema.parse(command).confirmationName, "חניכה לאישור");
+  for (const change of [{ confirmationName: " " }, { confirmationName: undefined }, { confirmationName: "x".repeat(201) }, { expectedVersion: undefined }, { reason: " " }, { force: true }]) {
+    assert.equal(schema.safeParse({ ...command, ...change }).success, false);
+  }
+});
 const protection = (overrides = {}) => ({ ...participant(), type: "set_ceo_protection", resourceId: randomUUID(), expectedProtectionVersion: null, active: true, fieldPaths: null, ...overrides });
 
 test("authority schemas require current versions and reject client identity assertions", () => {

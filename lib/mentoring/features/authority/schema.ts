@@ -18,6 +18,7 @@ export const authorityCommandSchemas = [
   }),
   z.strictObject({ ...participant, type: z.literal("set_participant_lifecycle"), lifecycle: z.enum(["active", "paused", "closed"], { error: "יש לבחור מצב ליווי: פעיל, מושהה או סגור." }) }, strictObjectError),
   z.strictObject({ ...participant, type: z.literal("delete_participant") }, strictObjectError),
+  z.strictObject({ ...participant, type: z.literal("permanently_delete_participant"), confirmationName: staffNameSchema }, strictObjectError),
   z.strictObject({ ...participant, type: z.literal("restore_participant") }, strictObjectError),
   z.strictObject({ operationId: operationIdSchema, type: z.literal("update_staff"), staffId: recordIdSchema, expectedVersion: versionSchema, fields: z.strictObject({ displayName: staffNameSchema.optional(), phone: phoneSchema.optional(), role: staffRoleSchema.optional(), coordinatorId: recordIdSchema.nullable().optional() }, strictObjectError).refine((fields) => Object.keys(fields).length > 0, { message: "יש לבחור לפחות שדה אחד לעדכון." }) }, strictObjectError),
 ] as const;

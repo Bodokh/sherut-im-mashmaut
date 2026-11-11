@@ -1,5 +1,8 @@
 .home { background: #102d40; color: #fff; box-shadow: none; border-color: #ffffff20; backdrop-filter: none; }
 .home > div:first-of-type { max-width: 94rem; }
+@media (max-width: 767px) { .headerLogo > span { display: none; } }
+.staffLink { display: inline-flex; min-height: 2.75rem; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid #ffffff66; border-radius: .5rem; padding: .5rem .7rem; font-size: .8125rem; font-weight: 600; white-space: nowrap; }
+.staffLink:hover { background: #ffffff15; }
 .home > div:first-of-type > nav a { font-size: .875rem; }
 .home > div:first-of-type > nav > a,
 .home > div:first-of-type > nav > div > a,
@@ -10,4 +13,4 @@
 .home > div:first-of-type > nav > div > a:hover,
 .home > div:first-of-type > div > a:hover,
 .home > div:first-of-type > div > div > a:hover { background: #ffffff15; }
-@media (min-width: 1280px) and (max-width: 1439px) { .home > div:first-of-type > nav > a, .home > div:first-of-type > nav > div > a { padding-inline: .7rem; } }
+@media (min-width: 1280px) and (max-width: 1439px) { .home > div:first-of-type > nav > a, .home > div:first-of-type > nav > div > a { padding-inline: .4rem; font-size: .8125rem; } }

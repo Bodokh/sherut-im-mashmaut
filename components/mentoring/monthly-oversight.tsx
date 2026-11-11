@@ -43,6 +43,7 @@ import {
   FieldError,
   FieldGroup,
   FieldLabel,
+  FieldTitle,
 } from "@/components/staff/ui/field";
 import { Input } from "@/components/staff/ui/input";
 import {
@@ -953,15 +954,12 @@ function SettingsEditor({
   const draft = useFormDraft("organization-settings", {
     baseVersion: settings.version,
     offlineLeaseHours: String(settings.offlineLeaseHours),
-    reminderAudience: settings.reminderAudience,
+    reminderAudience: "responsible_team" as const,
     appointmentReminderMinutesBefore: String(
       settings.appointmentReminderMinutesBefore,
     ),
-    overdueRemindersEnabled: settings.overdueRemindersEnabled,
-    overdueRepeatHours:
-      settings.overdueRepeatHours === null
-        ? ""
-        : String(settings.overdueRepeatHours),
+    overdueRemindersEnabled: true,
+    overdueRepeatHours: "168",
     reason: "",
   });
   const [busy, setBusy] = useState(false);
@@ -985,7 +983,7 @@ function SettingsEditor({
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting.current || !draft.hydrated || stale || result) return;
-    const found = settingsInputIssues(draft.value);
+    const found = settingsInputIssues({ ...draft.value, reminderAudience: "responsible_team", overdueRepeatHours: "168" });
     setIssues(found);
     setError(null);
     if (Object.keys(found).length) {
@@ -994,10 +992,6 @@ function SettingsEditor({
     }
     const lease = Number(draft.value.offlineLeaseHours);
     const reminder = Number(draft.value.appointmentReminderMinutesBefore);
-    const repeat =
-      draft.value.overdueRepeatHours.trim() === ""
-        ? null
-        : Number(draft.value.overdueRepeatHours);
     const payload: Omit<
       Extract<OversightCommand, { type: "update_organization_settings" }>,
       "operationId"
@@ -1006,10 +1000,10 @@ function SettingsEditor({
       expectedVersion: draft.value.baseVersion,
       settings: {
         offlineLeaseHours: lease,
-        reminderAudience: draft.value.reminderAudience,
+        reminderAudience: "responsible_team",
         appointmentReminderMinutesBefore: reminder,
-        overdueRemindersEnabled: draft.value.overdueRemindersEnabled,
-        overdueRepeatHours: repeat,
+        overdueRemindersEnabled: true,
+        overdueRepeatHours: 168,
       },
       reason: draft.value.reason.trim(),
     };
@@ -1063,11 +1057,11 @@ function SettingsEditor({
       <CardContent className="flex flex-col gap-5">
         <Alert>
           <InfoIcon />
-          <AlertTitle>ברירות מחדל זמניות עד לאישור המדיניות</AlertTitle>
+          <AlertTitle>תזכורות לצוות הליווי האחראי</AlertTitle>
           <AlertDescription>
-            תוקף עבודה ללא חיבור: 24 שעות; תזכורות לצוות האחראי; תזכורת במועד
-            הקשר; תזכורות איחור פעילות ללא חזרה אוטומטית. הערכים שבטופס הם
-            ההגדרות הפעילות שנשמרו בארגון.
+            הודעות נשלחות רק לחונכת ולרכזת שאחראיות לחניכה. המנכ״ל אינו מקבל
+            תזכורות ליווי. לאחר תיעוד הקשר וקביעת המועד הבא, התזכורות מתעדכנות
+            בהתאם. הערכים שבטופס הם ההגדרות הפעילות שנשמרו בארגון.
           </AlertDescription>
         </Alert>
         <dl className="grid gap-3 text-sm sm:grid-cols-2">
@@ -1102,15 +1096,8 @@ function SettingsEditor({
                     ערכי הטיוטה נשמרו. לפני המשך העריכה יש לעיין בגרסה הפעילה:
                     תוקף {settings.offlineLeaseHours} שעות, תזכורת{" "}
                     {settings.appointmentReminderMinutesBefore} דקות מראש, קהל{" "}
-                    {settings.reminderAudience === "responsible_team"
-                      ? "הצוות האחראי"
-                      : "כל הצוות"}
-                    , תזכורות איחור{" "}
-                    {settings.overdueRemindersEnabled ? "פעילות" : "כבויות"},
-                    חזרה{" "}
-                    {settings.overdueRepeatHours === null
-                      ? "כבויה"
-                      : `כל ${settings.overdueRepeatHours} שעות`}
+                    החונכת והרכזת האחראיות בלבד
+                    , ותזכורות מעקב שבועיות מהקשר האחרון ועד לתיעוד דוח שהושלם
                     .
                   </p>
                   <Button
@@ -1159,42 +1146,13 @@ function SettingsEditor({
                   בין שעה ל־24 שעות. תוקף הרשאה זמנית עשוי לקצר את משך הגישה.
                 </FieldDescription>
               </Field>
-              <Field data-disabled={!draft.hydrated || busy}>
-                <FieldLabel htmlFor="settings-audience">
+              <Field>
+                <FieldTitle>
                   למי מיועדות התזכורות
-                </FieldLabel>
-                <Select
-                  value={draft.value.reminderAudience}
-                  disabled={!draft.hydrated || busy}
-                  onValueChange={(value) => {
-                    if (value === "responsible_team" || value === "all_staff") {
-                      setIssues((previous) => ({ ...previous, reminderAudience: "" }));
-                      draft.update({ ...draft.value, reminderAudience: value });
-                    }
-                  }}
-                >
-                  <SelectTrigger id="settings-audience"
-                  data-validation-field="reminderAudience"
-                  aria-invalid={Boolean(issues.reminderAudience)}
-                  aria-describedby={issues.reminderAudience ? "settings-audience-error" : undefined} className="w-full">
-                    <SelectValue>
-                      {draft.value.reminderAudience === "responsible_team"
-                        ? "לצוות הליווי האחראי"
-                        : "לכל הצוות"}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem value="responsible_team">
-                        לצוות הליווי האחראי
-                      </SelectItem>
-                      <SelectItem value="all_staff">לכל הצוות</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-                {issues.reminderAudience && <FieldError id="settings-audience-error">{issues.reminderAudience}</FieldError>}
+                </FieldTitle>
+                <p className="text-sm font-medium">החונכת והרכזת האחראיות בלבד</p>
                 <FieldDescription>
-                  לפי מדיניות התזכורות והרשאות הנמען. השתקת המנכ״ל נשמרת בנפרד.
+                  חניכות, אנשי צוות אחרים והמנכ״ל אינם נמענים של תזכורות הליווי.
                 </FieldDescription>
               </Field>
               <Field data-disabled={!draft.hydrated || busy}>
@@ -1227,63 +1185,12 @@ function SettingsEditor({
                   0 שולח במועד שנקבע בלבד.
                 </FieldDescription>
               </Field>
-              <Field
-                orientation="horizontal"
-                data-disabled={!draft.hydrated || busy}
-              >
-                <FieldContent>
-                  <FieldLabel htmlFor="settings-overdue-enabled">
-                    תזכורות על איחור בקשר
-                  </FieldLabel>
-                  <FieldDescription>
-                    הפעלת תזכורות לאחר שחלף מועד הקשר או מרווח שבעת הימים.
-                  </FieldDescription>
-                </FieldContent>
-                <Switch
-                  id="settings-overdue-enabled"
-                  data-validation-field="overdueRemindersEnabled"
-                  aria-invalid={Boolean(issues.overdueRemindersEnabled)}
-                  aria-describedby={issues.overdueRemindersEnabled ? "settings-overdue-enabled-error" : undefined}
-                  checked={draft.value.overdueRemindersEnabled}
-                  disabled={!draft.hydrated || busy}
-                  onCheckedChange={(checked) => {
-                    setIssues((previous) => ({ ...previous, overdueRemindersEnabled: "" }));
-                    draft.update({
-                      ...draft.value,
-                      overdueRemindersEnabled: checked,
-                    });
-                  }}
-                />
-                {issues.overdueRemindersEnabled && <FieldError id="settings-overdue-enabled-error">{issues.overdueRemindersEnabled}</FieldError>}
-              </Field>
-              <Field data-disabled={!draft.hydrated || busy}>
-                <FieldLabel htmlFor="settings-repeat-hours">
-                  חזרה על תזכורות איחור, בשעות
-                </FieldLabel>
-                <Input
-                  id="settings-repeat-hours"
-                  data-validation-field="overdueRepeatHours"
-                  aria-invalid={Boolean(issues.overdueRepeatHours)}
-                  aria-describedby={issues.overdueRepeatHours ? "settings-repeat-hours-error" : undefined}
-                  type="number"
-                  min={1}
-                  max={168}
-                  step={1}
-                  placeholder="ללא חזרה אוטומטית"
-                  value={draft.value.overdueRepeatHours}
-                  disabled={!draft.hydrated || busy}
-                  onChange={(event) => {
-                    setIssues((previous) => ({ ...previous, overdueRepeatHours: "" }));
-                    draft.update({
-                      ...draft.value,
-                      overdueRepeatHours: event.target.value,
-                    });
-                  }}
-                />
-                {issues.overdueRepeatHours && <FieldError id="settings-repeat-hours-error">{issues.overdueRepeatHours}</FieldError>}
+              <Field>
+                <FieldLabel>תזכורות מעקב שבועיות</FieldLabel>
                 <FieldDescription>
-                  אפשר להשאיר ריק כדי לא לשלוח תזכורות חוזרות. אחרת, בין שעה ל־168
-                  שעות.
+                  התזכורת הראשונה נשלחת שבוע מהקשר האחרון שהושלם, ואחריה תזכורת
+                  בכל שבוע באותו יום ובאותה שעה לפי שעון ישראל, עד להזנת דוח קשר
+                  שהושלם. ניסיון ללא מענה אינו מאפס את המעקב.
                 </FieldDescription>
               </Field>
               <Field data-disabled={!draft.hydrated || busy}>

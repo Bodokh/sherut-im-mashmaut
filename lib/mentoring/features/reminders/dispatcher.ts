@@ -139,9 +139,11 @@ export async function runDispatcher(options: { readonly actor: StaffProfile; rea
   if (!transport || transportBlockedReason(transport) || !validProviderName(transport.provider)) return { considered: 0, claimed: 0, outcomes: {}, blocked: true };
   const ids = await transaction(async (client) => (await client.query(`SELECT j.id FROM mentoring.reminder_jobs j
     JOIN mentoring.participants p ON p.organization_id=j.organization_id AND p.id=j.participant_id AND p.lifecycle='active' AND p.deleted_at IS NULL
-    JOIN mentoring.memberships recipient ON recipient.organization_id=j.organization_id AND recipient.id=j.recipient_staff_id AND recipient.active=true AND (recipient.role<>'ceo' OR recipient.sms_muted=false)
+    JOIN mentoring.memberships recipient ON recipient.organization_id=j.organization_id AND recipient.id=j.recipient_staff_id AND recipient.active=true AND recipient.role IN ('mentor','coordinator')
     JOIN mentoring.memberships actor ON actor.organization_id=j.organization_id AND actor.id=$4 AND actor.active=true
     WHERE j.organization_id=$1 AND (j.state='pending' OR (j.state='blocked' AND j.reason IN ('missing_sms_provider','missing_sms_credentials','sending_disabled'))) AND j.scheduled_at<=$2
+      AND EXISTS (SELECT 1 FROM mentoring.assignments assigned WHERE assigned.organization_id=j.organization_id AND assigned.participant_id=j.participant_id AND assigned.ended_at IS NULL
+        AND ((recipient.role='mentor' AND assigned.mentor_id=recipient.id) OR (recipient.role='coordinator' AND assigned.coordinator_id=recipient.id)))
       AND (actor.role='ceo' OR (actor.role='coordinator' AND EXISTS(SELECT 1 FROM mentoring.assignments a WHERE a.organization_id=j.organization_id AND a.participant_id=j.participant_id AND a.ended_at IS NULL AND a.coordinator_id=actor.id)))
     ORDER BY j.scheduled_at,j.id LIMIT $3`, [options.actor.organizationId, now(), limit, options.actor.id])).rows.map((row) => String(row.id)));
   let claimed = 0;

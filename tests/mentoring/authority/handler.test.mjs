@@ -8,7 +8,7 @@ const organizationId = randomUUID();
 const participantId = randomUUID();
 const staffId = randomUUID();
 const actor = { id: randomUUID(), organizationId, role: "ceo", active: true, version: 1 };
-const view = { participant: { id: participantId, organizationId, version: 7, lifecycle: "active" }, assignment: { id: randomUUID(), followupAnchorAt: "2026-10-01T10:00:00Z" }, nextAppointment: { id: randomUUID(), scheduledAt: "2026-10-08T10:00:00Z" }, contacts: [], protections: [] };
+const view = { participant: { id: participantId, organizationId, displayName: "חניכה לאישור", version: 7, lifecycle: "active" }, assignment: { id: randomUUID(), followupAnchorAt: "2026-10-01T10:00:00Z" }, nextAppointment: { id: randomUUID(), scheduledAt: "2026-10-08T10:00:00Z" }, contacts: [], protections: [] };
 const command = (type, fields = {}) => ({ type, operationId: randomUUID(), participantId, expectedVersion: 7, reason: "בדיקת סמכות", ...fields });
 const deletion = { deleted_at: null, deleted_by: null, deletion_reason: null, deleted_previous_lifecycle: null };
 
@@ -38,6 +38,38 @@ test("authority handler verifies current CEO role before reading or mutating rec
     assert.equal(ctx.queries.length, 0);
     assert.equal(ctx.audits.length, 0);
   }
+});
+
+test("permanent deletion requires current name confirmation and waits for a claimed SMS to finish", { skip: !serverEnabled }, async () => {
+  const { handleAuthorityCommand } = await import("../../../lib/mentoring/features/authority/server.ts");
+  const mismatch = context();
+  assert.equal((await handleAuthorityCommand(mismatch, command("permanently_delete_participant", { confirmationName: "שם אחר" }))).error.field, "confirmationName");
+  assert.equal(mismatch.queries.some(({ sql }) => sql.startsWith("DELETE")), false);
+  const sending = context({}, (sql) => sql.includes("mentoring.reminder_jobs") ? [{ id: randomUUID(), state: "dispatching" }] : []);
+  assert.equal((await handleAuthorityCommand(sending, command("permanently_delete_participant", { confirmationName: view.participant.displayName }))).error.code, "conflict");
+  assert.equal(sending.queries.some(({ sql }) => sql.startsWith("DELETE")), false);
+  const unknown = context({}, (sql) => sql.includes("mentoring.reminder_jobs") ? [{ id: randomUUID(), state: "uncertain" }] : []);
+  assert.equal((await handleAuthorityCommand(unknown, command("permanently_delete_participant", { confirmationName: view.participant.displayName }))).error.code, "conflict");
+  assert.equal(unknown.queries.some(({ sql }) => sql.startsWith("DELETE")), false, "An expired in-memory claim may still resume sending.");
+});
+
+test("permanent deletion purges narrative rows in dependency order and retains only content-free tombstones", { skip: !serverEnabled }, async () => {
+  const { handleAuthorityCommand } = await import("../../../lib/mentoring/features/authority/server.ts");
+  const ctx = context();
+  const input = command("permanently_delete_participant", { confirmationName: view.participant.displayName });
+  assert.equal((await handleAuthorityCommand(ctx, input)).ok, true);
+  const deletes = ctx.queries.filter(({ sql }) => sql.startsWith("DELETE"));
+  assert.ok(deletes.some(({ sql }) => sql.startsWith("DELETE FROM mentoring.reminder_attempts")));
+  assert.ok(deletes.findIndex(({ sql }) => sql.startsWith("DELETE FROM mentoring.reminder_attempts")) < deletes.findIndex(({ sql }) => sql.startsWith("DELETE FROM mentoring.reminder_jobs")));
+  assert.ok(deletes.findIndex(({ sql }) => sql.startsWith("DELETE FROM mentoring.appointments")) < deletes.findIndex(({ sql }) => sql.startsWith("DELETE FROM mentoring.contacts")));
+  assert.equal(deletes.at(-1).sql.startsWith("DELETE FROM mentoring.participants"), true);
+  assert.equal(ctx.queries.some(({ sql }) => /DELETE FROM mentoring\.(resource_ids|operations)\b/.test(sql)), false);
+  assert.equal(deletes.every(({ values }) => values[0] === organizationId && values[1] === participantId), true);
+  assert.equal(ctx.audits.length, 1);
+  assert.equal(ctx.audits[0][1], undefined, "The deletion event cannot retain a participant foreign key.");
+  assert.equal(JSON.stringify(ctx.audits[0][2]).includes(view.participant.displayName), false);
+  assert.equal(JSON.stringify(ctx.audits[0][2]).includes(input.reason), false);
+  assert.equal(ctx.reminders.length, 0, "Deleted participants cannot be replanned.");
 });
 
 test("stale or cross-organization authority requests cannot mutate a loaded record", { skip: !serverEnabled }, async () => {
@@ -100,7 +132,8 @@ test("pause and deletion cancel unsent reminders while retaining anchor and appo
     assert.deepEqual(ctx.reminders[0].args, [participantId]);
     assert.ok(ctx.reminders[0].priorQueries.some(({ sql }) => sql.startsWith("UPDATE mentoring.participants")), "Rebuild uses the changed lifecycle or tombstone.");
     assert.ok(ctx.reminders[0].priorQueries.some(({ sql }) => sql.startsWith("UPDATE mentoring.outbox")), "Legacy unsent intents are cancelled before canonical jobs are rebuilt.");
-    assert.deepEqual(ctx.protections, input.type === "set_participant_lifecycle" ? [[participantId, 8, ["lifecycle"]]] : []);
+    assert.deepEqual(ctx.protections, [], "Lifecycle and deletion changes do not implicitly lock participant fields.");
+    assert.equal(ctx.queries.some(({ sql }) => /\bmentoring\.ceo_protections\b/.test(sql)), false);
     assert.equal(ctx.audits.length, 1);
     assert.equal(view.assignment.followupAnchorAt, "2026-10-01T10:00:00Z");
     assert.equal(view.nextAppointment.scheduledAt, "2026-10-08T10:00:00Z");

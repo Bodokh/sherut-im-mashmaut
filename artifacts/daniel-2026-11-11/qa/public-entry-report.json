@@ -1,0 +1,383 @@
+{
+  "results": [
+    {
+      "locale": "he",
+      "width": 375,
+      "status": "passed",
+      "metrics": {
+        "width": 375,
+        "scrollWidth": 375,
+        "rects": [
+          {
+            "tag": "A",
+            "x": 315,
+            "y": 16,
+            "width": 40,
+            "height": 40,
+            "right": 355
+          },
+          {
+            "tag": "DIV",
+            "x": 20,
+            "y": 14,
+            "width": 188.5,
+            "height": 44,
+            "right": 208.5
+          }
+        ],
+        "overlaps": []
+      }
+    },
+    {
+      "locale": "he",
+      "width": 420,
+      "status": "passed",
+      "metrics": {
+        "width": 420,
+        "scrollWidth": 420,
+        "rects": [
+          {
+            "tag": "A",
+            "x": 359,
+            "y": 16,
+            "width": 40,
+            "height": 40,
+            "right": 399
+          },
+          {
+            "tag": "DIV",
+            "x": 21,
+            "y": 14,
+            "width": 188.5,
+            "height": 44,
+            "right": 209.5
+          }
+        ],
+        "overlaps": []
+      }
+    },
+    {
+      "locale": "he",
+      "width": 640,
+      "status": "passed",
+      "metrics": {
+        "width": 640,
+        "scrollWidth": 640,
+        "rects": [
+          {
+            "tag": "A",
+            "x": 568,
+            "y": 16,
+            "width": 40,
+            "height": 40,
+            "right": 608
+          },
+          {
+            "tag": "DIV",
+            "x": 32,
+            "y": 13.6875,
+            "width": 378.625,
+            "height": 44.625,
+            "right": 410.625
+          }
+        ],
+        "overlaps": []
+      }
+    },
+    {
+      "locale": "he",
+      "width": 768,
+      "status": "passed",
+      "metrics": {
+        "width": 768,
+        "scrollWidth": 768,
+        "rects": [
+          {
+            "tag": "A",
+            "x": 514.265625,
+            "y": 24,
+            "width": 215.34375,
+            "height": 40,
+            "right": 729.609375
+          },
+          {
+            "tag": "DIV",
+            "x": 38.390625,
+            "y": 21.6875,
+            "width": 378.625,
+            "height": 44.625,
+            "right": 417.015625
+          }
+        ],
+        "overlaps": []
+      }
+    },
+    {
+      "locale": "he",
+      "width": 1280,
+      "status": "passed",
+      "metrics": {
+        "width": 1280,
+        "scrollWidth": 1280,
+        "rects": [
+          {
+            "tag": "A",
+            "x": 1000.65625,
+            "y": 24,
+            "width": 215.34375,
+            "height": 40,
+            "right": 1216
+          },
+          {
+            "tag": "NAV",
+            "x": 418.484375,
+            "y": 25.46875,
+            "width": 556.296875,
+            "height": 37.046875,
+            "right": 974.78125
+          },
+          {
+            "tag": "DIV",
+            "x": 64,
+            "y": 21.6875,
+            "width": 328.625,
+            "height": 44.625,
+            "right": 392.625
+          }
+        ],
+        "overlaps": []
+      }
+    },
+    {
+      "locale": "he",
+      "width": 1440,
+      "status": "passed",
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "rects": [
+          {
+            "tag": "A",
+            "x": 1160.65625,
+            "y": 24,
+            "width": 215.34375,
+            "height": 40,
+            "right": 1376
+          },
+          {
+            "tag": "NAV",
+            "x": 421.453125,
+            "y": 24.65625,
+            "width": 710.359375,
+            "height": 38.671875,
+            "right": 1131.8125
+          },
+          {
+            "tag": "DIV",
+            "x": 64,
+            "y": 21.6875,
+            "width": 328.625,
+            "height": 44.625,
+            "right": 392.625
+          }
+        ],
+        "overlaps": []
+      }
+    },
+    {
+      "locale": "he",
+      "journey": "public staff entry reaches login",
+      "status": "passed"
+    },
+    {
+      "locale": "en",
+      "width": 375,
+      "status": "passed",
+      "metrics": {
+        "width": 375,
+        "scrollWidth": 375,
+        "rects": [
+          {
+            "tag": "A",
+            "x": 20,
+            "y": 16,
+            "width": 40,
+            "height": 40,
+            "right": 60
+          },
+          {
+            "tag": "DIV",
+            "x": 173.234375,
+            "y": 14,
+            "width": 181.765625,
+            "height": 44,
+            "right": 355
+          }
+        ],
+        "overlaps": []
+      }
+    },
+    {
+      "locale": "en",
+      "width": 420,
+      "status": "passed",
+      "metrics": {
+        "width": 420,
+        "scrollWidth": 420,
+        "rects": [
+          {
+            "tag": "A",
+            "x": 21,
+            "y": 16,
+            "width": 40,
+            "height": 40,
+            "right": 61
+          },
+          {
+            "tag": "DIV",
+            "x": 217.234375,
+            "y": 14,
+            "width": 181.765625,
+            "height": 44,
+            "right": 399
+          }
+        ],
+        "overlaps": []
+      }
+    },
+    {
+      "locale": "en",
+      "width": 640,
+      "status": "passed",
+      "metrics": {
+        "width": 640,
+        "scrollWidth": 640,
+        "rects": [
+          {
+            "tag": "A",
+            "x": 32,
+            "y": 16,
+            "width": 40,
+            "height": 40,
+            "right": 72
+          },
+          {
+            "tag": "DIV",
+            "x": 245.625,
+            "y": 13.6875,
+            "width": 362.375,
+            "height": 44.625,
+            "right": 608
+          }
+        ],
+        "overlaps": []
+      }
+    },
+    {
+      "locale": "en",
+      "width": 768,
+      "status": "passed",
+      "metrics": {
+        "width": 768,
+        "scrollWidth": 768,
+        "rects": [
+          {
+            "tag": "A",
+            "x": 38.390625,
+            "y": 24,
+            "width": 243.9375,
+            "height": 40,
+            "right": 282.328125
+          },
+          {
+            "tag": "DIV",
+            "x": 367.234375,
+            "y": 21.6875,
+            "width": 362.375,
+            "height": 44.625,
+            "right": 729.609375
+          }
+        ],
+        "overlaps": []
+      }
+    },
+    {
+      "locale": "en",
+      "width": 1280,
+      "status": "passed",
+      "metrics": {
+        "width": 1280,
+        "scrollWidth": 1280,
+        "rects": [
+          {
+            "tag": "A",
+            "x": 64,
+            "y": 24,
+            "width": 243.9375,
+            "height": 40,
+            "right": 307.9375
+          },
+          {
+            "tag": "NAV",
+            "x": 343.53125,
+            "y": 25.46875,
+            "width": 524.5,
+            "height": 37.046875,
+            "right": 868.03125
+          },
+          {
+            "tag": "DIV",
+            "x": 903.625,
+            "y": 21.6875,
+            "width": 312.375,
+            "height": 44.625,
+            "right": 1216
+          }
+        ],
+        "overlaps": []
+      }
+    },
+    {
+      "locale": "en",
+      "width": 1440,
+      "status": "passed",
+      "metrics": {
+        "width": 1440,
+        "scrollWidth": 1440,
+        "rects": [
+          {
+            "tag": "A",
+            "x": 64,
+            "y": 24,
+            "width": 243.9375,
+            "height": 40,
+            "right": 307.9375
+          },
+          {
+            "tag": "NAV",
+            "x": 347.734375,
+            "y": 24.65625,
+            "width": 676.09375,
+            "height": 38.671875,
+            "right": 1023.828125
+          },
+          {
+            "tag": "DIV",
+            "x": 1063.625,
+            "y": 21.6875,
+            "width": 312.375,
+            "height": 44.625,
+            "right": 1376
+          }
+        ],
+        "overlaps": []
+      }
+    },
+    {
+      "locale": "en",
+      "journey": "public staff entry reaches login",
+      "status": "passed"
+    }
+  ],
+  "errors": []
+}

@@ -17,18 +17,21 @@ let actor;
 let receipt;
 let queriedReceipt;
 let writes;
+let participantWasPurged;
 
 function reset(role = "ceo") {
   actor = { id: actorId, organization_id: ORGANIZATION_ID, auth_user_id: "staff", display_name: "Staff", role, active: true, version: 1 };
   receipt = null;
   queriedReceipt = false;
   writes = [];
+  participantWasPurged = false;
 }
 const client = {
   async query(sql, params = []) {
     if (/^(BEGIN|COMMIT|ROLLBACK|SET LOCAL)/.test(sql)) return { rows: [], rowCount: 0 };
     if (sql.includes("FROM mentoring.memberships WHERE organization_id = $1 AND auth_user_id")) return { rows: actor && params[1] === actor.auth_user_id ? [actor] : [] };
     if (sql.includes("FROM mentoring.participants WHERE organization_id = $1 AND id = $2")) return { rows: [{ id: participantId, organization_id: ORGANIZATION_ID, display_name: "P", lifecycle: "active", version: 1, created_at: now, created_by: randomUUID() }] };
+    if (sql === "SELECT id FROM mentoring.participants WHERE organization_id=$1 AND id=$2") return { rows: participantWasPurged ? [] : [{ id: params[1] }] };
     if (/FROM mentoring\.(assignments|appointments|contacts|reviews|ceo_protections|grants)/.test(sql)) return { rows: [] };
     if (sql.includes("clock_timestamp() AS now")) return { rows: [{ now }] };
     if (sql.includes("FROM mentoring.operations")) {
@@ -85,7 +88,16 @@ test("receipt comparison preserves non-phone payload identity and current normal
   assert.deepEqual(writes, []);
 });
 
-test("legacy receipt cannot bypass identity, role or current participant scope", async () => {
+test("historical creation receipts cannot restore a permanently purged card", async () => {
+  reset();
+  const create = { type: "create_participant", operationId: randomUUID(), fields: { displayName: "שרה" } };
+  acceptedReceipt(create);
+  participantWasPurged = true;
+  assert.equal((await run(create)).error?.code, "not_found");
+  assert.deepEqual(writes, []);
+});
+
+test("legacy receipt cannot bypass identity or current participant scope", async () => {
   reset();
   const create = { type: "create_participant", operationId: randomUUID(), fields: { phone: "bad" } };
   acceptedReceipt(create);
@@ -95,8 +107,9 @@ test("legacy receipt cannot bypass identity, role or current participant scope",
   assert.equal((await run(create)).error?.code, "not_staff");
   reset("mentor");
   acceptedReceipt(create);
-  assert.equal((await run(create)).error?.code, "forbidden");
-  assert.equal(queriedReceipt, false);
+  assert.equal((await run(create)).replayed, true, "An active mentor may replay their own accepted creation receipt.");
+  assert.equal(queriedReceipt, true);
+  queriedReceipt = false;
   const update = { type: "update_participant", operationId: randomUUID(), participantId, expectedVersion: 1, fields: { phone: "bad" } };
   acceptedReceipt(update);
   assert.equal((await run(update)).error?.code, "forbidden");

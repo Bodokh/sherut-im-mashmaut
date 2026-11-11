@@ -1,5 +1,5 @@
 import type { ParticipantView, StaffProfile } from "../../contracts";
-import { computeFollowup, DEFAULT_CADENCE_POLICY, type ContactEntry } from "../../domain";
+import { addLocalWeeks, computeFollowup, DEFAULT_CADENCE_POLICY, type ContactEntry } from "../../domain";
 import { normalizePhoneNumber } from "../../../phone";
 import type { OrganizationSettings } from "../oversight/contracts";
 
@@ -49,8 +49,8 @@ export function reminderGeneration(view: ParticipantView, settings: Organization
 }
 
 /**
- * Plan the scheduled-day and optional advance reminders and one initial breach, plus the latest explicitly
- * configured repeat. Old repeat intervals are never backfilled in a burst.
+ * Plan scheduled-day/advance reminders and only the latest overdue calendar
+ * week. Missed weeks never backfill in a burst. Accepted attempts stay terminal.
  */
 export function planReminderOccurrences(view: ParticipantView, settings: OrganizationSettings, now: string): readonly ReminderOccurrence[] {
   if (!validScope(view, settings)) return [];
@@ -74,22 +74,24 @@ export function planReminderOccurrences(view: ParticipantView, settings: Organiz
   const followup = computeFollowup({ organizationId: view.participant.organizationId, participantId: view.participant.id,
     assignedAt: view.assignment?.assignedAt ?? null, followupAnchorAt: view.assignment?.followupAnchorAt,
     contacts: view.contacts, nextAppointment: appointment }, now);
-  if (!followup.dueAt) return occurrences;
+  if (!followup.dueAt || !followup.anchorAt) return occurrences;
   const completed = latestQualifyingContact(view, now);
   const obligation = completed ? ["contact", completed.id, completed.revision, completed.occurredAt] :
     ["assignment", view.assignment?.id, view.assignment?.followupAnchorAt ?? view.assignment?.assignedAt];
   const dueAt = followup.dueAt;
-  occurrences.push({ kind: "seven_day_overdue", occurrenceKey: JSON.stringify(["seven_day_overdue", obligation, "base"]),
-    generation, scheduledAt: dueAt, referenceAt: dueAt });
-  if (settings.overdueRepeatHours != null && settings.overdueRepeatHours > 0) {
-    const interval = settings.overdueRepeatHours * 3_600_000;
-    const index = Math.floor((Date.parse(now) - Date.parse(dueAt)) / interval);
-    if (index >= 1) {
-      const repeatAt = new Date(Date.parse(dueAt) + index * interval).toISOString();
-      occurrences.push({ kind: "seven_day_overdue", occurrenceKey: JSON.stringify(["seven_day_overdue", obligation, "repeat", repeatAt]),
-        generation, scheduledAt: repeatAt, referenceAt: dueAt });
-    }
+  // A UTC estimate is at most one week boundary away. Resolve from the original
+  // wall-time anchor, not a previously DST-shifted deadline, then adjust once.
+  const nowAt = Date.parse(now);
+  let week = Math.max(1, Math.floor((nowAt - Date.parse(followup.anchorAt)) / (7 * 86_400_000)));
+  let scheduledAt = addLocalWeeks(followup.anchorAt, week);
+  if (week > 1 && Date.parse(scheduledAt) > nowAt) scheduledAt = addLocalWeeks(followup.anchorAt, --week);
+  else {
+    const next = addLocalWeeks(followup.anchorAt, week + 1);
+    if (Date.parse(next) <= nowAt) { week += 1; scheduledAt = next; }
   }
+  const identity = week === 1 ? ["base"] : ["repeat", scheduledAt];
+  occurrences.push({ kind: "seven_day_overdue", occurrenceKey: JSON.stringify(["seven_day_overdue", obligation, ...identity]),
+    generation, scheduledAt, referenceAt: dueAt });
   return occurrences;
 }
 
@@ -107,12 +109,11 @@ export function selectReminderRecipients(view: ParticipantView, staff: readonly 
   if (!validScope(view, settings)) return [];
   const selected = new Map<string, StaffProfile>();
   for (const member of staff) {
-    if (member.organizationId !== view.participant.organizationId || !member.active || !["mentor", "coordinator", "ceo"].includes(member.role)) continue;
-    if (member.role === "ceo" && member.smsMuted) continue;
-    const responsible = member.role === "ceo" ||
-      (member.role === "mentor" && member.id === view.assignment?.mentorId) ||
+    if (member.organizationId !== view.participant.organizationId || !member.active) continue;
+    const responsible = (member.role === "mentor" && member.id === view.assignment?.mentorId) ||
       (member.role === "coordinator" && member.id === view.assignment?.coordinatorId);
-    if (settings.reminderAudience === "all_staff" || responsible) selected.set(member.id, member);
+    // Legacy all_staff policies must never widen the assigned team's audience.
+    if (responsible) selected.set(member.id, member);
   }
   return [...selected.values()].sort((left, right) => left.id.localeCompare(right.id));
 }
@@ -125,6 +126,7 @@ export function reminderMessage(participantName: string, occurrence: Pick<Remind
   const phone = normalizePhoneNumber(participantPhone);
   const contact = phone ? `${name} (טלפון: ${phone})` : name;
   const when = dateFormatter.format(new Date(occurrence.referenceAt));
-  return occurrence.kind === "appointment" ? `תזכורת לקשר עם ${contact}: ${when}. יש להתקשר לחניכה ולהתעניין בשלומה. לאחר השיחה יש למלא באתר את פרטי המעקב והחניכה.` :
-    `נדרש קשר עם ${contact}. מועד שבעת הימים: ${when}.`;
+  const instruction = "יש ליצור קשר עם החניכה ולהתעניין בשלומה. לאחר השיחה יש להזין באתר דוח מעקב חניכה.";
+  return occurrence.kind === "appointment" ? `תזכורת לקשר עם ${contact}: ${when}. ${instruction}` :
+    `טרם תועד קשר עם ${contact}. מועד שבעת הימים: ${when}. ${instruction}`;
 }

@@ -110,11 +110,11 @@ test("contact lifecycle uses real PostgreSQL transactions and revision-specific 
   async function makeInactive(data, lifecycle) {
     let current = await state(data.participantId);
     accept(await run(ceo, { type: "set_participant_lifecycle", operationId: randomUUID(), participantId: data.participantId, expectedVersion: current.view.participant.version, lifecycle, reason: "Historical maintenance fixture" }));
-    // Explicitly retain lifecycle-only protection so the report's original
+    // Explicitly add lifecycle-only protection so the report's original
     // author can exercise maintenance without overriding any CEO field.
     current = await state(data.participantId);
     const protection = (await database.query("SELECT version FROM mentoring.ceo_protections WHERE organization_id=$1 AND resource_id=$2", [organizationId, data.participantId])).rows[0];
-    accept(await run(ceo, { type: "set_ceo_protection", operationId: randomUUID(), participantId: data.participantId, expectedVersion: current.view.participant.version, resourceId: data.participantId, expectedProtectionVersion: protection.version, active: true, fieldPaths: ["lifecycle"], reason: "Allow historical report maintenance while keeping lifecycle protected" }));
+    accept(await run(ceo, { type: "set_ceo_protection", operationId: randomUUID(), participantId: data.participantId, expectedVersion: current.view.participant.version, resourceId: data.participantId, expectedProtectionVersion: protection?.version ?? null, active: true, fieldPaths: ["lifecycle"], reason: "Allow historical report maintenance while keeping lifecycle protected" }));
   }
 
   await t.test("recording an advance call retains its accepted reminder and one scheduled-day reminder", async () => {
@@ -306,36 +306,40 @@ test("contact lifecycle uses real PostgreSQL transactions and revision-specific 
     assert.equal(after.history.contactRevisions.length, 0);
   });
 
-  await t.test("CEO contact and manual-color changes remain protected with one preserved retry conflict", async () => {
+  await t.test("routine CEO corrections and colors remain editable while explicit locks preserve one retry conflict", async () => {
     const data = await fixture();
-    accept(await run(ceo, await revisionCommand(data, { notes: "CEO authoritative correction" })));
+    accept(await run(ceo, await revisionCommand(data, { notes: "Routine CEO correction" })));
+    accept(await run(mentor, await revisionCommand(data, { notes: "Mentor completed the report" })));
+    let current = await state(data.participantId);
+    assert.equal(current.view.contacts[0].notes, "Mentor completed the report");
+    assert.equal((await database.query("SELECT count(*)::int AS count FROM mentoring.ceo_protections WHERE organization_id=$1 AND resource_id=$2", [organizationId, data.contactId])).rows[0].count, 0);
+    accept(await run(ceo, { type: "set_ceo_protection", operationId: randomUUID(), participantId: data.participantId, expectedVersion: current.view.participant.version, resourceId: data.contactId, expectedProtectionVersion: null, active: true, fieldPaths: null, reason: "Explicitly retain the current report" }));
     const protectedCommand = await revisionCommand(data, { notes: "Queued mentor correction" });
     const first = reject(await run(mentor, protectedCommand), "ceo_protected");
     assert.ok(first.conflictId);
     assert.equal(reject(await run(mentor, protectedCommand), "ceo_protected").conflictId, first.conflictId);
-    const beforeColor = await state(data.participantId);
-    accept(await run(ceo, { type: "set_manual_color", operationId: randomUUID(), participantId: data.participantId, expectedVersion: beforeColor.view.participant.version, color: "red" }));
-    const afterColor = await state(data.participantId);
-    reject(await run(mentor, { type: "set_manual_color", operationId: randomUUID(), participantId: data.participantId, expectedVersion: afterColor.view.participant.version, color: "green" }), "ceo_protected");
-    assert.equal((await state(data.participantId)).view.manualColor, "red");
+    current = await state(data.participantId);
+    accept(await run(ceo, { type: "set_manual_color", operationId: randomUUID(), participantId: data.participantId, expectedVersion: current.view.participant.version, color: "red" }));
+    current = await state(data.participantId);
+    accept(await run(mentor, { type: "set_manual_color", operationId: randomUUID(), participantId: data.participantId, expectedVersion: current.view.participant.version, color: "green" }));
+    current = await state(data.participantId);
+    accept(await run(ceo, { type: "set_ceo_protection", operationId: randomUUID(), participantId: data.participantId, expectedVersion: current.view.participant.version, resourceId: data.participantId, expectedProtectionVersion: null, active: true, fieldPaths: ["manualColor"], reason: "Explicitly retain the current color" }));
+    current = await state(data.participantId);
+    reject(await run(mentor, { type: "set_manual_color", operationId: randomUUID(), participantId: data.participantId, expectedVersion: current.view.participant.version, color: "red" }), "ceo_protected");
+    assert.equal((await state(data.participantId)).view.manualColor, "green");
   });
 
-  await t.test("a CEO color change renews an explicitly unlocked protection without reviving unrelated fields", async () => {
+  await t.test("a routine CEO color change preserves an explicit unlock byte for byte", async () => {
     const data = await fixture();
     accept(await run(ceo, { type: "set_ceo_protection", operationId: randomUUID(), participantId: data.participantId, expectedVersion: 1, resourceId: data.participantId, expectedProtectionVersion: null, active: true, fieldPaths: ["profileNotes"], reason: "Protect profile notes" }));
     let current = await state(data.participantId);
     const before = (await database.query("SELECT version FROM mentoring.ceo_protections WHERE organization_id=$1 AND resource_id=$2", [organizationId, data.participantId])).rows[0];
     accept(await run(ceo, { type: "set_ceo_protection", operationId: randomUUID(), participantId: data.participantId, expectedVersion: current.view.participant.version, resourceId: data.participantId, expectedProtectionVersion: before.version, active: false, fieldPaths: null, reason: "Explicitly unlock previous profile protection" }));
     current = await state(data.participantId);
-    const unlocked = (await database.query("SELECT version FROM mentoring.ceo_protections WHERE organization_id=$1 AND resource_id=$2", [organizationId, data.participantId])).rows[0];
+    const unlocked = (await database.query("SELECT * FROM mentoring.ceo_protections WHERE organization_id=$1 AND resource_id=$2", [organizationId, data.participantId])).rows[0];
     accept(await run(ceo, { type: "set_manual_color", operationId: randomUUID(), participantId: data.participantId, expectedVersion: current.view.participant.version, color: "orange" }));
-    const protection = (await database.query("SELECT active,field_paths,version,reason,unlocked_by_staff_id,unlocked_at FROM mentoring.ceo_protections WHERE organization_id=$1 AND resource_id=$2", [organizationId, data.participantId])).rows[0];
-    assert.equal(protection.active, true);
-    assert.deepEqual(protection.field_paths, ["manualColor"]);
-    assert.equal(protection.version, unlocked.version + 1);
-    assert.equal(protection.unlocked_by_staff_id, null);
-    assert.equal(protection.unlocked_at, null);
-    assert.equal(protection.reason, null, "The previous unlock reason must not describe the renewed protection.");
+    const protection = (await database.query("SELECT * FROM mentoring.ceo_protections WHERE organization_id=$1 AND resource_id=$2", [organizationId, data.participantId])).rows[0];
+    assert.deepEqual(protection, unlocked, "Routine color changes preserve active state, scope, attribution, reason, timestamps and token.");
   });
 
   await t.test("a selected appointment protection blocks a completed contact with fresh tokens and preserves one retry conflict", async () => {
@@ -357,7 +361,7 @@ test("contact lifecycle uses real PostgreSQL transactions and revision-specific 
     assert.deepEqual((await state(data.participantId)).view.nextAppointment, before.view.nextAppointment);
   });
 
-  await t.test("a CEO completed contact remains protected while a later mentor contact advances the next cycle", async () => {
+  await t.test("a CEO completed contact can be explicitly protected without blocking a later mentor cycle", async () => {
     const data = await fixture();
     accept(await run(ceo, { type: "set_manual_color", operationId: randomUUID(), participantId: data.participantId, expectedVersion: 1, color: "red" }));
     let current = await state(data.participantId);
@@ -365,15 +369,16 @@ test("contact lifecycle uses real PostgreSQL transactions and revision-specific 
     resources.push(contact.operationId);
     accept(await run(ceo, contact));
     current = await state(data.participantId);
-    const protection = (await database.query("SELECT field_paths FROM mentoring.ceo_protections WHERE organization_id=$1 AND resource_id=$2 AND active", [organizationId, data.participantId])).rows[0];
-    assert.deepEqual(protection.field_paths, ["manualColor"], "Recording a new cycle must not add a standalone appointment lock.");
+    assert.equal((await database.query("SELECT count(*)::int AS count FROM mentoring.ceo_protections WHERE organization_id=$1 AND resource_id=ANY($2::uuid[])", [organizationId, [data.participantId, contact.operationId]])).rows[0].count, 0, "Routine CEO color and contact work does not create a lock.");
     assert.equal(current.view.nextAppointment.sourceContactId, contact.operationId);
-    const ceoEntry = current.view.contacts.find((entry) => entry.id === contact.operationId);
     const ceoAppointment = current.view.nextAppointment;
-    const contactProtection = (await database.query("SELECT active,field_paths FROM mentoring.ceo_protections WHERE organization_id=$1 AND resource_id=$2", [organizationId, contact.operationId])).rows[0];
-    assert.equal(contactProtection.active, true);
-    assert.equal(contactProtection.field_paths, null, "The accepted CEO contact itself remains whole-record protected.");
-    reject(await run(coordinator, await revisionCommand(data, { contactId: contact.operationId, notes: "Attempt to alter the CEO's accepted contact" })), "ceo_protected");
+    accept(await run(coordinator, await revisionCommand(data, { contactId: contact.operationId, notes: "Coordinator completed the CEO report" })));
+    current = await state(data.participantId);
+    assert.equal(current.view.contacts.find((entry) => entry.id === contact.operationId).notes, "Coordinator completed the CEO report");
+    accept(await run(ceo, { type: "set_ceo_protection", operationId: randomUUID(), participantId: data.participantId, expectedVersion: current.view.participant.version, resourceId: contact.operationId, expectedProtectionVersion: null, active: true, fieldPaths: null, reason: "Explicitly protect this report" }));
+    current = await state(data.participantId);
+    const ceoEntry = current.view.contacts.find((entry) => entry.id === contact.operationId);
+    reject(await run(coordinator, await revisionCommand(data, { contactId: contact.operationId, notes: "Attempt to alter the explicitly protected report" })), "ceo_protected");
     const mentorContact = { type: "record_contact", operationId: randomUUID(), participantId: data.participantId, expectedVersion: current.view.participant.version, expectedAppointmentVersion: current.view.nextAppointment.version, method: "phone", outcome: "completed", occurredAt: new Date().toISOString(), notes: "Next successful mentoring cycle", nextAppointmentAt: new Date(Date.now() + 2 * 86_400_000).toISOString() };
     resources.push(mentorContact.operationId);
     accept(await run(mentor, mentorContact));

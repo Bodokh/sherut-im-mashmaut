@@ -1,0 +1,86 @@
+[
+  {
+    "slide": 1,
+    "meanPixelDifference": 0.0323
+  },
+  {
+    "slide": 2,
+    "meanPixelDifference": 0.0326
+  },
+  {
+    "slide": 3,
+    "meanPixelDifference": 0.0631
+  },
+  {
+    "slide": 4,
+    "meanPixelDifference": 0.0261
+  },
+  {
+    "slide": 5,
+    "meanPixelDifference": 0.0319
+  },
+  {
+    "slide": 6,
+    "meanPixelDifference": 0.0358
+  },
+  {
+    "slide": 7,
+    "meanPixelDifference": 0.0468
+  },
+  {
+    "slide": 8,
+    "meanPixelDifference": 0.0308
+  },
+  {
+    "slide": 9,
+    "meanPixelDifference": 0.0469
+  },
+  {
+    "slide": 10,
+    "meanPixelDifference": 0.0369
+  },
+  {
+    "slide": 11,
+    "meanPixelDifference": 0.0031
+  },
+  {
+    "slide": 12,
+    "meanPixelDifference": 0.0195
+  },
+  {
+    "slide": 13,
+    "meanPixelDifference": 0.0303
+  },
+  {
+    "slide": 14,
+    "meanPixelDifference": 0.0022
+  },
+  {
+    "slide": 15,
+    "meanPixelDifference": 0.0065
+  },
+  {
+    "slide": 16,
+    "meanPixelDifference": 0.04
+  },
+  {
+    "slide": 17,
+    "meanPixelDifference": 0.0472
+  },
+  {
+    "slide": 18,
+    "meanPixelDifference": 0.0179
+  },
+  {
+    "slide": 19,
+    "meanPixelDifference": 0.018
+  },
+  {
+    "slide": 20,
+    "meanPixelDifference": 0.0107
+  },
+  {
+    "slide": 21,
+    "meanPixelDifference": 0.2158
+  }
+]

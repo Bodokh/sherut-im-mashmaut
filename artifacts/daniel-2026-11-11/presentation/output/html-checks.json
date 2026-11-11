@@ -1,0 +1,25 @@
+{
+  "slides": 21,
+  "originalBytes": 12813771,
+  "bytes": 7604459,
+  "sha256": "07d3cb4f4e5f650c9f37343a4c553b703ca3981aac07ebcd903b6bb1e7681b6c",
+  "changedOnlyThreeIllustrationEncodings": true,
+  "originalPhotosAndScreenshotsUnchanged": true,
+  "changes": [
+    {
+      "name": "choice",
+      "beforeBytes": 2025490,
+      "afterBytes": 573151
+    },
+    {
+      "name": "trains",
+      "beforeBytes": 1615702,
+      "afterBytes": 344221
+    },
+    {
+      "name": "discipline-inspection-illustration-v2",
+      "beforeBytes": 1544710,
+      "afterBytes": 361546
+    }
+  ]
+}

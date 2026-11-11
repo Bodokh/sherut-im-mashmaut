@@ -34,9 +34,13 @@ export function participantFormFields(values: ParticipantFormValues): Participan
   };
 }
 
-/** An empty create input is unknown, not a CEO-authored value to protect. */
+/** Empty create inputs remain unknown and can be completed later. */
 export function createdParticipantFields(values: ParticipantFormValues): ParticipantFields {
   return Object.fromEntries(Object.entries(participantFormFields(values)).filter(([, value]) => value !== null && value !== ""));
+}
+
+export function canCreateParticipant(actor: Pick<StaffProfile, "active" | "localPending" | "role">): boolean {
+  return actor.active && !actor.localPending && ["mentor", "coordinator", "ceo"].includes(actor.role);
 }
 
 export function fieldIsProtected(actor: Pick<StaffProfile, "role" | "organizationId">, participantId: string, protections: readonly CeoProtection[], field: string): boolean {

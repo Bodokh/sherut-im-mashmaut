@@ -53,18 +53,18 @@ function Readiness({ readiness }: { readiness: ReminderReadiness | undefined }) 
     <Card>
       <CardHeader>
         <CardTitle>הגדרות התזכורות</CardTitle>
-        <CardDescription>התזכורות מיועדות לצוות בלבד. מספר הטלפון של החניכה נכלל רק לנמענים עם הרשאת צפייה עדכנית בכרטיס שלה. תוכן הדיווחים אינו נכלל בהודעות.</CardDescription>
+        <CardDescription>התזכורות נשלחות לחונכת ולרכזת האחראיות בלבד. ההודעה כוללת את שם החניכה ומספר הטלפון שלה, לפי הרשאת הצפייה העדכנית, ובקשה ליצור קשר ולמלא דוח מעקב לאחר השיחה.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
         <dl className="grid gap-4 text-sm sm:grid-cols-2">
           <div><dt className="text-muted-foreground">ספק SMS</dt><dd className="mt-1 font-medium">{readiness.smsProviderConfigured ? "הוגדר" : "טרם הוגדר — השליחה חסומה"}</dd></div>
           <div><dt className="text-muted-foreground">חיבור לשליחת SMS</dt><dd className="mt-1 font-medium">{readiness.smsCredentialsConfigured ? readiness.smsSendingEnabled ? "השליחה מופעלת" : "פרטי החיבור הוגדרו; השליחה אינה מופעלת" : "פרטי החיבור טרם הוגדרו"}</dd></div>
           <div><dt className="text-muted-foreground">סריקה אוטומטית</dt><dd className="mt-1 font-medium">{readiness.hostedSchedulerConfigured ? "הוגדרה" : "טרם הוגדרה; סריקה ידנית זמינה"}</dd></div>
-          <div><dt className="text-muted-foreground">קהל התזכורת</dt><dd className="mt-1 font-medium">{readiness.audience === "all_staff" ? "כל הצוות הפעיל — לפי הגדרה מפורשת" : "החונך/ת המשויך/ת, הרכז/ת והמנכ״ל — ברירת מחדל זמנית"}</dd></div>
-          <div><dt className="text-muted-foreground">תזכורת למועד קשר</dt><dd className="mt-1 font-medium">{readiness.appointmentReminderMinutesBefore === 0 ? "במועד שנקבע" : `${readiness.appointmentReminderMinutesBefore} דקות לפני המועד וגם במועד שנקבע`}</dd></div>
-          <div><dt className="text-muted-foreground">לאחר שבעה ימים ללא קשר</dt><dd className="mt-1 font-medium">{!readiness.overdueRemindersEnabled ? "תזכורת אינה מופעלת" : readiness.overdueRepeatHours === null ? "תזכורת אחת, ללא חזרה" : `תזכורת וחזרה מדי ${readiness.overdueRepeatHours} שעות`}</dd></div>
+          <div><dt className="text-muted-foreground">קהל התזכורת</dt><dd className="mt-1 font-medium">החונכת והרכזת המשויכות לחניכה בלבד</dd></div>
+          <div><dt className="text-muted-foreground">תזכורת למועד קשר</dt><dd className="mt-1 font-medium">{readiness.appointmentReminderMinutesBefore === 4320 ? "שלושה ימים לפני מועד הקשר וביום הקשר עצמו" : readiness.appointmentReminderMinutesBefore === 0 ? "במועד שנקבע" : `${readiness.appointmentReminderMinutesBefore} דקות לפני המועד וגם במועד שנקבע`}</dd></div>
+          <div><dt className="text-muted-foreground">לאחר שבעה ימים ללא קשר</dt><dd className="mt-1 font-medium">{!readiness.overdueRemindersEnabled ? "תזכורת אינה מופעלת" : "שבוע מהקשר האחרון, ושוב בכל שבוע עד לתיעוד דוח קשר שהושלם"}</dd></div>
         </dl>
-        <p className="text-sm leading-relaxed text-muted-foreground">השתקת המנכ״ל חלה על ההודעות לחשבונו בלבד. קבלת בקשה אצל הספק ואישור מסירה מוצגים בנפרד.</p>
+        <p className="text-sm leading-relaxed text-muted-foreground">תזכורות מעקב אינן נשלחות למנכ״ל. קבלת בקשה אצל הספק ואישור מסירה מוצגים בנפרד.</p>
       </CardContent>
     </Card>
   );

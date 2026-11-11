@@ -33,25 +33,6 @@ async function audit(client: PoolClient, actor: StaffProfile, command: Mentoring
   await client.query("INSERT INTO mentoring.audit (id, organization_id, actor_id, operation_id, action, participant_id, details, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,clock_timestamp())", [randomUUID(), actor.organizationId, actor.id, command.operationId, command.type, participantId ?? null, JSON.stringify(details)]);
 }
 
-async function protect(client: PoolClient, actor: StaffProfile, resourceId: string, revision: number, fieldPaths?: readonly string[]): Promise<void> {
-  if (actor.role !== "ceo" || fieldPaths?.length === 0) return;
-  await client.query(`INSERT INTO mentoring.ceo_protections
-    (organization_id,resource_id,protected_by_staff_id,protected_revision,active,field_paths,created_at)
-    VALUES ($1,$2,$3,$4,true,$5::text[],clock_timestamp())
-    ON CONFLICT (organization_id,resource_id) DO UPDATE SET
-      protected_by_staff_id=EXCLUDED.protected_by_staff_id,protected_revision=EXCLUDED.protected_revision,
-      field_paths=CASE WHEN EXCLUDED.field_paths IS NULL THEN NULL
-        WHEN NOT mentoring.ceo_protections.active THEN EXCLUDED.field_paths
-        WHEN mentoring.ceo_protections.field_paths IS NULL OR cardinality(mentoring.ceo_protections.field_paths)=0 THEN mentoring.ceo_protections.field_paths
-        ELSE ARRAY(SELECT DISTINCT unnest(mentoring.ceo_protections.field_paths || EXCLUDED.field_paths)) END,
-      active=true,version=mentoring.ceo_protections.version+1,updated_at=clock_timestamp(),
-      reason=NULL,unlocked_by_staff_id=NULL,unlocked_at=NULL`, [actor.organizationId, resourceId, actor.id, revision, fieldPaths ?? null]);
-}
-
-async function protectParticipantField(client: PoolClient, actor: StaffProfile, participantId: string, revision: number, field: "manualColor" | "appointment"): Promise<void> {
-  await protect(client, actor, participantId, revision, [field]);
-}
-
 async function preserveConflict(client: PoolClient, actor: StaffProfile, command: MentoringCommand, view: ParticipantView, now: string): Promise<ApiFailure> {
   const conflict = preserveCeoConflict<unknown>({ operationId: command.operationId, organizationId: actor.organizationId, resourceId: view.participant.id, submittedByStaffId: actor.id, authoritative: view, submitted: command, preservedAt: now });
   const conflictId = randomUUID();
@@ -68,13 +49,18 @@ const fieldColumns: Record<keyof ParticipantFields, string> = {
   displayName: "display_name", phone: "phone", serviceType: "service_type", servicePlace: "service_place", serviceRole: "service_role", profileNotes: "profile_notes",
 };
 
-async function createParticipant(client: PoolClient, actor: StaffProfile, command: Extract<MentoringCommand, { type: "create_participant" }>): Promise<CommandResult> {
+async function createParticipant(client: PoolClient, actor: StaffProfile, command: Extract<MentoringCommand, { type: "create_participant" }>, now: string): Promise<CommandResult> {
   const id = command.operationId;
   const fields = command.fields;
   if (!await reserveResource(client, actor, id, "participant")) return failure("conflict", "מזהה הפעולה כבר משויך לרשומה אחרת. יש ליצור פעולה חדשה.");
   const inserted = await client.query("INSERT INTO mentoring.participants (id,organization_id,display_name,phone,service_type,service_place,service_role,profile_notes,created_by,last_ceo_version,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,clock_timestamp(),clock_timestamp()) ON CONFLICT (id) DO NOTHING RETURNING id", [id, actor.organizationId, fields.displayName?.trim() || "חניכה ללא שם", fields.phone || null, fields.serviceType ?? null, fields.servicePlace || null, fields.serviceRole || null, fields.profileNotes || null, actor.id, actor.role === "ceo" ? 1 : 0]);
   if (inserted.rowCount !== 1) return failure("conflict", "מזהה החניכה כבר קיים. יש ליצור פעולה חדשה.");
-  await protect(client, actor, id, 1, Object.keys(fields));
+  if (actor.role === "mentor") {
+    // The authenticated membership owns the new card. Never accept assignment
+    // authority from a creation payload or an optimistic client projection.
+    const coordinator = actor.coordinatorId ? await client.query("SELECT id FROM mentoring.memberships WHERE organization_id = $1 AND id = $2 AND role = 'coordinator' AND active = true FOR SHARE", [actor.organizationId, actor.coordinatorId]) : null;
+    await client.query("INSERT INTO mentoring.assignments (id,organization_id,participant_id,mentor_id,coordinator_id,assigned_at,followup_anchor_at,version) VALUES ($1,$2,$3,$4,$5,$6,$6,1)", [id, actor.organizationId, id, actor.id, coordinator?.rows[0]?.id ?? null, now]);
+  }
   await audit(client, actor, command, id, { version: 1 });
   return success(command, id);
 }
@@ -87,7 +73,6 @@ async function updateParticipant(client: PoolClient, actor: StaffProfile, comman
     return `${fieldColumns[field as keyof ParticipantFields]} = $${values.length}`;
   });
   await client.query(`UPDATE mentoring.participants SET ${sets.join(", ")}, ${actor.role === "ceo" ? "last_ceo_version = version + 1," : ""} version = version + 1, updated_at = clock_timestamp() WHERE organization_id = $1 AND id = $2`, values);
-  await protect(client, actor, view.participant.id, view.participant.version + 1, Object.keys(command.fields));
   await audit(client, actor, command, view.participant.id, { fields: Object.keys(command.fields), version: view.participant.version + 1 });
   return success(command, view.participant.id);
 }
@@ -108,7 +93,6 @@ async function assignParticipant(client: PoolClient, actor: StaffProfile, comman
   const followupAnchorAt = view.assignment?.followupAnchorAt ?? view.assignment?.assignedAt ?? now;
   await client.query("INSERT INTO mentoring.assignments (id,organization_id,participant_id,mentor_id,coordinator_id,assigned_at,followup_anchor_at,version) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)", [randomUUID(), actor.organizationId, view.participant.id, mentor.id, command.coordinatorId, now, followupAnchorAt, assignmentVersion]);
   await client.query("UPDATE mentoring.participants SET last_ceo_version = CASE WHEN $3::boolean THEN version + 1 ELSE last_ceo_version END, version = version + 1, updated_at = clock_timestamp() WHERE organization_id = $1 AND id = $2", [actor.organizationId, view.participant.id, actor.role === "ceo"]);
-  await protect(client, actor, view.participant.id, view.participant.version + 1, ["assignment"]);
   await cancelReminders(client, actor.organizationId, view.participant.id);
   await audit(client, actor, command, view.participant.id, { mentorId: mentor.id, coordinatorId: command.coordinatorId, assignmentVersion });
   return success(command, view.participant.id);
@@ -138,9 +122,7 @@ async function recordContact(client: PoolClient, actor: StaffProfile, command: E
   }
   await client.query("UPDATE mentoring.participants SET last_ceo_version = CASE WHEN $5::boolean THEN version + 1 ELSE last_ceo_version END, version = version + 1, manual_color = CASE WHEN $3::text IS NULL THEN manual_color ELSE $3 END, manual_color_at = CASE WHEN $3::text IS NULL THEN manual_color_at ELSE $4::timestamptz END, updated_at = clock_timestamp() WHERE organization_id = $1 AND id = $2", [actor.organizationId, view.participant.id, changedColor ?? null, now, actor.role === "ceo"]);
   // A preparation call can retain the existing future appointment and reminder identities.
-  await protect(client, actor, entry.id, 1);
   if (changedColor !== undefined) {
-    await protectParticipantField(client, actor, view.participant.id, view.participant.version + 1, "manualColor");
     await recordManualColorHistory(client, actor.organizationId, view.participant.id, actor.id, now, changedColor, view.participant.version + 1);
   }
   await audit(client, actor, command, view.participant.id, { contactId: entry.id, outcome: entry.outcome, version: view.participant.version + 1, warnings: transition.warnings.map((item) => item.code) });
@@ -155,7 +137,6 @@ async function reviewContact(client: PoolClient, actor: StaffProfile, command: E
   if (actor.role !== "ceo" && protection) return preserveConflict(client, actor, command, view, now);
   await client.query("INSERT INTO mentoring.review_events (id,organization_id,contact_id,participant_id,revision,decision,reviewed_by_staff_id,reviewed_at,operation_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)", [randomUUID(),actor.organizationId,entry.id,view.participant.id,entry.revision,command.decision,actor.id,now,command.operationId]);
   await client.query("INSERT INTO mentoring.reviews (organization_id,contact_id,revision,decision,reviewed_by_staff_id,reviewed_at) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (organization_id,contact_id,revision) DO UPDATE SET decision = EXCLUDED.decision, reviewed_by_staff_id = EXCLUDED.reviewed_by_staff_id, reviewed_at = EXCLUDED.reviewed_at", [actor.organizationId, entry.id, entry.revision, command.decision, actor.id, now]);
-  if (actor.role === "ceo") await protect(client, actor, entry.id, entry.revision);
   await audit(client, actor, command, view.participant.id, { contactId: entry.id, revision: entry.revision, decision: command.decision });
   return success(command, view.participant.id);
 }
@@ -253,12 +234,23 @@ export async function executeCommand(authUserId: string, verifiedEmail: string |
         resendTarget = member;
       }
       if (isAuthorityCommand(command) && actor.role !== "ceo") return failure("forbidden", "הפעולה זמינה למנכ״ל בלבד.");
+      if (command.type === "permanently_delete_participant") {
+        // A committed purge removes its participant. Authenticate the current
+        // CEO first, then replay only this actor's identical accepted intent.
+        // The membership lock serializes concurrent retries by this actor.
+        const receipt = await client.query("SELECT payload_hash,response FROM mentoring.operations WHERE organization_id = $1 AND actor_id = $2 AND operation_id = $3 FOR UPDATE", [actor.organizationId, actor.id, command.operationId]);
+        if (receipt.rows[0]) {
+          if (receipt.rows[0].payload_hash !== commandHash(command)) return failure("conflict", "מזהה הפעולה כבר שימש לתוכן אחר. יש לשלוח פעולה חדשה.");
+          const result = receipt.rows[0].response as CommandResult;
+          return result.ok ? { ...result, replayed: true } : result;
+        }
+      }
       if (command.type === "update_organization_settings" && actor.role !== "ceo") return failure("forbidden", "שינוי מדיניות זמין למנכ״ל בלבד.");
       if (command.type === "send_staff_sms" && actor.role !== "ceo") return failure("forbidden", "שליחת הודעות לצוות זמינה למנכ״ל בלבד.");
       if (command.type === "save_monthly_review" && !canReviewMonthlyScope(actor, command.scopeStaffId)) return failure("forbidden", "אין הרשאה לסקירה החודשית שנבחרה.");
       if ((command.type === "invalidate_contact" || command.type === "evaluate_reminders") && actor.role === "mentor") return failure("forbidden", "הפעולה זמינה להנהלה ולרכזים ולרכזות בלבד.");
       if (command.type === "create_staff" && actor.role === "coordinator" && (command.fields.role !== "mentor" || command.fields.coordinatorId !== actor.id)) return failure("forbidden", "אפשר לצרף חונכים וחונכות לצוות שלך בלבד.");
-      if (command.type === "create_participant" || command.type === "assign_participant" || command.type === "create_staff") {
+      if (command.type === "assign_participant" || command.type === "create_staff") {
         if (actor.role === "mentor") return failure("forbidden", "יצירה ושיוך של חניכות זמינים להנהלה ולרכזים ולרכזות בלבד.");
       }
       if (command.type === "set_sms_muted" || command.type === "resolve_conflict" || command.type === "set_staff_active") {
@@ -271,7 +263,7 @@ export async function executeCommand(authUserId: string, verifiedEmail: string |
         const grants = await loadActorGrants(client, actor, command.participantId);
         const time = await client.query("SELECT clock_timestamp() AS now");
         now = iso(time.rows[0].now);
-        const action = command.type === "review_contact" ? "approve" : command.type === "delete_participant" ? "delete" : "edit";
+        const action = command.type === "review_contact" ? "approve" : command.type === "delete_participant" || command.type === "permanently_delete_participant" ? "delete" : "edit";
         if (!canPerformParticipantAction(actor, view.participant, view.assignment, action, grants, now) && !await ownsUnassignedParticipant(client, actor, view)) return failure("forbidden", "אין הרשאה לפעול בכרטיס החניכה הזה.");
         if (command.type === "revise_contact" && actor.role === "mentor" && view.contacts.find((entry) => entry.id === command.contactId)?.actorId !== actor.id) return failure("forbidden", "ניתן לתקן רק דיווח שכתבת בעצמך.");
       }
@@ -294,6 +286,10 @@ export async function executeCommand(authUserId: string, verifiedEmail: string |
           return failure("conflict", "מזהה הפעולה כבר שימש לתוכן אחר. יש לשלוח פעולה חדשה.");
         }
         const result = receipt.rows[0].response as CommandResult;
+        if (result.ok && command.type === "create_participant") {
+          const current = await client.query("SELECT id FROM mentoring.participants WHERE organization_id=$1 AND id=$2", [actor.organizationId, command.operationId]);
+          if (!current.rows[0]) return failure("not_found", "כרטיס החניכה נמחק לצמיתות. לא ניתן ליצור אותו מחדש באמצעות פעולה קודמת.");
+        }
         if (result.ok && command.type === "assign_participant" && actor.role !== "ceo") {
           // Classify the original action from immutable evidence. Current
           // assignment presence cannot distinguish a valid first-assignment
@@ -308,7 +304,7 @@ export async function executeCommand(authUserId: string, verifiedEmail: string |
       if (!parsed.ok) return parsed;
       const writeHash = hash ?? commandHash(parsed.command);
       const finish = async (result: CommandResult): Promise<CommandResult> => {
-        if (result.ok && view && ["update_participant", "assign_participant", "record_contact"].includes(command.type)) await rebuildParticipantReminders(client, actor.organizationId, view.participant.id, actor.id, command.operationId, now);
+        if (result.ok && result.participantId && ["create_participant", "update_participant", "assign_participant", "record_contact"].includes(command.type)) await rebuildParticipantReminders(client, actor.organizationId, result.participantId, actor.id, command.operationId, now);
         if (result.ok && ["create_staff", "set_staff_active", "update_staff", "set_sms_muted"].includes(command.type)) {
           const affected = await client.query("SELECT id FROM mentoring.participants WHERE organization_id = $1 AND deleted_at IS NULL ORDER BY id FOR UPDATE", [actor.organizationId]);
           for (const row of affected.rows) await rebuildParticipantReminders(client, actor.organizationId, String(row.id), actor.id, command.operationId, now);
@@ -317,7 +313,7 @@ export async function executeCommand(authUserId: string, verifiedEmail: string |
         await assertCurrentScope();
         return saveReceipt(client, actor, command, writeHash, result);
       };
-      if (view?.participant.deletedAt && command.type !== "restore_participant") return finish(failure("not_found", "הכרטיס נמצא בסל המחזור. יש לשחזר אותו לפני שינוי נוסף."));
+      if (view?.participant.deletedAt && command.type !== "restore_participant" && command.type !== "permanently_delete_participant") return finish(failure("not_found", "הכרטיס נמצא בסל המחזור. יש לשחזר אותו לפני שינוי נוסף."));
       if (view && ["record_contact", "assign_participant", "reschedule_appointment"].includes(command.type) && view.participant.lifecycle !== "active") return finish(failure("validation", "אפשר לתעד קשר חדש, לשייך או לקבוע פגישה רק בכרטיס ליווי פעיל."));
       if (view && (command.type === "record_contact" || command.type === "update_participant" || command.type === "assign_participant")) {
         const protection = view.protections.find((item) => item.resourceId === view!.participant.id && item.active);
@@ -347,7 +343,6 @@ export async function executeCommand(authUserId: string, verifiedEmail: string |
         client, actor, view, now, success, failure,
         audit: (operation, participantId, details) => audit(client, actor, operation, participantId, details),
         preserveConflict: (operation, currentView) => preserveConflict(client, actor, operation, currentView, now),
-        protect: (resourceId, revision, fieldPaths) => protect(client, actor, resourceId, revision, fieldPaths),
         refreshReminders: async (participantId) => { await rebuildParticipantReminders(client, actor.organizationId, participantId, actor.id, command.operationId, now); },
       };
       if (command.type === "send_staff_sms") {
@@ -363,7 +358,7 @@ export async function executeCommand(authUserId: string, verifiedEmail: string |
         case "create_staff": return finish(await createStaff(client, actor, command));
         case "resend_staff_invite": return finish(await resendStaffInvite(client, actor, command, resendTarget!));
         case "set_staff_active": return finish(await setStaffActive(client, actor, command));
-        case "create_participant": return finish(await createParticipant(client, actor, command));
+        case "create_participant": return finish(await createParticipant(client, actor, command, now));
         case "update_participant": return finish(await updateParticipant(client, actor, command, view!));
         case "assign_participant": return finish(await assignParticipant(client, actor, command, view!, now));
         case "record_contact": return finish(await recordContact(client, actor, command, view!, now));

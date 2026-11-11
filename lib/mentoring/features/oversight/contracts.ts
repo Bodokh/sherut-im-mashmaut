@@ -1,10 +1,10 @@
-/** Operational defaults are provisional product choices, never provider credentials. */
+/** Operational defaults contain no provider credentials; reminder audience and lead are confirmed. */
 export const DEFAULT_ORGANIZATION_POLICY = {
   offlineLeaseHours: 24,
   reminderAudience: "responsible_team",
-  appointmentReminderMinutesBefore: 0,
+  appointmentReminderMinutesBefore: 4320,
   overdueRemindersEnabled: true,
-  overdueRepeatHours: null,
+  overdueRepeatHours: 168,
 } as const;
 
 export interface OrganizationPolicy {

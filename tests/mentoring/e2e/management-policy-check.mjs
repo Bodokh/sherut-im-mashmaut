@@ -61,8 +61,9 @@ async function savePolicy(value, phase, expectedVersion) {
   await page.locator("#settings-repeat-hours").fill(value.overdueRepeatHours === null ? "" : String(value.overdueRepeatHours));
   const overdue = page.getByRole("switch", { name: "תזכורות על איחור בקשר", exact: true });
   if ((await overdue.getAttribute("aria-checked")) !== String(value.overdueRemindersEnabled)) await overdue.click();
-  await page.locator("#settings-audience").click();
-  await page.getByRole("option", { name: value.reminderAudience === "all_staff" ? "לכל הצוות" : "לצוות הליווי האחראי", exact: true }).click();
+  assert.equal(value.reminderAudience, "responsible_team");
+  await page.getByText("החונכת והרכזת האחראיות בלבד", { exact: true }).waitFor({ state: "visible" });
+  assert.equal(await page.locator("#settings-audience").count(), 0, "Reminder recipients are a fixed policy, not an editable audience");
   await page.locator("#settings-reason").fill(`${marker} ${phase}`);
   allowed = { value, expectedVersion, phase };
   const responsePromise = page.waitForResponse((response) => {
@@ -75,6 +76,7 @@ async function savePolicy(value, phase, expectedVersion) {
   allowed = null;
   assert.equal(result.ok, true, JSON.stringify(result.error)); assert.equal(result.acceptance, "accepted");
   const after = await poll(snapshot, (state) => state.settings.version === expectedVersion + 1 && JSON.stringify(policy(state.settings)) === JSON.stringify(value));
+  assert.equal(after.settings.reminderAudience, "responsible_team");
   await page.getByText("הפעולה התקבלה במערכת", { exact: true }).waitFor({ state: "visible" });
   results.push({ phase, version: after.settings.version, persisted: policy(after.settings) });
   await persist();
@@ -94,6 +96,7 @@ try {
   assert.equal(initial.actor.id, actor); assert.equal(initial.actor.role, "ceo"); assert.equal(initial.actor.active, true);
   assert.equal(initial.capabilities.smsSendingEnabled, false);
   original = policy(initial.settings); initialVersion = initial.settings.version;
+  assert.equal(original.reminderAudience, "responsible_team", "Apply the responsible-team reminder migration before this settings journey");
   recovery.original = original; recovery.originalVersion = initialVersion; await persist();
   await page.route("**/api/mentoring/commands", async (route) => {
     if (route.request().method() !== "POST") return route.fallback();
@@ -106,7 +109,7 @@ try {
     await persist(); await route.continue();
   });
   const min = { offlineLeaseHours: 1, reminderAudience: "responsible_team", appointmentReminderMinutesBefore: 0, overdueRemindersEnabled: false, overdueRepeatHours: 1 };
-  const max = { offlineLeaseHours: 24, reminderAudience: "all_staff", appointmentReminderMinutesBefore: 4320, overdueRemindersEnabled: true, overdueRepeatHours: 168 };
+  const max = { offlineLeaseHours: 24, reminderAudience: "responsible_team", appointmentReminderMinutesBefore: 4320, overdueRemindersEnabled: true, overdueRepeatHours: 168 };
   const noRepeat = { ...max, overdueRepeatHours: null };
   let version = initialVersion;
   for (const [phase, value] of [["minimum", min], ["maximum", max], ["optional-repeat-blank", noRepeat]]) version = await savePolicy(value, phase, version);

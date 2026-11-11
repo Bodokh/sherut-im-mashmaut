@@ -7,7 +7,7 @@ import { participant, assignment, appointment, contact, snapshot } from "../doma
 const { reminderGeneration, planReminderOccurrences, selectReminderRecipients, normalizeStaffMobile, reminderMessage } = await import("../../../lib/mentoring/features/reminders/policy.ts");
 
 const now = "2026-10-26T12:00:00Z";
-const settings = (overrides = {}) => ({ ...defaultOrganizationSettings("org-1", now), ...overrides });
+const settings = (overrides = {}) => ({ ...defaultOrganizationSettings("org-1", now), appointmentReminderMinutesBefore: 0, ...overrides });
 const upcomingAppointment = { ...appointment, scheduledAt: "2026-10-27T08:00:00.000Z" };
 const view = (overrides = {}) => snapshot({ nextAppointment: upcomingAppointment, ...overrides });
 const member = (id, role, overrides = {}) => ({ id, organizationId: "org-1", role, active: true, version: 1, authUserId: id,
@@ -16,7 +16,13 @@ const staff = () => [member("mentor-1", "mentor"), member("coordinator-1", "coor
   member("unrelated", "mentor"), member("inactive", "mentor", { active: false }), member("cross-org", "ceo", { organizationId: "org-2" })];
 const byKind = (occurrences, kind) => occurrences.find((item) => item.kind === kind);
 
-test("default plan has one appointment and one seven-day breach with deterministic identities", () => {
+test("confirmed default sends three days before and on the scheduled day", () => {
+  const planned = planReminderOccurrences(view(), defaultOrganizationSettings("org-1", now), now);
+  assert.equal(planned.filter((item) => item.kind === "appointment").length, 2);
+  assert.equal(planned.find((item) => item.occurrenceKey.includes("advance")).scheduledAt, "2026-10-24T08:00:00.000Z");
+});
+
+test("zero-lead plan has one appointment and one seven-day breach with deterministic identities", () => {
   const planned = planReminderOccurrences(view(), settings(), now);
   assert.equal(planned.length, 2);
   assert.deepEqual(planned, planReminderOccurrences(view(), settings(), now));
@@ -72,6 +78,16 @@ test("a no-answer changes validation generation while preserving occurrence deli
   assert.notEqual(after[0].generation, before[0].generation);
 });
 
+test("a completed follow-up report and its next appointment start a fresh reminder pair", () => {
+  const policy = settings({ appointmentReminderMinutesBefore: 4320, overdueRemindersEnabled: false });
+  const before = planReminderOccurrences(view(), policy, now);
+  const next = { ...upcomingAppointment, id: "appointment-after-report", scheduledAt: "2026-11-02T12:00:00.000Z", sourceContactId: "completed-report" };
+  const after = planReminderOccurrences(view({ contacts: [contact({ id: "completed-report", occurredAt: now })], nextAppointment: next }), policy, now);
+  assert.equal(after.length, 2);
+  assert.deepEqual(after.map((item) => item.scheduledAt).sort(), ["2026-10-30T12:00:00.000Z", "2026-11-02T12:00:00.000Z"]);
+  assert.equal(after.some((item) => before.some((previous) => previous.occurrenceKey === item.occurrenceKey)), false);
+});
+
 test("successful contact, correction, invalidation, appointment and settings versions invalidate stale claims", () => {
   const original = reminderGeneration(view(), settings(), now);
   for (const changed of [
@@ -111,16 +127,16 @@ test("paused, closed, deleted, unassigned and wrong-organization participants ha
   }
 });
 
-test("responsible team recipients are primary mentor, assigned coordinator and unmuted CEO only", () => {
-  assert.deepEqual(selectReminderRecipients(view(), staff(), settings()).map((row) => row.id), ["ceo-1", "coordinator-1", "mentor-1"]);
+test("only the assigned mentor and coordinator receive reminders, regardless of CEO mute", () => {
+  assert.deepEqual(selectReminderRecipients(view(), staff(), settings()).map((row) => row.id), ["coordinator-1", "mentor-1"]);
   const muted = staff().map((row) => ({ ...row, smsMuted: true }));
   assert.deepEqual(selectReminderRecipients(view(), muted, settings()).map((row) => row.id), ["coordinator-1", "mentor-1"]);
 });
 
-test("all-staff routing must be explicit and still excludes inactive and cross-org accounts", () => {
-  assert.deepEqual(selectReminderRecipients(view(), staff(), settings({ reminderAudience: "all_staff" })).map((row) => row.id), ["ceo-1", "coordinator-1", "mentor-1", "unrelated"]);
+test("legacy all-staff settings cannot include CEOs, unrelated, inactive or cross-org accounts", () => {
+  assert.deepEqual(selectReminderRecipients(view(), staff(), settings({ reminderAudience: "all_staff" })).map((row) => row.id), ["coordinator-1", "mentor-1"]);
   const duplicates = [...staff(), staff()[0], member("participant", "developer")];
-  assert.equal(selectReminderRecipients(view(), duplicates, settings({ reminderAudience: "all_staff" })).length, 4);
+  assert.equal(selectReminderRecipients(view(), duplicates, settings({ reminderAudience: "all_staff" })).length, 2);
 });
 
 test("missing or invalid staff mobile remains an explicit transport problem, never a substituted participant number", () => {
@@ -131,16 +147,54 @@ test("missing or invalid staff mobile remains an explicit transport problem, nev
   assert.equal(recipients[0].phone, null);
 });
 
-test("repeats are disabled by default and explicit repetition schedules only base plus latest occurrence", () => {
-  const current = view({ nextAppointment: null });
-  assert.equal(planReminderOccurrences(current, settings(), "2027-01-01T12:00:00Z").length, 1);
-  const planned = planReminderOccurrences(current, settings({ overdueRepeatHours: 12 }), "2026-10-28T09:00:00Z");
-  assert.equal(planned.length, 2);
-  assert.equal(planned[1].scheduledAt, "2026-10-28T08:00:00.000Z");
-  assert.equal(planned[1].referenceAt, "2026-10-25T08:00:00.000Z");
-  assert.notEqual(planned[0].occurrenceKey, planned[1].occurrenceKey);
-  assert.equal(planReminderOccurrences(current, settings({ overdueRepeatHours: 12 }), "2026-10-25T19:59:59Z").length, 1);
-  assert.equal(planReminderOccurrences(current, settings({ overdueRemindersEnabled: false, overdueRepeatHours: 12 }), now).length, 0);
+test("weekly repeats plan only the latest missed week regardless of legacy interval settings", () => {
+  assert.equal(defaultOrganizationSettings("org-1", now).overdueRepeatHours, 168);
+  const current = view({ contacts: [contact({ occurredAt: "2026-11-01T08:00:00Z" })], nextAppointment: null });
+  for (const overdueRepeatHours of [null, 12, 168]) {
+    const planned = planReminderOccurrences(current, settings({ overdueRepeatHours }), "2026-11-30T09:00:00Z");
+    assert.equal(planned.length, 1, "Four missed runs produce one current weekly occurrence, never a burst");
+    assert.equal(planned[0].scheduledAt, "2026-11-29T08:00:00.000Z");
+    assert.equal(planned[0].referenceAt, "2026-11-08T08:00:00.000Z");
+    assert.equal(planReminderOccurrences(current, settings({ overdueRepeatHours }), "2026-12-01T10:00:00Z")[0].occurrenceKey, planned[0].occurrenceKey);
+    assert.notEqual(planReminderOccurrences(current, settings({ overdueRepeatHours }), "2026-12-06T08:00:00Z")[0].occurrenceKey, planned[0].occurrenceKey);
+  }
+  assert.equal(planReminderOccurrences(current, settings({ overdueRemindersEnabled: false }), "2026-11-30T09:00:00Z").length, 0, "The internal operational safeguard remains available");
+});
+
+test("weekly recurrence preserves Jerusalem wall time and changes identity exactly at both DST boundaries", () => {
+  for (const [anchor, previous, due] of [
+    ["2026-10-12T07:00:00Z", "2026-10-19T07:00:00.000Z", "2026-10-26T08:00:00.000Z"],
+    ["2026-03-13T08:00:00Z", "2026-03-20T08:00:00.000Z", "2026-03-27T07:00:00.000Z"],
+  ]) {
+    const current = view({ contacts: [contact({ occurredAt: anchor })], nextAppointment: null });
+    const before = planReminderOccurrences(current, settings(), new Date(Date.parse(due) - 1).toISOString())[0];
+    const at = planReminderOccurrences(current, settings(), due)[0];
+    const after = planReminderOccurrences(current, settings(), new Date(Date.parse(due) + 1).toISOString())[0];
+    assert.equal(before.scheduledAt, previous);
+    assert.equal(at.scheduledAt, due);
+    assert.notEqual(before.occurrenceKey, at.occurrenceKey);
+    assert.equal(at.occurrenceKey, after.occurrenceKey);
+  }
+});
+
+test("a missing DST wall time does not permanently shift subsequent weekly reminders", () => {
+  const current = view({ contacts: [contact({ occurredAt: "2026-03-20T00:30:00Z" })], nextAppointment: null });
+  assert.equal(planReminderOccurrences(current, settings(), "2026-03-27T00:30:00Z")[0].scheduledAt, "2026-03-27T00:30:00.000Z");
+  assert.equal(planReminderOccurrences(current, settings(), "2026-04-02T23:30:00Z")[0].scheduledAt, "2026-04-02T23:30:00.000Z");
+});
+
+test("only a completed report starts a fresh weekly cycle; no-answer leaves the current week unchanged", () => {
+  const completed = contact({ id: "last-completed", occurredAt: "2026-11-01T08:00:00Z" });
+  const current = view({ contacts: [completed], nextAppointment: null });
+  const at = "2026-11-30T09:00:00Z";
+  const previous = planReminderOccurrences(current, settings(), at)[0];
+  const noAnswer = view({ ...current, contacts: [completed, contact({ id: "no-answer", outcome: "no_answer", occurredAt: "2026-11-29T10:00:00Z" })] });
+  assert.equal(planReminderOccurrences(noAnswer, settings(), at)[0].occurrenceKey, previous.occurrenceKey);
+  const fresh = view({ ...current, contacts: [completed, contact({ id: "fresh-report", occurredAt: "2026-11-30T08:00:00Z" })] });
+  const next = planReminderOccurrences(fresh, settings(), at);
+  assert.equal(next.length, 1);
+  assert.equal(next[0].scheduledAt, "2026-12-07T08:00:00.000Z");
+  assert.notEqual(next[0].occurrenceKey, previous.occurrenceKey);
 });
 
 test("messages request a call and follow-up recording without including private narrative", () => {
@@ -148,12 +202,15 @@ test("messages request a call and follow-up recording without including private 
   const text = reminderMessage("שם\nחניכה", occurrence);
   assert.match(text, /שם חניכה/);
   assert.match(text, /תזכורת לקשר/);
-  assert.match(text, /להתקשר לחניכה/);
+  assert.match(text, /ליצור קשר עם החניכה/);
   assert.match(text, /בשלומה/);
-  assert.match(text, /למלא באתר את פרטי המעקב והחניכה/);
+  assert.match(text, /להזין באתר דוח מעקב חניכה/);
   assert.doesNotMatch(text, /SECRET|050|\n/);
   assert.ok(text.length < 500);
-  assert.match(reminderMessage("שם", { kind: "seven_day_overdue", referenceAt: now }), /נדרש קשר/);
+  const overdue = reminderMessage("שם", { kind: "seven_day_overdue", referenceAt: now });
+  assert.match(overdue, /טרם תועד קשר/);
+  assert.match(overdue, /ליצור קשר עם החניכה/);
+  assert.match(overdue, /לאחר השיחה יש להזין באתר דוח מעקב חניכה/);
 });
 
 test("reminders include only a normalized supplied mentee phone for either kind", () => {

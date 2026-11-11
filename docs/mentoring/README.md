@@ -2,6 +2,8 @@
 
 Version 0.4 · 27 October 2026 · Specification, development implementation and readiness
 
+**11 November local candidate:** [Daniel's fixes and delivery ledger](daniel-fixes-2026-11-11.md) records mentor creation, explicit-only CEO protection, personal/team views, responsible-team reminders, staff branding and the public entrance. Daniel's 19:10 reply confirmed mentor/coordinator scope, weekly overdue reminders from the last contact and permanent deletion of reports/history with screen confirmation; final local verification passes 643 unit tests, 73 PostgreSQL checks, lint/type generation/TypeScript, independent code/security review and the 55-page production build. The exact 21-slide presentation source was recovered, exported to locally verified offline HTML/PowerPoint and privately linked to Daniel, with the unreproduced blank-image cause and device/editability limits recorded. The brochure send was acknowledged by WhatsApp. This candidate has not been deployed; its new migrations have not been applied to shared development or production. The dated checkpoints below retain their original evidence boundaries.
+
 The mentoring system helps staff keep personal contact with each participant at least once every seven days. Each participant has one accountable mentor, with coordinator oversight and final CEO authority.
 
 This folder contains the staff product specification, design references and development implementation evidence. The repository's existing [PRODUCT.md](../../PRODUCT.md) describes the public nonprofit website and remains its separate product brief.
@@ -52,7 +54,7 @@ Recorded core PostgreSQL 30/30/contact 16/16 predates later dispatcher/provider 
 
 Production's www proxy update was rejected by Clerk; the current correction uses verified live DNS and retains the development proxy. See the deployment record for final runtime proof. Vercel CLI65.4.0 was used through `npx`; no global tool update is claimed.
 
-The current provisional [CEO protection contract](technical-spec.md#6-authorization-and-ceo-protection) protects the affected information while preserving routine new-contact work. Existing whole-record locks and explicit scheduling locks remain enforced; automatic actions cannot silently narrow them. The ledger records the real regression and final retest status.
+The local candidate's [CEO protection contract](technical-spec.md#6-authorization-and-ceo-protection) retains explicit field/whole-record protection while ordinary CEO edits no longer add locks. Legacy automatic-lock reconciliation is migration `012`, pending rollout. The earlier automatic protection contract and its regression evidence remain labelled historical in the technical specification.
 
 ## How to review
 

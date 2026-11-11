@@ -1,0 +1,38 @@
+{
+  "preparedAt": "2026-11-11",
+  "files": [
+    {
+      "type": "pptx",
+      "path": "output/sherut-im-mashmaut-offline.pptx",
+      "bytes": 4245269,
+      "url": "https://docs.google.com/presentation/d/18guHj6YVwJjhUXNjkfUo9wMyS75b9aZx/edit?usp=drivesdk&ouid=105827384160702885760&rtpof=true&sd=true"
+    },
+    {
+      "type": "html",
+      "path": "output/sherut-im-mashmaut-offline.html",
+      "bytes": 7604459,
+      "url": "https://drive.google.com/file/d/1ELzrtNAawcgV5zkPMOeQ9afgx_TRY08j/view?usp=drivesdk"
+    }
+  ],
+  "sharing": {
+    "verification": "Drive metadata readback confirmed the original MIME types and byte sizes, owner access, and reader access for Daniel's individually verified existing Google account only.",
+    "publicOrDomainAccess": false,
+    "existingFilesChanged": false
+  },
+  "whatsapp": {
+    "requestId": "daniel-offline-presentation-links-20261111-1",
+    "state": "accepted",
+    "acceptedAt": "2026-11-11T17:43:41Z",
+    "contents": "Private download links, offline opening instructions, image-slide PPTX limitation, and a request for Daniel to verify images on his device.",
+    "recipientDeliveryOrReadConfirmed": false
+  },
+  "directAttachmentAttempt": {
+    "requestId": "daniel-offline-presentation-pptx-20261111-1",
+    "result": "MCP gateway rejected the request as Request Entity Too Large; send-status lookup returned send_request_not_found. The identical retry was also rejected. No direct attachment delivery is claimed."
+  },
+  "acceptanceLimits": [
+    "The original blank-image failure was not reproduced in the archived source.",
+    "The 21 slides were checked offline in Chrome and the PPTX was rendered in LibreOffice; Microsoft PowerPoint desktop and Daniel's device remain untested.",
+    "PPTX slides are images; the HTML preserves editable text."
+  ]
+}

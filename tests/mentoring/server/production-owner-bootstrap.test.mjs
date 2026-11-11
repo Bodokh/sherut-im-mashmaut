@@ -131,7 +131,7 @@ test("approval file must be private, regular, bounded JSON and cannot be a symli
 
 test("migration verification uses all current ordered source checksums", async () => {
   const source=await loadMigrations();
-  assert.equal(source.length,10); assert.equal(source[0].filename,"001_initial.sql"); assert.equal(source.at(-1).filename,"010_staff_messages.sql");
+  assert.equal(source.length,13); assert.equal(source[0].filename,"001_initial.sql"); assert.equal(source.at(-1).filename,"013_weekly_overdue_reminders.sql");
   assert.ok(source.every(row=>/^[a-f0-9]{64}$/.test(row.checksum)));
 });
 

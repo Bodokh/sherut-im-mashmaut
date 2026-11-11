@@ -26,6 +26,7 @@ import { useWorkspace } from "@/lib/mentoring/workspace-client";
 import { cn } from "@/lib/mentoring/ui-utils";
 import { DraftStatus, useFormDraft } from "./form-draft";
 import { changedStaffFields, isPendingStaffPreapproval, staffEditValues } from "./staff-form-state";
+import { teamStaff } from "./personal-area-state";
 
 const roleLabels: Record<StaffRole, string> = { mentor: "חונך/ת", coordinator: "רכז/ת", ceo: "מנכ״ל" };
 const onboardingEmailLabels = {
@@ -310,9 +311,10 @@ export function StaffManagement() {
   const { actor, staff } = snapshot;
   const isCeo = actor.role === "ceo";
   const canCreate = isCeo || actor.role === "coordinator";
-  const activeCount = staff.filter((member) => member.active).length;
-  const pendingCount = staff.filter(isPendingStaffPreapproval).length;
-  const inactiveCount = staff.filter((member) => !member.active && !isPendingStaffPreapproval(member)).length;
+  const visibleStaff = teamStaff(actor, staff);
+  const activeCount = visibleStaff.filter((member) => member.active).length;
+  const pendingCount = visibleStaff.filter(isPendingStaffPreapproval).length;
+  const inactiveCount = visibleStaff.filter((member) => !member.active && !isPendingStaffPreapproval(member)).length;
   const selected = staff.find((member) => member.id === target?.id);
   const closeDialog = () => setTarget(null);
   function inviteControl(member: StaffProfile) {
@@ -336,13 +338,13 @@ export function StaffManagement() {
   return <TooltipProvider><div className="flex min-w-0 flex-col gap-4">
     {canCreate && <OfflineNotice />}
     {canCreate && !isOnline && <p className="text-sm text-muted-foreground">שליחת הזמנה או קישור כניסה זמינה כשיש חיבור לאינטרנט.</p>}
-    <Card className="min-w-0 max-w-full"><CardHeader><CardTitle>צוות הליווי</CardTitle><CardDescription>{activeCount} עם גישה מאושרת · {inactiveCount} ללא גישה{pendingCount > 0 ? ` · ${pendingCount} בקשות חברות ממתינות לאישור` : ""}</CardDescription><CardAction>{canCreate ? <AddStaffDialog /> : <Badge variant="secondary">{staff.length} בצוות</Badge>}</CardAction></CardHeader>
-      <CardContent className="min-w-0 max-w-full">{staff.length === 0 ? <Empty><EmptyHeader><EmptyMedia variant="icon"><Users aria-hidden="true" /></EmptyMedia><EmptyTitle>אין צוות להצגה</EmptyTitle><EmptyDescription>{canCreate ? "אפשר לאשר חברות חדשה בצוות באמצעות הכפתור למעלה." : "רשימת הצוות תוצג לאחר הגדרת חשבונות הצוות."}</EmptyDescription></EmptyHeader></Empty> : <>
+    <Card className="min-w-0 max-w-full"><CardHeader><CardTitle>{actor.role === "coordinator" ? "הצוות שלי" : "צוות הליווי"}</CardTitle><CardDescription>{activeCount} עם גישה מאושרת · {inactiveCount} ללא גישה{pendingCount > 0 ? ` · ${pendingCount} בקשות חברות ממתינות לאישור` : ""}</CardDescription><CardAction>{canCreate ? <AddStaffDialog /> : <Badge variant="secondary">{visibleStaff.length} בצוות</Badge>}</CardAction></CardHeader>
+      <CardContent className="min-w-0 max-w-full">{visibleStaff.length === 0 ? <Empty><EmptyHeader><EmptyMedia variant="icon"><Users aria-hidden="true" /></EmptyMedia><EmptyTitle>אין צוות להצגה</EmptyTitle><EmptyDescription>{canCreate ? "אפשר לאשר חברות חדשה בצוות באמצעות הכפתור למעלה." : "רשימת הצוות תוצג לאחר הגדרת חשבונות הצוות."}</EmptyDescription></EmptyHeader></Empty> : <>
         <div className="hidden min-w-0 max-w-full md:block">
           <Table className={cn("table-fixed", isCeo ? "min-w-[60rem]" : "min-w-[44rem]")} aria-label="צוות הליווי">
             <colgroup><col /><col className="w-24" /><col /><col /><col className="w-36" />{isCeo && <col className="w-48" />}</colgroup>
             <TableHeader><TableRow><TableHead scope="col">שם</TableHead><TableHead scope="col">תפקיד</TableHead><TableHead scope="col">פרטי קשר</TableHead><TableHead scope="col">רכז/ת אחראי/ת</TableHead><TableHead scope="col">גישה</TableHead>{isCeo && <TableHead scope="col">ניהול צוות</TableHead>}</TableRow></TableHeader>
-            <TableBody>{staff.map((member) => <TableRow key={member.id}>
+            <TableBody>{visibleStaff.map((member) => <TableRow key={member.id}>
               <TableCell className="whitespace-normal"><div className="flex min-w-0 flex-col gap-1"><span className="font-medium [overflow-wrap:anywhere]">{member.displayName}</span>{member.id === actor.id && <span className="text-xs text-muted-foreground">החשבון שלך</span>}</div></TableCell>
               <TableCell><Badge className="h-auto min-h-5 max-w-full whitespace-normal" variant="outline">{isPendingStaffPreapproval(member) ? "תפקיד מבוקש: " : ""}{roleLabels[member.role]}</Badge></TableCell>
               <TableCell className="whitespace-normal"><div className="flex min-w-0 flex-col gap-1"><span dir="ltr" className="[overflow-wrap:anywhere]">{member.phone ?? "לא הוזן טלפון"}</span>{member.email && <span dir="ltr" title={member.email} className="block max-w-full truncate text-xs text-muted-foreground">{member.email}</span>}</div></TableCell>
@@ -352,7 +354,7 @@ export function StaffManagement() {
             </TableRow>)}</TableBody>
           </Table>
         </div>
-        <div className="grid gap-3 md:hidden">{staff.map((member) => <Card key={member.id} size="sm"><CardHeader><CardTitle className="min-w-0 break-words">{member.displayName}</CardTitle><CardDescription>{isPendingStaffPreapproval(member) ? "תפקיד מבוקש: " : ""}{roleLabels[member.role]}{member.id === actor.id ? " · החשבון שלך" : ""}</CardDescription><CardAction>{accessStatus(member, "בקשת חברות ממתינה לאישור")}</CardAction></CardHeader><CardContent className="flex flex-col gap-2"><dl className="flex min-w-0 flex-col gap-2 text-sm"><div className="flex flex-col gap-1"><dt className="text-muted-foreground">פרטי קשר</dt><dd><span dir="ltr">{member.phone ?? "לא הוזן טלפון"}</span></dd>{member.email && <dd dir="ltr" className="break-all text-start">{member.email}</dd>}</div><div className="flex flex-col gap-1"><dt className="text-muted-foreground">{isPendingStaffPreapproval(member) ? "רכז/ת מבוקש/ת" : "רכז/ת אחראי/ת"}</dt><dd>{staff.find((person) => person.id === member.coordinatorId)?.displayName ?? "ללא שיוך"}</dd></div></dl>
+        <div className="grid gap-3 md:hidden">{visibleStaff.map((member) => <Card key={member.id} size="sm"><CardHeader><CardTitle className="min-w-0 break-words">{member.displayName}</CardTitle><CardDescription>{isPendingStaffPreapproval(member) ? "תפקיד מבוקש: " : ""}{roleLabels[member.role]}{member.id === actor.id ? " · החשבון שלך" : ""}</CardDescription><CardAction>{accessStatus(member, "בקשת חברות ממתינה לאישור")}</CardAction></CardHeader><CardContent className="flex flex-col gap-2"><dl className="flex min-w-0 flex-col gap-2 text-sm"><div className="flex flex-col gap-1"><dt className="text-muted-foreground">פרטי קשר</dt><dd><span dir="ltr">{member.phone ?? "לא הוזן טלפון"}</span></dd>{member.email && <dd dir="ltr" className="break-all text-start">{member.email}</dd>}</div><div className="flex flex-col gap-1"><dt className="text-muted-foreground">{isPendingStaffPreapproval(member) ? "רכז/ת מבוקש/ת" : "רכז/ת אחראי/ת"}</dt><dd>{staff.find((person) => person.id === member.coordinatorId)?.displayName ?? "ללא שיוך"}</dd></div></dl>
           <StaffOnboardingStatus member={member} />
           {inviteControl(member)}
         </CardContent>{isCeo && <CardFooter>{controls(member)}</CardFooter>}</Card>)}</div>

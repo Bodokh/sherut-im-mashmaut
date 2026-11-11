@@ -109,6 +109,7 @@ export const he = {
   },
 
   nav: {
+    staff: "מערך הליווי",
     home: "דף הבית",
     about: "אנחנו",
     organization: "אודות העמותה",

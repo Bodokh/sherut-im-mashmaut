@@ -194,6 +194,13 @@ export async function getWorkspace(authUserId: string, verifiedEmail?: string | 
     const conflictsResult = await client.query("SELECT c.*, p.display_name AS participant_name, m.display_name AS author_name FROM mentoring.conflicts c JOIN mentoring.participants p ON p.organization_id = c.organization_id AND p.id = c.participant_id JOIN mentoring.memberships m ON m.organization_id = c.organization_id AND m.id = c.actor_id WHERE c.organization_id = $1 AND ($3 = 'ceo' OR c.actor_id = $2) ORDER BY c.created_at DESC", [actor.organizationId, actor.id, actor.role]);
     const visibleIds = new Set(participants.map((view) => view.participant.id));
     const conflicts: ConflictView[] = conflictsResult.rows.filter((row) => visibleIds.has(text(row.participant_id))).map((row) => ({ id: text(row.id), participantId: text(row.participant_id), participantName: text(row.participant_name), authorName: text(row.author_name), authoritativeValue: JSON.stringify(row.authoritative_value, null, 2), submittedValue: JSON.stringify(row.submitted_value, null, 2), createdAt: iso(row.created_at), resolvedAt: nullableIso(row.resolved_at) }));
+    // The reserved namespace survives permanent deletion. UUIDs alone identify
+    // local data to erase after reconnect, without retaining profile content or
+    // confusing an ordinary access revocation with permanent deletion.
+    const permanentDeletions = await client.query(`SELECT r.id FROM mentoring.resource_ids r
+      LEFT JOIN mentoring.participants p ON p.organization_id=r.organization_id AND p.id=r.id
+      WHERE r.organization_id=$1 AND r.kind='participant' AND p.id IS NULL ORDER BY r.id`, [actor.organizationId]);
+    const permanentlyDeletedParticipantIds = permanentDeletions.rows.map((row) => text(row.id));
     let offlineDeadline = Date.parse(serverTime) + oversight.settings.offlineLeaseHours * 60 * 60 * 1000;
     if (actor.role !== "ceo") {
       // A known grant deadline must never become a longer offline permission.
@@ -202,6 +209,6 @@ export async function getWorkspace(authUserId: string, verifiedEmail?: string | 
       const expiry = await client.query("SELECT min(expires_at) AS expires_at FROM mentoring.grants WHERE organization_id = $1 AND staff_id = $2 AND active = true AND expires_at > $3::timestamptz", [actor.organizationId, actor.id, serverTime]);
       if (expiry.rows[0].expires_at != null) offlineDeadline = Math.min(offlineDeadline, Date.parse(iso(expiry.rows[0].expires_at)));
     }
-    return { actor, staff, participants, conflicts, ...oversight, ...reminderData, ...(staffSmsBatches ? { staffSmsBatches } : {}), serverTime, offlineValidUntil: new Date(offlineDeadline).toISOString(), capabilities: { smsConfigured: reminderData.reminderReadiness.smsProviderConfigured && reminderData.reminderReadiness.smsCredentialsConfigured, smsSendingEnabled: reminderData.reminderReadiness.smsSendingEnabled } };
+    return { actor, staff, participants, permanentlyDeletedParticipantIds, conflicts, ...oversight, ...reminderData, ...(staffSmsBatches ? { staffSmsBatches } : {}), serverTime, offlineValidUntil: new Date(offlineDeadline).toISOString(), capabilities: { smsConfigured: reminderData.reminderReadiness.smsProviderConfigured && reminderData.reminderReadiness.smsCredentialsConfigured, smsSendingEnabled: reminderData.reminderReadiness.smsSendingEnabled } };
   }, { repeatableRead: true });
 }

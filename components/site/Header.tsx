@@ -18,6 +18,7 @@ type HeaderNavKey =
   | "vision"
   | "about"
   | "organization"
+  | "staff"
   | "donate";
 
 export type HeaderCopy = {
@@ -53,6 +54,7 @@ export function buildHeaderCopy(dict: Dictionary): HeaderCopy {
       gallery: dict.nav.gallery,
       getInvolved: dict.nav.getInvolved,
       faq: dict.nav.faq,
+      staff: dict.nav.staff,
     },
     a11y: {
       skip: dict.a11y.skip,
@@ -122,7 +124,7 @@ export function Header({
           aria-label={copy.brandName}
           className="inline-flex min-w-0 shrink-0 rounded-lg text-ink-950 transition-opacity hover:opacity-85"
         >
-          <Logo name={copy.brandName} priority />
+          <Logo name={copy.brandName} className={styles.headerLogo} priority />
         </Link>
 
         <nav aria-label={copy.a11y.menu} className="hidden items-center gap-0.5 xl:flex">
@@ -169,6 +171,9 @@ export function Header({
         </nav>
 
         <div className="flex items-center gap-1.5">
+          <Link href="/staff" prefetch={false} className={styles.staffLink}>
+            {copy.nav.staff}
+          </Link>
           <UserWayAccessibilityTrigger label={copy.a11y.accessibilityMenu} />
 
           <div className="hidden items-center gap-1.5 sm:flex">
@@ -189,6 +194,9 @@ export function Header({
             closeLabel={copy.a11y.closeMenu}
             menuLabel={copy.a11y.menu}
           >
+            <Link href="/staff" prefetch={false} className="mt-6 rounded-lg bg-brand-100 px-4 py-3 text-lg font-semibold text-brand-900">
+              {copy.nav.staff}
+            </Link>
             <p className="border-b border-line/70 py-4 font-display text-2xl font-bold text-ink-900">
               {copy.nav.about}
             </p>

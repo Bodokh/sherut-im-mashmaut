@@ -231,21 +231,21 @@ test("coordinators can create an inactive pending mentor in their own team for l
   assert.equal(apply(snapshot, { ...command, fields: { ...command.fields, coordinatorId: "other-team" } }), snapshot);
 });
 
-test("automatic CEO protection advances pending tokens without changing the accepted active state", () => {
+test("routine CEO changes leave explicit protection tokens available for a later lock", () => {
   const snapshot = fixture();
   const color = participantCommand("set_manual_color", { color: "red" });
-  const pending = apply(snapshot, color);
-  assert.deepEqual(pending.participants[0].protections, []);
-  assert.equal(pending.participants[0].protectionStates[0].version, 1);
-  assert.equal(pending.participants[0].protectionStates[0].active, false);
-  const unlock = participantCommand("set_ceo_protection", { expectedVersion: 2, resourceId: "participant", expectedProtectionVersion: 1, active: false, fieldPaths: null });
-  assert.equal(apply(pending, unlock).participants[0].protectionStates[0].version, 2);
-  const accepted = apply(snapshot, color, true);
-  assert.equal(accepted.participants[0].protections[0].active, true);
-  assert.equal(accepted.participants[0].protectionStates[0].version, 1);
-  const second = apply(accepted, participantCommand("reschedule_appointment", { expectedVersion: 2, expectedAppointmentVersion: 1, scheduledAt: "2026-10-29T09:00:00.000Z" }));
-  assert.equal(second.participants[0].protectionStates[0].version, 2);
-  assert.deepEqual(second.participants[0].protections[0].fieldPaths, ["manualColor"]);
+  for (const accepted of [false, true]) {
+    const changed = apply(snapshot, color, accepted);
+    assert.deepEqual(changed.participants[0].protections, []);
+    assert.deepEqual(changed.participants[0].protectionStates, []);
+    const lock = participantCommand("set_ceo_protection", { expectedVersion: 2, resourceId: "participant", expectedProtectionVersion: null, active: true, fieldPaths: ["manualColor"] });
+    const pending = apply(changed, lock);
+    assert.equal(pending.participants[0].protectionStates[0].version, 1);
+    assert.deepEqual(pending.participants[0].protections, []);
+    const locked = apply(changed, lock, true);
+    assert.equal(locked.participants[0].protections[0].active, true);
+    assert.deepEqual(locked.participants[0].protections[0].fieldPaths, ["manualColor"]);
+  }
 });
 
 test("deleted or CEO-protected contacts cannot acquire projected coordinator approval", () => {
@@ -301,6 +301,47 @@ test("coordinator create acknowledgement retains creator ownership for its queue
   const assigned = apply(accepted, participantCommand("assign_participant", { participantId: create.operationId, mentorId: "target", coordinatorId: snapshot.actor.id }));
   assert.equal(assigned.participants.find((view) => view.participant.id === create.operationId).assignment.mentorId, "target");
   assert.equal(assigned.participants.find((view) => view.participant.id === create.operationId).acceptedAssignment, null);
+});
+
+test("mentor-created cards are self-assigned and editable without approval or deletion authority", () => {
+  for (const accepted of [false, true]) {
+    const snapshot = fixture("mentor");
+    snapshot.actor.coordinatorId = "coordinator";
+    snapshot.staff.push({ ...snapshot.actor, id: "coordinator", role: "coordinator", coordinatorId: null });
+    const command = { type: "create_participant", operationId: "mentor-created", fields: { displayName: "חניכה חדשה" } };
+    const createdSnapshot = apply(snapshot, command, accepted);
+    const created = createdSnapshot.participants.find((view) => view.participant.id === command.operationId);
+    assert.deepEqual(created.allowedActions, ["view", "edit"]);
+    assert.equal(created.assignment.id, command.operationId);
+    assert.equal(created.assignment.mentorId, snapshot.actor.id);
+    assert.equal(created.assignment.coordinatorId, "coordinator");
+    assert.equal(created.assignment.version, 1);
+    assert.equal(created.participant.localPending, !accepted);
+    assert.equal(created.participant.createdBy, snapshot.actor.id);
+    assert.deepEqual(created.protections, []);
+    const report = participantCommand("record_contact", { participantId: command.operationId, expectedAppointmentVersion: null, method: "phone", outcome: "completed", occurredAt: "2026-10-26T09:00:00.000Z", nextAppointmentAt: "2026-10-30T09:00:00.000Z", notes: "דיווח ראשון" });
+    const reported = apply(createdSnapshot, report, accepted).participants.find((view) => view.participant.id === command.operationId);
+    assert.equal(reported.contacts[0].notes, report.notes);
+    assert.equal(reported.nextAppointment.mentorId, snapshot.actor.id);
+    assert.equal(apply(createdSnapshot, command, accepted), createdSnapshot, "replaying the same create cannot duplicate the card or assignment");
+    assert.equal(snapshot.participants.length, 1);
+  }
+});
+
+test("mentor creation never derives coordinator access from missing or invalid team members", () => {
+  const candidates = [null, { active: false }, { role: "mentor" }, { organizationId: "other-org" }];
+  for (const candidate of candidates) {
+    for (const accepted of [false, true]) {
+      const snapshot = fixture("mentor");
+      snapshot.actor.coordinatorId = "coordinator";
+      if (candidate) snapshot.staff.push({ ...snapshot.actor, id: "coordinator", role: "coordinator", coordinatorId: null, ...candidate });
+      const command = { type: "create_participant", operationId: "mentor-created", fields: { displayName: "חניכה חדשה" } };
+      const created = apply(snapshot, command, accepted).participants.find((view) => view.participant.id === command.operationId);
+      assert.equal(created.assignment.mentorId, snapshot.actor.id);
+      assert.equal(created.assignment.coordinatorId, null);
+      assert.deepEqual(created.allowedActions, ["view", "edit"]);
+    }
+  }
 });
 
 test("an unanswered attempt with a stale appointment token never changes its pending projection", () => {
@@ -412,77 +453,38 @@ test("appointment and whole locks block new completed contacts while permitting 
   }
 });
 
-test("CEO completed contacts protect their own content and a changed color without locking future appointment cycles", () => {
-  const cases = [
-    { name: "new protection", existing: false, active: false, fieldPaths: null, version: 0, expectedFields: ["manualColor"] },
-    { name: "active selected fields", existing: true, active: true, fieldPaths: ["phone"], version: 5, expectedFields: ["manualColor", "phone"] },
-    { name: "active whole lock", existing: true, active: true, fieldPaths: null, version: 5, expectedFields: null },
-    { name: "inactive selected fields", existing: true, active: false, fieldPaths: ["phone"], version: 5, expectedFields: ["manualColor"] },
-  ];
-  for (const state of cases) {
-    for (const accepted of [false, true]) {
-      const snapshot = fixture();
-      if (state.existing) {
-        const protection = { organizationId: "org", resourceId: "participant", protectedByStaffId: "prior-ceo", protectedRevision: 1, active: state.active, fieldPaths: state.fieldPaths };
-        snapshot.participants[0].protections = state.active ? [protection] : [];
-        snapshot.participants[0].protectionStates = [{ ...protection, version: state.version, reason: "החלטה קודמת", createdAt: now, updatedAt: now,
-          unlockedByStaffId: state.active ? null : "prior-ceo", unlockedAt: state.active ? null : "2026-10-25T10:00:00.000Z" }];
-      }
-      const original = structuredClone(snapshot);
-      const command = participantCommand("record_contact", { expectedAppointmentVersion: 1, method: "phone", outcome: "completed", occurredAt: "2026-10-25T10:00:00.000Z", nextAppointmentAt: "2026-10-29T09:00:00.000Z", notes: "קשר ועדכון צבע", manualColor: "red" });
-      const projected = apply(snapshot, command, accepted).participants[0];
-      const participantState = projected.protectionStates.find((entry) => entry.resourceId === "participant");
-      const contactState = projected.protectionStates.find((entry) => entry.resourceId === command.operationId);
-      const context = `${state.name}, accepted=${accepted}`;
-      assert.equal(projected.participant.version, 2, context);
-      assert.equal(projected.nextAppointment.version, 2, context);
-      assert.equal(projected.manualColor, "red", context);
-      assert.equal(participantState.version, state.version + 1, "only the changed color increments the participant protection token");
-      assert.equal(contactState.version, 1, "contact protection has its own independent resource token");
-      if (accepted) {
-        const participantProtection = projected.protections.find((entry) => entry.resourceId === "participant");
-        assert.deepEqual(participantProtection.fieldPaths?.toSorted() ?? null, state.expectedFields, context);
-        assert.deepEqual(participantState.fieldPaths?.toSorted() ?? null, state.expectedFields, context);
-        assert.equal(participantProtection.active, true, context);
-        assert.equal(participantState.reason, null, "automatic record-contact protection clears an obsolete explicit reason");
-        assert.equal(participantState.unlockedByStaffId, null, context);
-        assert.equal(participantState.unlockedAt, null, context);
-        assert.equal(projected.protections.find((entry) => entry.resourceId === command.operationId).active, true, context);
-      } else {
-        assert.deepEqual(projected.protections, original.participants[0].protections, "pending writes never change the accepted lock scope");
-        assert.equal(participantState.active, state.active, context);
-        if (state.existing) {
-          assert.deepEqual(participantState.fieldPaths, state.fieldPaths, context);
-          assert.equal(participantState.reason, "החלטה קודמת", context);
-          assert.equal(participantState.unlockedByStaffId, state.active ? null : "prior-ceo", context);
-        }
-      }
-      assert.deepEqual(snapshot, original, context);
-    }
-  }
-});
-
-test("automatic feature protections clear an obsolete active reason only after central acceptance", () => {
+test("routine CEO reports and feature changes preserve explicit protection state exactly", () => {
   const commands = [
+    participantCommand("record_contact", { expectedAppointmentVersion: 1, method: "phone", outcome: "completed", occurredAt: "2026-10-25T10:00:00.000Z", nextAppointmentAt: "2026-10-29T09:00:00.000Z", notes: "קשר ועדכון צבע", manualColor: "red" }),
     participantCommand("set_manual_color", { color: "red" }),
     participantCommand("reschedule_appointment", { expectedAppointmentVersion: 1, scheduledAt: "2026-10-29T09:00:00.000Z" }),
     participantCommand("revise_contact", { contactId: "contact", expectedRevision: 1, expectedAppointmentVersion: 1, method: "phone", outcome: "completed", occurredAt: "2026-10-24T08:00:00.000Z", nextAppointmentAt: "2026-10-29T09:00:00.000Z", notes: "תיקון מועד" }),
+    { type: "review_contact", operationId: "ceo-review", participantId: "participant", contactId: "contact", revision: 1, decision: "returned_for_correction" },
   ];
-  for (const command of commands) {
+  const states = [
+    { name: "no explicit protection", existing: false },
+    { name: "selected fields", existing: true, active: true, fieldPaths: ["phone"] },
+    { name: "whole record", existing: true, active: true, fieldPaths: null },
+    { name: "explicitly unlocked", existing: true, active: false, fieldPaths: ["phone"] },
+  ];
+  for (const state of states) {
     for (const accepted of [false, true]) {
-      const snapshot = fixture();
-      const protection = { organizationId: "org", resourceId: "participant", protectedByStaffId: "prior-ceo", protectedRevision: 1, active: true, fieldPaths: ["phone"] };
-      snapshot.participants[0].protections = [protection];
-      snapshot.participants[0].protectionStates = [{ ...protection, version: 5, reason: "החלטה מפורשת ישנה", createdAt: now, updatedAt: now, unlockedByStaffId: null, unlockedAt: null }];
-      const projected = apply(snapshot, command, accepted).participants[0];
-      const state = projected.protectionStates.find((entry) => entry.resourceId === "participant");
-      const context = `${command.type}, accepted=${accepted}`;
-      assert.equal(state.version, 6, context);
-      assert.equal(state.reason, accepted ? null : "החלטה מפורשת ישנה", context);
-      assert.equal(state.active, true, context);
-      assert.equal(state.unlockedByStaffId, null, context);
-      assert.equal(state.unlockedAt, null, context);
-      if (!accepted) assert.deepEqual(projected.protections, snapshot.participants[0].protections, context);
+      for (const command of commands) {
+        const snapshot = fixture();
+        if (state.existing) {
+          const protection = { organizationId: "org", resourceId: "participant", protectedByStaffId: "prior-ceo", protectedRevision: 1, active: state.active, fieldPaths: state.fieldPaths };
+          snapshot.participants[0].protections = state.active ? [protection] : [];
+          snapshot.participants[0].protectionStates = [{ ...protection, version: 5, reason: "החלטה מפורשת שמורה", createdAt: now, updatedAt: now,
+            unlockedByStaffId: state.active ? null : "prior-ceo", unlockedAt: state.active ? null : "2026-10-25T10:00:00.000Z" }];
+        }
+        const original = structuredClone(snapshot);
+        const projected = apply(snapshot, command, accepted).participants[0];
+        const context = `${command.type}, ${state.name}, accepted=${accepted}`;
+        assert.notEqual(projected, snapshot.participants[0], context);
+        assert.deepEqual(projected.protections, original.participants[0].protections, context);
+        assert.deepEqual(projected.protectionStates, original.participants[0].protectionStates, context);
+        assert.deepEqual(snapshot, original, context);
+      }
     }
   }
 });
@@ -493,28 +495,28 @@ test("routine mentor reporting remains possible after CEO profile, assignment, l
       snapshot.participants[0].assignment.mentorId = "target";
       snapshot.participants[0].nextAppointment.mentorId = "target";
       return apply(snapshot, participantCommand("update_participant", { fields: { profileNotes: "הנחיית מנכ״ל" } }), true);
-    }, participantId: "participant", expectedFields: ["profileNotes"] },
+    }, participantId: "participant", expectedFields: [] },
     { name: "initial assignment", prepare(snapshot) {
       snapshot.participants[0].assignment = null;
       snapshot.participants[0].nextAppointment = null;
       return apply(snapshot, participantCommand("assign_participant", { mentorId: "target", coordinatorId: null }), true);
-    }, participantId: "participant", expectedFields: ["assignment"] },
+    }, participantId: "participant", expectedFields: [] },
     { name: "lifecycle resume", prepare(snapshot) {
       snapshot.participants[0].assignment.mentorId = "target";
       snapshot.participants[0].nextAppointment.mentorId = "target";
       const paused = apply(snapshot, participantCommand("set_participant_lifecycle", { lifecycle: "paused" }), true);
       return apply(paused, participantCommand("set_participant_lifecycle", { expectedVersion: 2, lifecycle: "active" }), true);
-    }, participantId: "participant", expectedFields: ["lifecycle"] },
+    }, participantId: "participant", expectedFields: [] },
     { name: "participant creation", prepare(snapshot) {
       const created = apply(snapshot, { type: "create_participant", operationId: "created-case", fields: { displayName: "חדשה", phone: "0500000000" } }, true);
       return apply(created, participantCommand("assign_participant", { participantId: "created-case", mentorId: "target", coordinatorId: null }), true);
-    }, participantId: "created-case", expectedFields: ["assignment", "displayName", "phone"] },
+    }, participantId: "created-case", expectedFields: [] },
   ];
   for (const scenario of cases) {
     const prepared = scenario.prepare(fixture());
     const prior = prepared.participants.find((view) => view.participant.id === scenario.participantId);
     const protection = prior.protections.find((entry) => entry.resourceId === scenario.participantId);
-    assert.deepEqual(protection.fieldPaths?.toSorted(), scenario.expectedFields, scenario.name);
+    assert.deepEqual(protection?.fieldPaths?.toSorted() ?? [], scenario.expectedFields, scenario.name);
     const mentorWorkspace = { ...prepared, actor: prepared.staff.find((member) => member.id === "target") };
     for (const accepted of [false, true]) {
       const command = participantCommand("record_contact", { participantId: scenario.participantId, expectedVersion: prior.participant.version,
@@ -528,7 +530,7 @@ test("routine mentor reporting remains possible after CEO profile, assignment, l
   }
 });
 
-test("a CEO completed contact protects that report while the mentor can advance the next contact cycle", () => {
+test("a CEO completed contact keeps immutable history without implicitly locking the report", () => {
   const snapshot = fixture();
   snapshot.participants[0].assignment.mentorId = "target";
   snapshot.participants[0].nextAppointment.mentorId = "target";
@@ -536,8 +538,8 @@ test("a CEO completed contact protects that report while the mentor can advance 
   const ceoWorkspace = apply(snapshot, first, true);
   const accepted = ceoWorkspace.participants[0];
   const ceoReport = accepted.contacts.find((entry) => entry.id === first.operationId);
-  assert.equal(accepted.protectionStates.find((entry) => entry.resourceId === first.operationId).version, 1);
-  assert.equal(accepted.protections.find((entry) => entry.resourceId === first.operationId).fieldPaths, null);
+  assert.equal(accepted.protectionStates.find((entry) => entry.resourceId === first.operationId), undefined);
+  assert.equal(accepted.protections.find((entry) => entry.resourceId === first.operationId), undefined);
   assert.equal(accepted.protectionStates.find((entry) => entry.resourceId === "participant"), undefined);
   assert.equal(accepted.protections.find((entry) => entry.resourceId === "participant"), undefined);
   assert.equal(accepted.appointmentHistory.find((entry) => entry.appointmentVersion === 2).sourceContactId, first.operationId);
@@ -567,7 +569,7 @@ test("preparation calls retain the existing future appointment and history in pe
   }
 });
 
-test("automatic participant protections preserve an existing active whole lock", () => {
+test("routine profile and assignment changes leave an existing explicit whole lock untouched", () => {
   const snapshot = fixture();
   const protection = { organizationId: "org", resourceId: "participant", protectedByStaffId: "prior-ceo", protectedRevision: 1, active: true, fieldPaths: null };
   snapshot.participants[0].protections = [protection];
@@ -575,15 +577,14 @@ test("automatic participant protections preserve an existing active whole lock",
   const commands = [
     participantCommand("update_participant", { fields: { profileNotes: "עדכון מנכ״ל" } }),
     participantCommand("assign_participant", { expectedVersion: 2, mentorId: "target", coordinatorId: null }),
-    participantCommand("set_participant_lifecycle", { expectedVersion: 3, lifecycle: "paused" }),
   ];
   let projected = snapshot;
-  for (const [index, command] of commands.entries()) {
+  for (const command of commands) {
     projected = apply(projected, command, true);
     const view = projected.participants[0];
     assert.equal(view.protections.find((entry) => entry.resourceId === "participant").fieldPaths, null, command.type);
     assert.equal(view.protectionStates.find((entry) => entry.resourceId === "participant").fieldPaths, null, command.type);
-    assert.equal(view.protectionStates.find((entry) => entry.resourceId === "participant").version, 6 + index, command.type);
+    assert.deepEqual(view.protectionStates, snapshot.participants[0].protectionStates, command.type);
   }
 });
 

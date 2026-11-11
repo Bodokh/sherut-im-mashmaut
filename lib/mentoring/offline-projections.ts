@@ -1,5 +1,5 @@
 import type { MentoringCommand, ParticipantView, StaffProfile, WorkspaceSnapshot } from "./contracts";
-import { applyRecordedContact, canPerformParticipantAction, type CeoProtection, type ContactEntry, type Review } from "./domain/index";
+import { applyRecordedContact, canPerformParticipantAction, type ContactEntry, type Review } from "./domain/index";
 import type { OfflineOperation } from "./offline";
 import type { AuthorityCommand, AuthorityExtras, GrantView, ProtectionStateView } from "./features/authority/contracts";
 import type { AppointmentChange, ContactCommand, ContactHistory, ContactRevision } from "./features/contacts/contracts";
@@ -14,20 +14,6 @@ type Snapshot = WorkspaceSnapshot & { readonly settings?: OrganizationSettings; 
 function protectedResource(view: View, resourceId: string, actor: StaffProfile, fields?: readonly string[]): boolean {
   return actor.role !== "ceo" && view.protections.some((protection) => protection.active && protection.resourceId === resourceId
     && (!fields || !protection.fieldPaths?.length || protection.fieldPaths.some((path) => fields.some((field) => field === path || path.startsWith(`${field}.`) || field.startsWith(`${path}.`)))));
-}
-
-function automaticProtection(view: View, actor: StaffProfile, resourceId: string, revision: number, accepted: boolean, at: string, fields?: readonly string[]): View {
-  if (actor.role !== "ceo" || (fields !== undefined && fields.length === 0)) return view;
-  const previous = view.protections.find((entry) => entry.resourceId === resourceId);
-  const protection: CeoProtection = { organizationId: actor.organizationId, resourceId, protectedByStaffId: actor.id, protectedRevision: revision, active: true,
-    ...(fields ? { fieldPaths: previous?.active && !previous.fieldPaths?.length ? previous.fieldPaths : [...new Set([...(previous?.active ? previous.fieldPaths ?? [] : []), ...fields])] } : { fieldPaths: null }) };
-  const previousState = view.protectionStates?.find((entry) => entry.resourceId === resourceId);
-  const base: ProtectionStateView = previousState ?? { organizationId: actor.organizationId, resourceId, protectedByStaffId: previous?.protectedByStaffId ?? actor.id,
-    protectedRevision: previous?.protectedRevision ?? revision, active: previous?.active ?? false, fieldPaths: previous?.fieldPaths ?? null,
-    version: previous ? 1 : 0, reason: null, createdAt: at, updatedAt: at, unlockedByStaffId: null, unlockedAt: null };
-  const state: ProtectionStateView = { ...base, version: base.version + 1, ...(accepted ? { ...protection, reason: null, updatedAt: at, unlockedByStaffId: null, unlockedAt: null } : {}) };
-  return { ...view, protectionStates: [...(view.protectionStates ?? []).filter((entry) => entry.resourceId !== resourceId), state],
-    ...(accepted ? { protections: [...view.protections.filter((entry) => entry.resourceId !== resourceId), protection] } : {}) };
 }
 
 function contactRevision(view: View, entry: ContactEntry, kind: ContactRevision["changeKind"], actor: StaffProfile, at: string, reason: string | null, operationId: string | null): ContactRevision {
@@ -80,9 +66,8 @@ function reviseContact(view: View, command: Extract<ContactCommand, { type: "rev
   if (effect !== "retain") {
     next = changeAppointment(next, actor, operation, command.type === "revise_contact" ? "contact_correction" : "contact_invalidation", command.reason,
       effect === "replace" && command.type === "revise_contact" ? { scheduledAt: command.nextAppointmentAt, sourceContactId: entry.id, requiresReview: false } : { requiresReview: true }, accepted);
-    next = automaticProtection(next, actor, view.participant.id, next.participant.version, accepted, operation.queuedAt, ["appointment"]);
   }
-  return automaticProtection(next, actor, entry.id, changed.revision, accepted, operation.queuedAt);
+  return next;
 }
 
 function projectGrant(view: View, command: Extract<AuthorityCommand, { type: "set_access_grant" }>, actor: StaffProfile, at: string, accepted: boolean): View {
@@ -121,7 +106,7 @@ function projectParticipant(view: View, command: ProjectionCommand, actor: Staff
     const review: Review = { contactId: command.contactId, revision: command.revision, decision: command.decision, reviewedByStaffId: actor.id, reviewedAt: at, localPending: !accepted, localTimestamp: true };
     const next = { ...view, reviews: [review, ...view.reviews.filter((item) => item.contactId !== command.contactId || item.revision !== command.revision || (!item.localPending && !item.localTimestamp))],
       reviewEvents: [{ ...review, id: command.operationId, participantId: command.participantId, operationId: command.operationId }, ...(view.reviewEvents ?? [])] };
-    return automaticProtection(next, actor, command.contactId, command.revision, accepted, at);
+    return next;
   }
   if (!("expectedVersion" in command) || view.participant.version !== command.expectedVersion) return view;
   if (command.type === "restore_participant") {
@@ -135,7 +120,7 @@ function projectParticipant(view: View, command: ProjectionCommand, actor: Staff
   if (command.type === "update_participant") {
     if (protectedResource(view, view.participant.id, actor, Object.keys(command.fields))) return view;
     const next = { ...view, participant: { ...view.participant, ...command.fields, version: view.participant.version + 1 } };
-    return automaticProtection(next, actor, view.participant.id, next.participant.version, accepted, at, Object.keys(command.fields));
+    return next;
   }
   if (command.type === "assign_participant") {
     if (actor.role === "mentor" || (view.assignment && actor.role !== "ceo") || protectedResource(view, view.participant.id, actor, ["assignment"])) return view;
@@ -151,7 +136,7 @@ function projectParticipant(view: View, command: ProjectionCommand, actor: Staff
       nextAppointment: view.nextAppointment ? { ...view.nextAppointment, mentorId: command.mentorId, version: view.nextAppointment.version + 1 } : null,
       ...(view.assignmentHistory ? { assignmentHistory: [{ ...assignment, endedAt: null, localPending: !accepted, localTimestamp: true },
         ...view.assignmentHistory.map((entry) => entry.endedAt == null ? { ...entry, endedAt: at, localPending: !accepted, localTimestamp: true } : entry)] } : {}) };
-    return automaticProtection(next, actor, view.participant.id, next.participant.version, accepted, at, ["assignment"]);
+    return next;
   }
   if (command.type === "record_contact") {
     if (command.expectedAppointmentVersion !== (view.nextAppointment?.version ?? null)) return view;
@@ -168,10 +153,8 @@ function projectParticipant(view: View, command: ProjectionCommand, actor: Staff
       { scheduledAt: command.nextAppointmentAt, sourceContactId: command.operationId, requiresReview: false }, accepted) : view;
     let next = withRevision({ ...appointmentView, contacts: transition.state.contacts, nextAppointment: transition.state.nextAppointment, manualColor: transition.state.manualColor,
       participant: { ...view.participant, version: view.participant.version + 1 }, manualColorAt: command.manualColor && command.manualColor !== view.manualColor ? at : view.manualColorAt }, contactRevision(view, entry, "initial", actor, at, null, command.operationId));
-    next = automaticProtection(next, actor, entry.id, 1, accepted, at);
     if (command.manualColor && command.manualColor !== view.manualColor) {
       next = { ...next, manualColorHistory: [{ id: command.operationId, color: command.manualColor, setByStaffId: actor.id, setAt: at, reason: null, participantVersion: next.participant.version, localPending: !accepted, localTimestamp: true }, ...(view.manualColorHistory ?? [])] };
-      next = automaticProtection(next, actor, view.participant.id, next.participant.version, accepted, at, ["manualColor"]);
     }
     return next;
   }
@@ -179,13 +162,13 @@ function projectParticipant(view: View, command: ProjectionCommand, actor: Staff
   if (command.type === "reschedule_appointment") {
     if (!view.nextAppointment || command.expectedAppointmentVersion !== view.nextAppointment.version || protectedResource(view, view.participant.id, actor, ["appointment"]) || !Number.isFinite(Date.parse(command.scheduledAt)) || Date.parse(command.scheduledAt) <= Date.parse(at)) return view;
     const next = changeAppointment({ ...view, participant: { ...view.participant, version: view.participant.version + 1 } }, actor, operation, "rescheduled", command.reason, { scheduledAt: command.scheduledAt, requiresReview: false }, accepted);
-    return automaticProtection(next, actor, view.participant.id, next.participant.version, accepted, at, ["appointment"]);
+    return next;
   }
   if (command.type === "set_manual_color") {
     if (command.color === view.manualColor || protectedResource(view, view.participant.id, actor, ["manualColor"])) return view;
     const next = { ...view, participant: { ...view.participant, version: view.participant.version + 1 }, manualColor: command.color, manualColorAt: at,
       manualColorHistory: [{ id: command.operationId, color: command.color, setByStaffId: actor.id, setAt: at, reason: command.reason ?? null, participantVersion: view.participant.version + 1, localPending: !accepted, localTimestamp: true }, ...(view.manualColorHistory ?? [])] };
-    return automaticProtection(next, actor, view.participant.id, next.participant.version, accepted, at, ["manualColor"]);
+    return next;
   }
   if (actor.role !== "ceo") return view;
   if (command.type === "set_access_grant") return projectGrant(view, command, actor, at, accepted);
@@ -194,7 +177,7 @@ function projectParticipant(view: View, command: ProjectionCommand, actor: Staff
     const next = { ...view, participant: { ...view.participant, version: view.participant.version + 1,
       ...(command.type === "set_participant_lifecycle" ? { lifecycle: command.lifecycle } : { deletedAt: at }) },
       ...(command.type === "delete_participant" ? { deletedAt: at, deletedBy: actor.id, deletionReason: command.reason, deletedPreviousLifecycle: view.participant.lifecycle } : {}) };
-    return command.type === "set_participant_lifecycle" ? automaticProtection(next, actor, view.participant.id, next.participant.version, accepted, at, ["lifecycle"]) : next;
+    return next;
   }
   return view;
 }
@@ -234,14 +217,16 @@ export function applyOptimisticCommand(snapshot: WorkspaceSnapshot, operation: O
     return { ...current, staff };
   }
   if (command.type === "create_participant") {
-    if (actor.role === "mentor" || current.participants.some((view) => view.participant.id === command.operationId)) return snapshot;
+    if (current.participants.some((view) => view.participant.id === command.operationId)) return snapshot;
     const fields = command.fields;
-    let view: View = { participant: { id: command.operationId, organizationId: actor.organizationId, displayName: fields.displayName ?? "", phone: fields.phone ?? null,
+    const coordinator = current.staff.find((member) => member.id === actor.coordinatorId && member.organizationId === actor.organizationId && member.active && member.role === "coordinator");
+    const assignment = actor.role === "mentor" ? { id: command.operationId, organizationId: actor.organizationId, participantId: command.operationId,
+      mentorId: actor.id, coordinatorId: coordinator?.id ?? null, assignedAt: at, followupAnchorAt: at, version: 1 } : null;
+    const view: View = { participant: { id: command.operationId, organizationId: actor.organizationId, displayName: fields.displayName ?? "", phone: fields.phone ?? null,
       serviceType: fields.serviceType ?? null, servicePlace: fields.servicePlace ?? null, serviceRole: fields.serviceRole ?? null, profileNotes: fields.profileNotes ?? null,
       lifecycle: "active", version: 1, createdAt: at, createdBy: actor.id, localPending: !accepted, localCreatedByStaffId: actor.id },
-      allowedActions: actor.role === "ceo" ? ["view", "edit", "approve", "delete"] : ["view", "edit", "approve"],
-      assignment: null, acceptedAssignment: null, nextAppointment: null, contacts: [], reviews: [], manualColor: null, manualColorAt: null, protections: [] };
-    view = automaticProtection(view, actor, command.operationId, 1, accepted, at, Object.keys(fields));
+      allowedActions: actor.role === "ceo" ? ["view", "edit", "approve", "delete"] : actor.role === "coordinator" ? ["view", "edit", "approve"] : ["view", "edit"],
+      assignment, acceptedAssignment: accepted ? assignment : null, nextAppointment: null, contacts: [], reviews: [], manualColor: null, manualColorAt: null, protections: [] };
     return { ...current, participants: [...current.participants, view] };
   }
   if (command.type === "set_sms_muted") {

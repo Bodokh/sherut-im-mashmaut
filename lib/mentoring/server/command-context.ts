@@ -11,7 +11,6 @@ export interface CommandContext {
   readonly success: (command: MentoringCommand, participantId?: string) => CommandSuccess;
   readonly failure: (code: ApiFailure["error"]["code"], message: string, field?: string) => ApiFailure;
   readonly preserveConflict: (command: MentoringCommand, view: ParticipantView) => Promise<ApiFailure>;
-  readonly protect: (resourceId: string, revision: number, fieldPaths?: readonly string[]) => Promise<void>;
   readonly refreshReminders: (participantId: string) => Promise<void>;
 }
 

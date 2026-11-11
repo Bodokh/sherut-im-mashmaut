@@ -7,7 +7,7 @@ delete process.env.MENTORING_DATABASE_URL;
 
 const { ORGANIZATION_ID } = await import("../../../lib/mentoring/server/db.ts");
 const { runScheduledReminders } = await import("../../../lib/mentoring/features/reminders/scheduled.ts");
-const { runDispatcher, recordReminderResult } = await import("../../../lib/mentoring/features/reminders/dispatcher.ts");
+const { claimReminder, runDispatcher, recordReminderResult } = await import("../../../lib/mentoring/features/reminders/dispatcher.ts");
 const { rebuildParticipantReminders } = await import("../../../lib/mentoring/features/reminders/server.ts");
 
 const id = (part) => `44444444-4444-4444-8444-${String(part).padStart(12, "0")}`;
@@ -77,7 +77,7 @@ function fixture({ singleOccurrence = false, leadMinutes = 0, scheduledAt = "202
     if (sql.startsWith("SELECT") && sql.includes("FROM mentoring.assignments")) return rows([assignment]);
     if (sql.startsWith("SELECT") && sql.includes("FROM mentoring.appointments")) return rows([appointment]);
     if (sql.startsWith("SELECT") && sql.includes("FROM mentoring.grants")) {
-      if (grantReadAt && values[1] === outsider.id) databaseNow = grantReadAt;
+      if (grantReadAt && values[1] === mentor.id) databaseNow = grantReadAt;
       return rows(grants.filter((entry) => entry.organization_id === values[0] && entry.staff_id === values[1] && entry.participant_id === values[2] && entry.active));
     }
     if (sql.startsWith("SELECT") && /FROM mentoring\.(contacts|reviews|ceo_protections)/.test(sql)) return rows([]);
@@ -149,27 +149,49 @@ async function seededModel(options) {
   const transport = { provider: "unit-only", credentialsConfigured: true, sendingEnabled: true,
     send: async () => { throw new Error("The seed phase must never send"); } };
   await model.transaction((client) => rebuildParticipantReminders(client, ORGANIZATION_ID, participantId, actorId, null, now, transport));
-  assert.equal(model.jobs.length, ((options?.singleOccurrence ? 1 : 2) + (options?.leadMinutes > 0 ? 1 : 0)) * (options?.unrelatedRecipient && options?.audience === "all_staff" ? 2 : 1));
+  assert.equal(model.jobs.length, (options?.singleOccurrence ? 1 : 2) + (options?.leadMinutes > 0 ? 1 : 0));
   assert.equal(model.jobs.every((job) => job.state === "pending"), true);
   return model;
 }
 
-test("claim-time phone content follows recipient view access without changing the staff destination", async (context) => {
-  for (const [label, grant, allowed, grantReadAt] of [["no grant", null, false], ["view grant", {}, true], ["expired grant", { expires_at: now }, false], ["inactive grant", { active: false }, false],
-    ["grant expires during claim", { expires_at: "2026-10-26T12:00:00.005Z" }, false, "2026-10-26T12:00:00.010Z"]]) {
+test("claim-time messages include the mentee phone only for the assigned team, never as a destination", async (context) => {
+  for (const [label, grant] of [["no grant", null], ["unrelated staff view grant", {}], ["expired grant", { expires_at: now }]]) {
     await context.test(label, async () => {
-      const model = await seededModel({ singleOccurrence: true, participantPhone: "052-9999999", audience: "all_staff", unrelatedRecipient: true, grant, grantReadAt });
+      const model = await seededModel({ singleOccurrence: true, participantPhone: "052-9999999", audience: "all_staff", unrelatedRecipient: true, grant });
       const sent = [];
       const transport = { provider: "unit-only", credentialsConfigured: true, sendingEnabled: true,
         send: async (input) => { sent.push(input); return { state: "provider_accepted", providerReference: `unit-phone-${sent.length}` }; } };
       const result = await runDispatcher({ actor: { id: actorId, organizationId: ORGANIZATION_ID }, transport, transaction: model.transaction, now: () => now });
-      assert.equal(result.claimed, 2);
-      assert.equal(sent.length, 2);
+      assert.equal(result.claimed, 1);
+      assert.equal(sent.length, 1);
       const responsible = sent.find((item) => item.recipient === "+972501234567");
-      const outsider = sent.find((item) => item.recipient === "+972507654321");
       assert.ok(responsible.message.includes("+972529999999"));
-      assert.equal(outsider.message.includes("+972529999999"), allowed);
+      assert.ok(responsible.message.includes("Synthetic participant"));
+      assert.match(responsible.message, /לאחר השיחה יש להזין באתר דוח מעקב חניכה/);
+      assert.equal(sent.some((item) => item.recipient === "+972507654321"), false, "A view grant never subscribes unrelated staff to SMS");
       assert.equal(sent.some((item) => item.recipient === "+972529999999"), false, "The mentee phone is content, never an SMS recipient");
+    });
+  }
+});
+
+test("authoritative claim cancels legacy CEO and unrelated jobs before any send, including all-staff policies", async (context) => {
+  for (const [label, recipientId] of [["unmuted CEO", actorId], ["unrelated mentor", id(6)]]) {
+    await context.test(label, async () => {
+      const model = await seededModel({ singleOccurrence: true, audience: "all_staff", unrelatedRecipient: true });
+      model.changeActor({ sms_muted: false, phone: "0501111111" });
+      const legacy = model.jobs[0];
+      model.changeJob(legacy.id, { recipient_staff_id: recipientId });
+      let sends = 0;
+      const transport = { provider: "unit-only", credentialsConfigured: true, sendingEnabled: true,
+        send: async () => { sends += 1; return { state: "provider_accepted", providerReference: "unit-valid-mentor" }; } };
+      const actor = { id: actorId, organizationId: ORGANIZATION_ID };
+      assert.equal(await model.transaction((client) => claimReminder(client, actor, legacy.id, now, transport)), null);
+      assert.equal(model.jobs.find((job) => job.id === legacy.id).state, "cancelled");
+      assert.equal(model.attempts.length, 0);
+      assert.equal(sends, 0);
+      assert.equal((await runDispatcher({ actor, transport, transaction: model.transaction, now: () => now })).claimed, 1, "A valid mentor remains dispatchable");
+      assert.equal(sends, 1);
+      assert.equal(model.attempts.every((attempt) => attempt.job_id !== legacy.id), true);
     });
   }
 });
@@ -185,11 +207,10 @@ test("a grant-lock wait cannot carry an expired appointment occurrence into disp
       const transport = { provider: "unit-only", credentialsConfigured: true, sendingEnabled: true,
         send: async (input) => { sent.push(input); return { state: "provider_accepted", providerReference: "unit-before-expiry" }; } };
       const result = await runDispatcher({ actor: { id: actorId, organizationId: ORGANIZATION_ID }, transport, transaction: model.transaction, now: () => scenario.dispatchAt });
-      assert.equal(result.claimed, 1, "only the mentor claimed before the grant wait may dispatch");
-      assert.equal(sent.length, 1);
-      assert.equal(sent[0].recipient, "+972501234567");
-      assert.equal(model.attempts.length, 1, "the expired occurrence must never gain a durable claim");
-      assert.equal(model.jobs.filter((job) => job.recipient_staff_id === id(6) && Date.parse(job.scheduled_at) <= Date.parse(scenario.dispatchAt)).every((job) => job.state === "cancelled"), true);
+      assert.equal(result.claimed, 0, "the mentor's occurrence expired while waiting on grant locks");
+      assert.equal(sent.length, 0);
+      assert.equal(model.attempts.length, 0, "the expired occurrence must never gain a durable claim");
+      assert.equal(model.jobs.filter((job) => Date.parse(job.scheduled_at) <= Date.parse(scenario.dispatchAt)).every((job) => job.state === "cancelled"), true);
     });
   }
 });
@@ -199,8 +220,8 @@ test("a durable claim and its full lease start after the grant-lock wait", async
   const model = await seededModel({ singleOccurrence: true, audience: "all_staff", unrelatedRecipient: true, grantReadAt });
   const transport = { provider: "unit-only", credentialsConfigured: true, sendingEnabled: true,
     send: async () => ({ state: "provider_accepted", providerReference: "unit-fresh-lease" }) };
-  assert.equal((await runDispatcher({ actor: { id: actorId, organizationId: ORGANIZATION_ID }, transport, transaction: model.transaction, now: () => now })).claimed, 2);
-  const job = model.jobs.find((job) => job.recipient_staff_id === id(6));
+  assert.equal((await runDispatcher({ actor: { id: actorId, organizationId: ORGANIZATION_ID }, transport, transaction: model.transaction, now: () => now })).claimed, 1);
+  const job = model.jobs.find((job) => job.recipient_staff_id === mentorId);
   const attempt = model.attempts.find((attempt) => attempt.job_id === job.id);
   assert.equal(attempt.claimed_at, grantReadAt);
   assert.equal(attempt.lease_expires_at, "2026-10-26T12:01:30.000Z");

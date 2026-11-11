@@ -14,6 +14,17 @@ export const reminderTransaction: ReminderTransaction = (run) => withTransaction
 const MAX_EVALUATION_PARTICIPANTS = 200;
 const MAX_HISTORY_DIAGNOSTICS = 200;
 
+/** Existing delivery keys include contact revision; notes-only edits are not a new contact. */
+function overdueContactCycle(occurrenceKey: string): string | null {
+  try {
+    const key: unknown = JSON.parse(occurrenceKey);
+    if (!Array.isArray(key) || key[0] !== "seven_day_overdue" || !Array.isArray(key[1])) return null;
+    const [kind, contactId, revision, occurredAt] = key[1];
+    if (kind !== "contact" || typeof contactId !== "string" || !Number.isInteger(revision) || typeof occurredAt !== "string" || !Number.isFinite(Date.parse(occurredAt))) return null;
+    return JSON.stringify([contactId, new Date(occurredAt).toISOString()]);
+  } catch { return null; }
+}
+
 /** All callers use participant → job lock ordering, including the dispatcher. */
 export async function rebuildParticipantReminders(client: PoolClient, organizationId: string, participantId: string, actorId: string, operationId: string | null, now: string, transport: ReminderTransport | null = configuredReminderTransport()): Promise<number> {
   const locked = await client.query("SELECT id, lifecycle, deleted_at FROM mentoring.participants WHERE organization_id=$1 AND id=$2 FOR UPDATE", [organizationId, participantId]);
@@ -26,8 +37,21 @@ export async function rebuildParticipantReminders(client: PoolClient, organizati
   const eligible = locked.rows[0].deleted_at == null && locked.rows[0].lifecycle === "active";
   const occurrences = eligible ? planReminderOccurrences(view, settings, now) : [];
   const recipients = eligible ? selectReminderRecipients(view, staff, settings) : [];
+  const contactWeeks = occurrences.filter((item) => item.kind === "seven_day_overdue" && overdueContactCycle(item.occurrenceKey) !== null).map((item) => item.scheduledAt);
+  // Read under the participant barrier shared by claims, corrections and result
+  // persistence. Retain historical keys/attempts instead of rekeying known or
+  // uncertain external effects when an existing report's notes are corrected.
+  const attempted = contactWeeks.length === 0 ? { rows: [] } : await client.query(`SELECT recipient_staff_id,occurrence_key,scheduled_at FROM mentoring.reminder_jobs
+    WHERE organization_id=$1 AND participant_id=$2 AND kind='seven_day_overdue' AND scheduled_at=ANY($3::timestamptz[])
+      AND state IN ('dispatching','provider_accepted','delivered','uncertain','failed') ORDER BY id`, [organizationId, participantId, contactWeeks]);
   const keys: string[] = [];
   for (const occurrence of occurrences) for (const recipient of recipients) {
+    const cycle = occurrence.kind === "seven_day_overdue" ? overdueContactCycle(occurrence.occurrenceKey) : null;
+    const previous = cycle === null ? undefined : attempted.rows.find((row) => row.recipient_staff_id === recipient.id && iso(row.scheduled_at) === occurrence.scheduledAt && overdueContactCycle(String(row.occurrence_key)) === cycle);
+    if (previous) {
+      keys.push(`${recipient.id}|${previous.occurrence_key}`);
+      continue;
+    }
     const reason: ReminderReason = normalizeStaffMobile(recipient.phone) ? transportBlockedReason(transport) : "invalid_staff_phone";
     keys.push(`${recipient.id}|${occurrence.occurrenceKey}`);
     await client.query(`INSERT INTO mentoring.reminder_jobs
@@ -100,5 +124,5 @@ export async function loadReminderExtras(client: PoolClient, actor: StaffProfile
     kind: row.kind, scheduledAt: iso(row.scheduled_at), referenceAt: iso(row.reference_at), state: row.state, reason: row.reason, updatedAt: iso(row.updated_at),
     attempts: attempts.rows.filter((attempt) => attempt.job_id === row.id).map((attempt): ReminderAttempt => ({ id: String(attempt.id), attemptNumber: Number(attempt.attempt_number), state: attempt.state, claimedAt: iso(attempt.claimed_at), finishedAt: attempt.finished_at == null ? null : iso(attempt.finished_at), leaseExpiresAt: iso(attempt.lease_expires_at), provider: String(attempt.provider), providerReference: attempt.provider_reference, reason: attempt.reason })),
   }));
-  return { reminders, reminderReadiness: { smsProviderConfigured: transport !== null, smsCredentialsConfigured: transport?.credentialsConfigured === true, smsSendingEnabled: blocked === null, hostedSchedulerConfigured, evaluationMode: hostedSchedulerConfigured ? "hosted_and_manual" : "manual_and_cli", blockedReasons: [...(transport ? [] : ["missing_sms_provider" as const]), ...(transport?.credentialsConfigured ? [] : ["missing_sms_credentials" as const]), ...(blocked === "sending_disabled" ? ["sending_disabled" as const] : []), ...(hostedSchedulerConfigured ? [] : ["hosted_scheduler_not_configured" as const])], audience: settings.reminderAudience, appointmentReminderMinutesBefore: settings.appointmentReminderMinutesBefore, overdueRemindersEnabled: settings.overdueRemindersEnabled, overdueRepeatHours: settings.overdueRepeatHours, diagnosticsTruncated: history.length > MAX_HISTORY_DIAGNOSTICS } };
+  return { reminders, reminderReadiness: { smsProviderConfigured: transport !== null, smsCredentialsConfigured: transport?.credentialsConfigured === true, smsSendingEnabled: blocked === null, hostedSchedulerConfigured, evaluationMode: hostedSchedulerConfigured ? "hosted_and_manual" : "manual_and_cli", blockedReasons: [...(transport ? [] : ["missing_sms_provider" as const]), ...(transport?.credentialsConfigured ? [] : ["missing_sms_credentials" as const]), ...(blocked === "sending_disabled" ? ["sending_disabled" as const] : []), ...(hostedSchedulerConfigured ? [] : ["hosted_scheduler_not_configured" as const])], audience: "responsible_team", appointmentReminderMinutesBefore: settings.appointmentReminderMinutesBefore, overdueRemindersEnabled: settings.overdueRemindersEnabled, overdueRepeatHours: settings.overdueRepeatHours, diagnosticsTruncated: history.length > MAX_HISTORY_DIAGNOSTICS } };
 }

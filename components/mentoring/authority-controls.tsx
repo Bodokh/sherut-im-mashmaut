@@ -68,6 +68,7 @@ import { DraftRecovery } from "./draft-recovery";
 import { DraftStatus, useFormDraft } from "./form-draft";
 import { formatDateTime, fromDateTimeInput, toDateTimeInput } from "./format";
 import { RecoveredDraft } from "./recovered-draft";
+import { PermanentDeleteDialog } from "./permanent-delete-dialog";
 import {
   authorityPendingState,
   authorityScopeComparison,
@@ -118,7 +119,7 @@ export function ParticipantAuthorityControls({
         </AlertDescription>
       </Alert>
     ) : (
-      <AuthorityDialog view={view} mode="restore" />
+      <div className="flex flex-wrap gap-2"><AuthorityDialog view={view} mode="restore" /><PermanentDeleteDialog view={view} /></div>
     );
   return (
     <Card>
@@ -135,6 +136,7 @@ export function ParticipantAuthorityControls({
           <AuthorityDialog view={view} mode="grant" />
           <AuthorityDialog view={view} mode="protection" />
           <AuthorityDialog view={view} mode="delete" disabled={!pending.canDelete} />
+          <PermanentDeleteDialog view={view} />
         </div>
         <div className="flex flex-col gap-2">
           <p className="text-sm font-medium">הרשאות אישיות לכרטיס</p>
@@ -971,6 +973,7 @@ export function RecycleBinView() {
                   פתיחת ההיסטוריה
                 </Button>
                 <AuthorityDialog view={view} mode="restore" disabled={!authorityPendingState(view.participant).canRestore} />
+                <PermanentDeleteDialog view={view} />
               </div>
             </div>
           ))

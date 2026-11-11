@@ -7,7 +7,7 @@ import type { CommandContext } from "../../server/command-context";
 import type { AssignmentHistoryView, AuthorityCommand, AuthorityExtras, GrantView, ParticipantDeletionState, ParticipantLifecycle, ProtectionStateView } from "./contracts";
 import { CONTACT_PROTECTION_FIELDS, PARTICIPANT_PROTECTION_FIELDS } from "./schema";
 
-const commandTypes = new Set(["set_access_grant", "set_ceo_protection", "set_participant_lifecycle", "delete_participant", "restore_participant", "update_staff"]);
+const commandTypes = new Set(["set_access_grant", "set_ceo_protection", "set_participant_lifecycle", "delete_participant", "permanently_delete_participant", "restore_participant", "update_staff"]);
 export const isAuthorityCommand = (command: { readonly type: string }): command is AuthorityCommand => commandTypes.has(command.type);
 const instant = (value: unknown): string => new Date(value as string | Date).toISOString();
 const optionalInstant = (value: unknown): string | null => value == null ? null : instant(value);
@@ -103,6 +103,37 @@ async function updateStaff(context: CommandContext, command: Extract<AuthorityCo
   return { ...context.success(command), staffId: command.staffId };
 }
 
+async function permanentlyDeleteParticipant(context: CommandContext, command: Extract<AuthorityCommand, { type: "permanently_delete_participant" }>): Promise<CommandResult> {
+  const { client, actor, view } = context;
+  if (command.confirmationName.trim() !== view!.participant.displayName) return context.failure("validation", "יש להקליד את שם החניכה בדיוק כפי שהוא מופיע בכרטיס כדי לאשר מחיקה לצמיתות.", "confirmationName");
+  const parameters = [actor.organizationId, command.participantId];
+  // The caller already holds the participant lock. The dispatcher takes that
+  // same lock before claiming a job, so no new external send can race this purge.
+  const jobs = await client.query("SELECT id,state FROM mentoring.reminder_jobs WHERE organization_id=$1 AND participant_id=$2 ORDER BY id FOR UPDATE", parameters);
+  if (jobs.rows.some((job) => job.state === "dispatching")) return context.failure("conflict", "הודעת תזכורת נמצאת כעת בשליחה. יש להמתין לסיום השליחה, לרענן ולאשר את המחיקה מחדש.", "reminderDelivery");
+  if (jobs.rows.some((job) => job.state === "uncertain")) return context.failure("conflict", "מצב שליחת תזכורת לחניכה אינו ידוע. יש לפנות לתמיכה לבירור ההודעה מול ספק המסרונים לפני מחיקה לצמיתות.", "reminderDelivery");
+  // Explicitly purge only this participant's relational and narrative data.
+  // Contact revisions/review events and appointment/color history cascade from
+  // their parents; all other participant foreign keys deliberately restrict.
+  await client.query("DELETE FROM mentoring.reminder_attempts WHERE organization_id=$1 AND participant_id=$2", parameters);
+  await client.query("DELETE FROM mentoring.reminder_jobs WHERE organization_id=$1 AND participant_id=$2", parameters);
+  await client.query("DELETE FROM mentoring.outbox WHERE organization_id=$1 AND participant_id=$2", parameters);
+  await client.query("DELETE FROM mentoring.conflicts WHERE organization_id=$1 AND participant_id=$2", parameters);
+  await client.query("DELETE FROM mentoring.audit WHERE organization_id=$1 AND participant_id=$2", parameters);
+  await client.query("DELETE FROM mentoring.reviews WHERE organization_id=$1 AND contact_id IN (SELECT id FROM mentoring.contacts WHERE organization_id=$1 AND participant_id=$2)", parameters);
+  await client.query("DELETE FROM mentoring.ceo_protections WHERE organization_id=$1 AND (resource_id=$2 OR resource_id IN (SELECT id FROM mentoring.contacts WHERE organization_id=$1 AND participant_id=$2))", parameters);
+  await client.query("DELETE FROM mentoring.grants WHERE organization_id=$1 AND participant_id=$2", parameters);
+  await client.query("DELETE FROM mentoring.appointments WHERE organization_id=$1 AND participant_id=$2", parameters);
+  await client.query("DELETE FROM mentoring.contacts WHERE organization_id=$1 AND participant_id=$2", parameters);
+  await client.query("DELETE FROM mentoring.assignments WHERE organization_id=$1 AND participant_id=$2", parameters);
+  await client.query("DELETE FROM mentoring.participants WHERE organization_id=$1 AND id=$2", parameters);
+  // Resource UUID tombstones and content-free hashed operation receipts stay
+  // reserved: a delayed create/retry cannot recreate a deleted card or contact.
+  // The final event has no participant FK, name, reason, or report content.
+  await context.audit(command, undefined, { purgedParticipantId: command.participantId, version: view!.participant.version });
+  return context.success(command, command.participantId);
+}
+
 /** The caller owns identity/participant locks, receipt, transaction and commit. */
 export async function handleAuthorityCommand(context: CommandContext, command: MentoringCommand): Promise<CommandResult | null> {
   if (!isAuthorityCommand(command)) return null;
@@ -111,6 +142,7 @@ export async function handleAuthorityCommand(context: CommandContext, command: M
   const view = context.view;
   if (!view || view.participant.id !== command.participantId || view.participant.organizationId !== context.actor.organizationId) return context.failure("not_found", "כרטיס החניכה לא נמצא.");
   if (command.expectedVersion !== view.participant.version) return context.failure("conflict", "כרטיס החניכה השתנה. יש לרענן לפני שמירה.", "expectedVersion");
+  if (command.type === "permanently_delete_participant") return permanentlyDeleteParticipant(context, command);
   const result = await context.client.query("SELECT deleted_at,deleted_by,deletion_reason,deleted_previous_lifecycle FROM mentoring.participants WHERE organization_id = $1 AND id = $2", [context.actor.organizationId, command.participantId]);
   if (!result.rows[0]) return context.failure("not_found", "כרטיס החניכה לא נמצא.");
   const deletion = deletionStateFromRow(result.rows[0]);
@@ -133,7 +165,6 @@ export async function handleAuthorityCommand(context: CommandContext, command: M
   }
   if (command.type === "set_participant_lifecycle") {
     await context.client.query("UPDATE mentoring.participants SET lifecycle = $3, last_ceo_version = version + 1, version = version + 1, updated_at = clock_timestamp() WHERE organization_id = $1 AND id = $2", [context.actor.organizationId, command.participantId, command.lifecycle]);
-    await context.protect(command.participantId, view.participant.version + 1, ["lifecycle"]);
     if (command.lifecycle === "active") await context.refreshReminders(command.participantId);
     else await cancelUnsentReminders(context, command.participantId);
     await context.audit(command, command.participantId, { reason: command.reason, previousLifecycle: view.participant.lifecycle, lifecycle: command.lifecycle, version: view.participant.version + 1 });

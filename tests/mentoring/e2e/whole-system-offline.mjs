@@ -160,7 +160,9 @@ async function policyForm(h, policy, reason) {
   const staleDraft = h.page.getByRole("button", { name: "עיינתי בהגדרות הפעילות — המשך עריכת הטיוטה", exact: true });
   if (await staleDraft.isVisible().catch(() => false)) await staleDraft.click();
   await h.page.getByLabel("תוקף גישה ללא חיבור, בשעות", { exact: true }).fill(String(policy.offlineLeaseHours));
-  await h.select("למי מיועדות התזכורות", policy.reminderAudience === "responsible_team" ? "לצוות הליווי האחראי" : "לכל הצוות");
+  assert.equal(policy.reminderAudience, "responsible_team");
+  await h.page.getByText("החונכת והרכזת האחראיות בלבד", { exact: true }).waitFor({ state: "visible" });
+  assert.equal(await h.page.locator("#settings-audience").count(), 0, "Reminder audience remains fixed while editing offline policy");
   await h.page.getByLabel("תזכורת לפני מועד הקשר, בדקות", { exact: true }).fill(String(policy.appointmentReminderMinutesBefore));
   const overdue = h.page.locator('[data-slot="card"]').filter({ hasText: "מדיניות ליווי ותזכורות" }).getByRole("switch");
   if ((await overdue.getAttribute("aria-checked")) !== String(policy.overdueRemindersEnabled)) await overdue.click();
@@ -445,6 +447,7 @@ export async function runOfflineScenarios(h) {
       await acceptedQueue(h, monthlyOperationIds);
       const accepted = await h.poll(h.snapshot, (state) => state.settings.appointmentReminderMinutesBefore === changedPolicy.appointmentReminderMinutesBefore && state.monthlyReviews.some((review) => review.scopeStaffId === chain.coordinator.id && review.summary === summary));
       policyChanged = true;
+      assert.equal(accepted.settings.reminderAudience, "responsible_team");
       assert.equal(accepted.actor.smsMuted, before.actor.smsMuted);
       assert.equal(accepted.reminderReadiness.smsProviderConfigured, false);
       assert.equal(accepted.reminderReadiness.smsSendingEnabled, false);

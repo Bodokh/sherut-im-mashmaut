@@ -38,6 +38,87 @@ test("manual staff SMS cannot enter a local queue even for a CEO", async () => {
   assert.equal(await store.unsyncedCount(), 0);
 });
 
+test("permanent deletion never enters an offline queue", async () => {
+  const { store, scope } = await setup(fixture("purge-admin", "ceo"));
+  await assert.rejects(store.enqueue(scope, { type: "permanently_delete_participant", operationId: crypto.randomUUID(), participantId: "participant_1", expectedVersion: 1, reason: "מחיקה", confirmationName: "חניכת בדיקה" }), { code: "invalid_command" });
+  assert.deepEqual(await store.operations(scope), []);
+});
+
+test("accepted purge removes current card, content receipts and drafts while preserving unrelated local work", async () => {
+  const initial = fixture("purge-admin", "ceo");
+  const other = structuredClone(initial.participants[0]);
+  other.participant.id = "other";
+  other.participant.displayName = "כרטיס נשמר";
+  initial.participants.push(other);
+  initial.conflicts = [{ id: "conflict", participantId: "participant_1", participantName: "private", authorName: "staff", authoritativeValue: "private", submittedValue: "private", createdAt: initial.serverTime, resolvedAt: null }];
+  const { store, scope } = await setup(initial);
+  const saved = await store.enqueue(scope, update());
+  await store.settle(scope, saved, accepted(saved.command));
+  const pending = await store.enqueue(scope, update(crypto.randomUUID(), 2, "pending report"));
+  await assert.rejects(store.assertParticipantReadyForPurge(scope, "participant_1"), { code: "superseded" });
+  await store.settle(scope, pending, accepted(pending.command));
+  await store.writeDraft(scope, "contact:participant_1", { notes: "נמחק" });
+  await store.writeDraft(scope, "contact:other", { notes: "נשמר" });
+  await store.writeDraft(scope, "settings", { notes: "הגדרות נשמרות" });
+  await assert.rejects(store.assertParticipantReadyForPurge(scope, "participant_1"), { code: "superseded" });
+  await store.clearDraft(scope, "contact:participant_1");
+  await store.assertParticipantReadyForPurge(scope, "participant_1");
+  const before = await store.activeCacheRevision();
+  await store.purgeParticipant(scope, "participant_1");
+  const current = await store.readSession(scope.accountId);
+  assert.deepEqual(current.snapshot.participants.map((view) => view.participant.id), ["other"]);
+  assert.deepEqual(current.snapshot.conflicts, []);
+  assert.deepEqual(current.snapshot.permanentlyDeletedParticipantIds, ["participant_1"]);
+  assert.equal(await store.readReceipt(scope, saved.command), null);
+  assert.deepEqual(await store.readDraft(scope, "contact:other"), { notes: "נשמר" });
+  assert.deepEqual(await store.readDraft(scope, "settings"), { notes: "הגדרות נשמרות" });
+  await assert.rejects(store.saveSnapshot(initial, scope.accountId, Date.now(), () => true, before), { code: "superseded" });
+  await assert.rejects(store.enqueue(scope, { type: "create_participant", operationId: "participant_1", fields: { displayName: "old" } }), { code: "invalid_command" });
+  await assert.rejects(store.writeDraft(scope, "contact:participant_1", { notes: "late autosave" }), { code: "account_changed" });
+});
+
+test("explicit remote tombstones scrub vaults and real saved creation envelopes without erasing other records or organizations", async () => {
+  const initial = fixture("purge-A", "ceo");
+  const { store, scope } = await setup(initial);
+  const envelope = (id, text) => ({ kind: "mentoring-form-draft-v1", value: { displayName: text, profileNotes: text }, intent: { operationId: id, signature: JSON.stringify({ type: "create_participant", fields: { displayName: text, profileNotes: text } }) } });
+  await store.writeDraft(scope, "participant-profile:new", envelope("participant_1", "PRIVATE_PURGED"));
+  await assert.rejects(store.assertParticipantReadyForPurge(scope, "participant_1"), { code: "superseded" });
+  await store.writeDraft(scope, "settings", { notes: "KEEP_SETTINGS" });
+  const old = await store.enqueue(scope, update());
+  await store.settle(scope, old, accepted(old.command));
+  await store.quarantine("not_authenticated", scope);
+  const foreign = fixture("foreign", "ceo");
+  foreign.actor.organizationId = "foreign-org";
+  foreign.participants[0].participant.organizationId = "foreign-org";
+  const foreignSession = await store.saveSnapshot(foreign, foreign.actor.authUserId);
+  await store.writeDraft(foreignSession.scope, "participant-profile:new", envelope("participant_1", "KEEP_FOREIGN"));
+  await store.quarantine("not_authenticated", foreignSession.scope);
+  const fresh = { ...initial, participants: [], permanentlyDeletedParticipantIds: ["participant_1"] };
+  await store.saveSnapshot(fresh, scope.accountId);
+  const [vault] = await store.recoveryMetadata(scope);
+  assert.equal(vault.draftCount, 1);
+  await store.recoverLocalWork(scope, vault.id);
+  assert.equal(await store.readDraft(scope, "participant-profile:new"), null);
+  assert.deepEqual(await store.readDraft(scope, "settings"), { notes: "KEEP_SETTINGS" });
+  assert.equal(await store.readReceipt(scope, old.command), null);
+  const back = await store.saveSnapshot(foreign, foreign.actor.authUserId);
+  const [foreignVault] = await store.recoveryMetadata(back.scope);
+  await store.recoverLocalWork(back.scope, foreignVault.id);
+  assert.deepEqual(await store.readDraft(back.scope, "participant-profile:new"), { ...envelope("participant_1", "KEEP_FOREIGN"), intent: null });
+});
+
+test("an authoritative purge removes matching new-create intents and preserves a different unsent new draft", async () => {
+  const { store, scope, snapshot } = await setup(fixture("purge-create", "ceo"));
+  const envelope = (id) => ({ kind: "mentoring-form-draft-v1", value: { displayName: "new" }, intent: { operationId: id, signature: JSON.stringify({ type: "create_participant", fields: { displayName: "new" } }) } });
+  await store.writeDraft(scope, "participant-profile:new", envelope("participant_1"));
+  await store.saveSnapshot({ ...snapshot, participants: [], permanentlyDeletedParticipantIds: ["participant_1"] }, scope.accountId);
+  assert.equal(await store.readDraft(scope, "participant-profile:new"), null);
+  await assert.rejects(store.writeDraft(scope, "participant-profile:new", envelope("participant_1")), { code: "account_changed" });
+  await store.writeDraft(scope, "participant-profile:new", envelope("new-other"));
+  await store.purgeParticipant(scope, "participant_1");
+  assert.deepEqual(await store.readDraft(scope, "participant-profile:new"), envelope("new-other"));
+});
+
 test("every field draft survives reopening its account-scoped store", async () => {
   const { store, scope } = await setup();
   await store.writeDraft(scope, "contact:participant_1", { notes: "שיחה עם החניכה", next: "2026-10-28T16:00" });
@@ -281,8 +362,8 @@ test("offline creation uses the real deterministic participant identifier for su
   assert.equal(created.participant.profileNotes, "המשך ללא חיבור");
 });
 
-test("drafts for an authorized offline-created participant survive revalidation before creation is acknowledged", async () => {
-  const { store, scope, snapshot } = await setup(fixture("user_test_A", "coordinator"));
+for (const role of ["coordinator", "mentor"]) test(`${role} drafts for an offline-created participant survive revalidation before creation is acknowledged`, async () => {
+  const { store, scope, snapshot } = await setup(fixture("user_test_A", role));
   const create = { type: "create_participant", operationId: crypto.randomUUID(), fields: { displayName: "חדשה ללא חיבור" } };
   await store.enqueue(scope, create);
   await store.writeDraft(scope, `participant-profile:${create.operationId}`, { profileNotes: "טיוטה אחרי יצירה מקומית" });
@@ -293,8 +374,8 @@ test("drafts for an authorized offline-created participant survive revalidation 
   assert.equal((await store.readDraft(scope, `participant-profile:${create.operationId}`)).profileNotes, "טיוטה אחרי יצירה מקומית");
 });
 
-test("rejected new-record drafts recover as author-owned documents while the rejected intent stays blocked", async () => {
-  const { store, scope, snapshot } = await setup(fixture("user_test_A", "coordinator"));
+for (const role of ["coordinator", "mentor"]) test(`${role} rejected new-record drafts recover as author-owned documents while the rejected intent stays blocked`, async () => {
+  const { store, scope, snapshot } = await setup(fixture("user_test_A", role));
   const create = { type: "create_participant", operationId: crypto.randomUUID(), fields: { displayName: "טעון תיקון" } };
   const queued = await store.enqueue(scope, create);
   const key = `participant-profile:${create.operationId}`;
@@ -320,6 +401,30 @@ test("rejected new-record drafts recover as author-owned documents while the rej
   const other = await store.saveSnapshot(otherSnapshot, otherSnapshot.actor.authUserId);
   assert.deepEqual(await store.recoveredDrafts(other.scope), []);
   await assert.rejects(store.recoveredDrafts(scope), { code: "account_changed" });
+});
+
+test("mentor local creation never grants reassignment, approval, invalidation or CEO authority during revalidation", async () => {
+  const forbidden = [
+    { type: "assign_participant", mentorId: "other-mentor", coordinatorId: null },
+    { type: "review_contact", contactId: "contact-1", revision: 1, decision: "approved" },
+    { type: "invalidate_contact", contactId: "contact-1", expectedRevision: 1, expectedAppointmentVersion: null, reason: "בדיקה" },
+    { type: "set_access_grant", staffId: "other-mentor", expectedGrantVersion: null, actions: ["view"], expiresAt: null, reason: "בדיקה" },
+    { type: "set_ceo_protection", resourceId: "participant-1", expectedProtectionVersion: null, active: true, fieldPaths: null, reason: "בדיקה" },
+    { type: "set_participant_lifecycle", lifecycle: "closed", reason: "בדיקה" },
+    { type: "delete_participant", reason: "בדיקה" },
+    { type: "restore_participant", reason: "בדיקה" },
+  ];
+  for (const fields of forbidden) {
+    const { store, scope, snapshot } = await setup();
+    const create = { type: "create_participant", operationId: crypto.randomUUID(), fields: { displayName: "החניכה שלי" } };
+    await store.enqueue(scope, create);
+    await store.enqueue(scope, { ...fields, operationId: crypto.randomUUID(), participantId: create.operationId, expectedVersion: 1 });
+    await store.saveSnapshot(snapshot, scope.accountId);
+    assert.deepEqual(await store.operations(scope), [], fields.type);
+    const [vault] = await store.recoveryMetadata(scope);
+    assert.equal(vault.pendingCount, 2, `${fields.type} locks the original durable intent for review`);
+    assert.equal(projectWorkspace(snapshot, await store.operations(scope)).participants.some((view) => view.participant.id === create.operationId), false);
+  }
 });
 
 test("IndexedDB quota failures preserve the last saved draft and never create a phantom queue entry", async () => {

@@ -57,3 +57,19 @@ test("mentor extras query only operational settings and never monthly narratives
   assert.equal(ctx.queries[0].args[0], org);
   assert.equal(ctx.queries.some((query) => query.sql.includes("monthly")), false);
 });
+
+test("a legacy client's settings update cannot disable or change the confirmed weekly policy", async () => {
+  const current = { organization_id: org, version: 1, offline_lease_hours: 24, reminder_audience: "responsible_team", appointment_reminder_minutes_before: 4320,
+    overdue_reminders_enabled: true, overdue_repeat_hours: 168, updated_at: "2026-10-26T12:00:00Z", updated_by: null };
+  const ctx = context(member("ceo"), (sql, args) => {
+    if (sql.startsWith("SELECT * FROM mentoring.organization_settings")) return { rows: [current] };
+    if (sql.startsWith("UPDATE mentoring.organization_settings")) return { rows: [{ ...current, version: 2, reminder_audience: args[2], overdue_reminders_enabled: args[4], overdue_repeat_hours: args[5], updated_by: args[7] }] };
+    return { rows: [] };
+  });
+  const result = await handleOversightCommand(ctx, { type: "update_organization_settings", operationId: randomUUID(), expectedVersion: 1,
+    settings: { ...DEFAULT_ORGANIZATION_POLICY, reminderAudience: "all_staff", overdueRemindersEnabled: false, overdueRepeatHours: 12 }, reason: "Legacy client update" });
+  assert.equal(result.ok, true);
+  const saved = ctx.queries.find((query) => query.sql.startsWith("UPDATE mentoring.organization_settings")).args;
+  assert.deepEqual([saved[2], saved[4], saved[5]], ["responsible_team", true, 168]);
+  assert.deepEqual([ctx.audits[0][2].settings.overdueRemindersEnabled, ctx.audits[0][2].settings.overdueRepeatHours], [true, 168]);
+});

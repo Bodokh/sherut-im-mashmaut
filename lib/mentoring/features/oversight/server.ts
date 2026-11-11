@@ -67,7 +67,9 @@ export async function handleOversightCommand(ctx: CommandContext, command: Mento
     const current = await client.query("SELECT * FROM mentoring.organization_settings WHERE organization_id = $1 FOR UPDATE", [actor.organizationId]);
     const before = organizationSettingsFromRow(current.rows[0]);
     if (before.version !== command.expectedVersion) return ctx.failure("conflict", "הגדרות הארגון עודכנו. הטיוטה נשמרה; יש לבדוק את הגרסה העדכנית לפני ניסיון נוסף.", "expectedVersion");
-    const policy = command.settings;
+    // Keep older clients' payloads readable, but they cannot disable the
+    // confirmed weekly follow-up policy or widen its responsible-team audience.
+    const policy = { ...command.settings, reminderAudience: "responsible_team", overdueRemindersEnabled: true, overdueRepeatHours: 168 };
     const changed = await client.query(`UPDATE mentoring.organization_settings SET version = version + 1,
       offline_lease_hours = $2, reminder_audience = $3, appointment_reminder_minutes_before = $4,
       overdue_reminders_enabled = $5, overdue_repeat_hours = $6, updated_at = $7, updated_by = $8

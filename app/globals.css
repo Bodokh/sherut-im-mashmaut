@@ -425,41 +425,41 @@
   min-height: 3.125rem;
 }
 
-/* Staff workspace: a self-contained blue system, including portalled controls. */
+/* Staff workspace: the public site's techelet identity, including portalled controls. */
 .staff-app {
   --font-sans: var(--font-staff), Arial, sans-serif;
   --font-display: var(--font-staff), Arial, sans-serif;
-  --background: oklch(0.977 0.008 255);
-  --foreground: oklch(0.275 0.047 257);
+  --background: var(--color-surface);
+  --foreground: var(--color-ink-900);
   --card: oklch(1 0 0);
   --card-foreground: var(--foreground);
   --popover: oklch(1 0 0);
   --popover-foreground: var(--foreground);
-  --primary: oklch(0.49 0.195 260);
-  --primary-foreground: oklch(0.99 0.004 255);
-  --secondary: oklch(0.94 0.025 255);
-  --secondary-foreground: oklch(0.385 0.11 259);
-  --muted: oklch(0.952 0.014 255);
-  --muted-foreground: oklch(0.49 0.037 257);
-  --accent: oklch(0.937 0.032 255);
-  --accent-foreground: oklch(0.38 0.14 260);
+  --primary: var(--color-brand-700);
+  --primary-foreground: var(--color-paper);
+  --secondary: var(--color-brand-100);
+  --secondary-foreground: var(--color-brand-900);
+  --muted: var(--color-surface-2);
+  --muted-foreground: var(--color-ink-600);
+  --accent: var(--color-brand-50);
+  --accent-foreground: var(--color-brand-800);
   --destructive: oklch(0.49 0.19 25);
-  --border: oklch(0.908 0.017 255);
+  --border: var(--color-line);
   --input: oklch(0.64 0.025 255);
-  --ring: oklch(0.535 0.19 258);
+  --ring: var(--color-brand-600);
   --radius: 0.75rem;
   --staff-radius-sm: calc(var(--radius) * 0.6);
   --staff-radius-md: calc(var(--radius) * 0.8);
   --staff-radius-lg: var(--radius);
-  --staff-radius-xl: calc(var(--radius) * 1.4);
-  --staff-radius-2xl: calc(var(--radius) * 1.8);
-  --staff-radius-3xl: calc(var(--radius) * 2.2);
-  --staff-radius-4xl: calc(var(--radius) * 2.6);
-  --sidebar: oklch(0.253 0.065 261);
+  --staff-radius-xl: 0.875rem;
+  --staff-radius-2xl: 1rem;
+  --staff-radius-3xl: 1rem;
+  --staff-radius-4xl: 1rem;
+  --sidebar: #102d40;
   --sidebar-foreground: oklch(0.962 0.012 255);
-  --sidebar-primary: oklch(0.80 0.105 248);
-  --sidebar-primary-foreground: oklch(0.22 0.065 261);
-  --sidebar-accent: oklch(0.355 0.097 260);
+  --sidebar-primary: var(--color-brand-200);
+  --sidebar-primary-foreground: var(--color-brand-950);
+  --sidebar-accent: oklch(0.355 0.065 240);
   --sidebar-accent-foreground: oklch(0.99 0.005 250);
   --sidebar-border: oklch(0.38 0.065 260);
   --sidebar-ring: oklch(0.80 0.105 248);
@@ -491,7 +491,7 @@
 .staff-app :is(h1, h2, h3, h4) { color: inherit; line-height: 1.35; }
 .staff-app :focus-visible { outline-color: var(--ring); }
 .staff-app [data-slot="card"] {
-  box-shadow: 0 1px 3px oklch(0.26 0.065 261 / 0.025), 0 8px 26px oklch(0.26 0.065 261 / 0.025);
+  box-shadow: none;
 }
 .staff-app [data-slot="sidebar-inner"], .staff-app [data-mobile="true"] {
   --muted-foreground: oklch(0.785 0.035 252);

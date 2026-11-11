@@ -489,17 +489,17 @@ export function SettingsView() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>תזכורות לצוות</CardTitle>
-            <CardDescription>התזכורות מיועדות לאנשי הצוות בלבד. החניכות אינן מקבלות הודעות מהמערכת.</CardDescription>
+            <CardTitle>{isCeo ? "מסרונים לצוות" : "תזכורות לצוות"}</CardTitle>
+            <CardDescription>תזכורות הליווי האוטומטיות נשלחות לחונכת ולרכזת האחראיות בלבד. החניכות והמנכ״ל אינם מקבלים תזכורות אלו.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-5">
             <FieldGroup>
               <Field orientation="horizontal" data-disabled={!isCeo || !ready || pendingKey !== null}>
                 <FieldContent>
-                  <FieldLabel htmlFor="staff-sms" className="min-h-11 items-center">קבלת תזכורות ב־SMS</FieldLabel>
+                  <FieldLabel htmlFor="staff-sms" className="min-h-11 items-center">{isCeo ? "מסרונים יזומים" : "קבלת תזכורות ב־SMS"}</FieldLabel>
                   <FieldDescription id="staff-sms-description">
                     {isCeo
-                      ? "אפשר להשתיק את הודעות ה־SMS לחשבון המנכ״ל בלבד. השינוי אינו משפיע על תזכורות לשאר הצוות."
+                      ? "ההעדפה חלה רק על הודעות יזומות שנשלחות לצוות. חשבון המנכ״ל אינו מקבל תזכורות ליווי אוטומטיות."
                       : "קבלת SMS היא חלק ממערך הליווי ואינה ניתנת לביטול בחשבונות הצוות."}
                   </FieldDescription>
                 </FieldContent>
@@ -511,7 +511,7 @@ export function SettingsView() {
                   disabled={!isCeo || !ready || pendingKey !== null}
                   onCheckedChange={(checked) => void run("sms", {
                     type: "set_sms_muted", muted: !checked,
-                  }, checked ? "קבלת תזכורות SMS הופעלה" : "הודעות ה־SMS לחשבונך הושתקו")}
+                  }, checked ? "קבלת מסרונים יזומים הופעלה" : "המסרונים היזומים לחשבונך הושתקו")}
                 />
               </Field>
             </FieldGroup>

@@ -1,0 +1,23 @@
+{
+  "files": [
+    {
+      "file": "sherut-im-mashmaut-offline.html",
+      "bytes": 7604459,
+      "sha256": "07d3cb4f4e5f650c9f37343a4c553b703ca3981aac07ebcd903b6bb1e7681b6c"
+    },
+    {
+      "file": "sherut-im-mashmaut-offline.pptx",
+      "bytes": 4245269,
+      "sha256": "5789936564653991719393a69827294f1053de463327a45339a4c7e5fff0402b"
+    }
+  ],
+  "slides": 21,
+  "embeddedPptxImages": 21,
+  "externalImageLinks": [],
+  "htmlSourceImages": 27,
+  "nativePptxRenderedSlides": 21,
+  "codeReview": "approved",
+  "visualReview": "all 21 HTML and all 21 PPTX pages inspected",
+  "clientDeviceAcceptance": "not tested",
+  "originalBlankImageFailure": "not reproduced"
+}

@@ -50,7 +50,7 @@ import { initials } from "./format";
 import { readableError, roleNames } from "./common";
 
 const navigation = [
-  { href: "/staff", label: "המעקב שלי", icon: HomeIcon },
+  { href: "/staff", label: "האזור האישי שלי", icon: HomeIcon },
   { href: "/staff/participants", label: "החניכות", icon: UsersRoundIcon },
   { href: "/staff/contacts/new", label: "תיעוד קשר", icon: CalendarCheck2Icon },
   { href: "/staff/reminders", label: "התזכורות שלי", icon: BellRingIcon },
@@ -181,7 +181,7 @@ export function MentoringShell({ children }: { children: ReactNode }) {
         דילוג לתוכן
       </a>
       <Sidebar side="right" collapsible="offcanvas">
-        <SidebarHeader className="px-5 py-7">
+        <SidebarHeader className="border-b border-sidebar-border px-5 py-7">
           <Link href={staffPublicPath("/staff")} className="flex items-center gap-3">
             <Image src="/images/logo-mark.png" alt="" width={44} height={44} />
             <span className="flex flex-col gap-1">
@@ -189,7 +189,7 @@ export function MentoringShell({ children }: { children: ReactNode }) {
                 שירות עם משמעות
               </strong>
               <span className="text-xs text-muted-foreground">
-                נוכחות לאורך הדרך
+                מערך הליווי האישי
               </span>
             </span>
           </Link>
@@ -263,7 +263,7 @@ export function MentoringShell({ children }: { children: ReactNode }) {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset className="min-w-0">
-        <header className="sticky top-0 z-20 flex min-h-20 items-center justify-between gap-4 border-b bg-background px-5 md:px-9">
+        <header className="sticky top-0 z-20 flex min-h-20 items-center justify-between gap-4 border-b bg-card px-5 md:px-9">
           <div className="flex h-11 min-w-0 items-center gap-2">
             <SidebarTrigger aria-label="פתיחת תפריט ניווט" />
             <Separator

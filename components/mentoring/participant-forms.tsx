@@ -46,13 +46,13 @@ import { InlineError } from "./common";
 import { DraftStatus, useFormDraft } from "./form-draft";
 import { DraftRecovery } from "./draft-recovery";
 import { RecoveredDraft } from "./recovered-draft";
-import { assignmentScope, canEditParticipant, changedParticipantFields, createdParticipantFields, fieldIsProtected, participantFieldNames, participantFormFields, participantInputError, type ParticipantFieldName } from "./participant-form-state";
+import { assignmentScope, canCreateParticipant, canEditParticipant, changedParticipantFields, createdParticipantFields, fieldIsProtected, participantFieldNames, participantFormFields, participantInputError, type ParticipantFieldName } from "./participant-form-state";
 
 export function ParticipantEditor({ view }: { view?: ParticipantView }) {
   const { snapshot } = useWorkspace();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  if (!snapshot || (!view && snapshot.actor.role === "mentor")) return null;
+  if (!snapshot || (!view && !canCreateParticipant(snapshot.actor))) return null;
   const currentView = view ? snapshot.participants.find((item) => item.participant.id === view.participant.id) : undefined;
   if (view && !currentView) return null;
   const protectedProfile = currentView && participantFieldNames.every((field) => fieldIsProtected(snapshot.actor, currentView.participant.id, currentView.protections, field));
@@ -88,6 +88,7 @@ export function ParticipantEditor({ view }: { view?: ParticipantView }) {
           <DialogDescription>
             אפשר להתחיל גם בכרטיס חלקי ולהשלים פרטים בהמשך. המידע מיועד לצוות
             המורשה.
+            {!view && snapshot.actor.role === "mentor" && " החניכה החדשה תשויך אליך ותופיע באזור האישי שלך."}
           </DialogDescription>
         </DialogHeader>
         <ParticipantProfileForm
@@ -129,7 +130,7 @@ function ParticipantProfileForm({
   const values = draft.value;
   const actor = snapshot?.actor;
   const currentView = view && snapshot?.participants.find((item) => item.participant.id === view.participant.id);
-  const editable = Boolean(snapshot && (!view || (currentView && canEditParticipant(snapshot.actor, currentView))));
+  const editable = Boolean(snapshot && (view ? currentView && canEditParticipant(snapshot.actor, currentView) : canCreateParticipant(snapshot.actor)));
   const locked = (field: ParticipantFieldName) => Boolean(view && actor && fieldIsProtected(actor, view.participant.id, currentView?.protections ?? view.protections, field));
   const changedFields = view && actor ? changedParticipantFields(values, currentView?.participant ?? view.participant, actor, currentView?.protections ?? view.protections) : participantFormFields(values);
   const hasChanges = !view || Object.keys(changedFields).length > 0;

@@ -222,13 +222,15 @@ function localEpoch(instant: number, timeZone: string): number {
 }
 
 /**
- * Proposed policy: same local clock time seven calendar days later. For a DST
+ * Same local clock time a whole number of calendar weeks later. For a DST
  * overlap choose the earlier instant; for a missing time shift forward by the
  * gap. These disambiguation defaults remain an explicit product-policy choice.
  */
-export function addSevenLocalDays(value: InstantInput, timeZone: string = DEFAULT_CADENCE_POLICY.timeZone): string {
+export function addLocalWeeks(value: InstantInput, weeks: number, timeZone: string = DEFAULT_CADENCE_POLICY.timeZone): string {
+  if (!Number.isSafeInteger(weeks) || weeks < 0) throw new DomainInputError("invalid_interval", "A nonnegative whole number of weeks is required.");
   const source = instantMs(value);
-  const targetWall = localEpoch(source, timeZone) + DEFAULT_CADENCE_POLICY.days * DAY;
+  const targetWall = localEpoch(source, timeZone) + weeks * DEFAULT_CADENCE_POLICY.days * DAY;
+  if (!Number.isFinite(new Date(targetWall).getTime())) throw new DomainInputError("invalid_interval", "The calendar deadline is outside the supported range.");
   const offsets = new Set<number>();
   for (let hours = -36; hours <= 36; hours += 6) {
     const probe = targetWall + hours * HOUR;
@@ -240,6 +242,10 @@ export function addSevenLocalDays(value: InstantInput, timeZone: string = DEFAUL
   const forward = candidates.map((candidate) => ({ candidate, difference: localEpoch(candidate, timeZone) - targetWall })).filter((item) => item.difference > 0).sort((a, b) => a.difference - b.difference)[0];
   if (!forward) throw new DomainInputError("unresolvable_local_time", "The calendar deadline could not be resolved.");
   return new Date(forward.candidate).toISOString();
+}
+
+export function addSevenLocalDays(value: InstantInput, timeZone: string = DEFAULT_CADENCE_POLICY.timeZone): string {
+  return addLocalWeeks(value, 1, timeZone);
 }
 
 function matchesParticipant(record: { organizationId: string; participantId: string }, organizationId: string, participantId: string): boolean {

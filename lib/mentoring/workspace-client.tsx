@@ -4,10 +4,11 @@ import { createContext, useContext, useEffect, useMemo, useState, useSyncExterna
 import { useAuth } from "@clerk/nextjs";
 import { isConfiguredStaffHost, toStaffInternalPath } from "@/lib/staff-host";
 import type { ApiFailure, CommandResult, MentoringCommand, WorkspaceSnapshot } from "./contracts";
-import { isMentoringOfflineAccessPrepared, isOfflineDraftAccessCurrent, offlineDraftAccessKey, MENTORING_OFFLINE_CHANNEL, mentoringOfflineStore, OfflineStorageError, prepareMentoringOfflineAccess, projectWorkspace, quarantineMentoringOfflineData, type OfflineOperation, type OfflineScope, type OfflineSession, type OfflineRecoveryMetadata, type OfflineRecoveredDraft } from "./offline";
+import { isMentoringOfflineAccessPrepared, isOfflineDraftAccessCurrent, offlineDraftAccessKey, lockMentoringOfflineData, MENTORING_OFFLINE_CHANNEL, mentoringOfflineStore, OfflineStorageError, prepareMentoringOfflineAccess, projectWorkspace, quarantineMentoringOfflineData, type OfflineOperation, type OfflineScope, type OfflineSession, type OfflineRecoveryMetadata, type OfflineRecoveredDraft } from "./offline";
 
 type WorkspaceError = { readonly message: string; readonly code?: string };
 type Connection = "online" | "offline" | "syncing" | "conflict";
+type OnlineCommand = Extract<MentoringCommand, { type: "send_staff_sms" | "permanently_delete_participant" }>;
 interface WorkspaceState {
   readonly snapshot: WorkspaceSnapshot | null;
   readonly loading: boolean;
@@ -24,7 +25,7 @@ interface WorkspaceState {
 export interface WorkspaceContextValue extends WorkspaceState {
   readonly refresh: () => Promise<void>;
   readonly submit: (command: MentoringCommand) => Promise<CommandResult>;
-  readonly submitOnline: (command: Extract<MentoringCommand, { type: "send_staff_sms" }>) => Promise<CommandResult>;
+  readonly submitOnline: (command: OnlineCommand) => Promise<CommandResult>;
   readonly readDraft: <T>(key: string) => Promise<T | null>;
   readonly writeDraft: <T>(key: string, value: T) => Promise<void>;
   readonly clearDraft: (key: string) => Promise<void>;
@@ -62,7 +63,7 @@ const apiFailureMessages: Record<ApiFailure["error"]["code"], string> = {
   unavailable: "המערכת אינה זמינה כרגע. יש לבדוק את החיבור ולנסות שוב.",
 };
 const validationLabels: Record<string, string> = {
-  displayName: "השם", email: "כתובת הדוא״ל", phone: "מספר הטלפון", role: "התפקיד", coordinatorId: "הרכז/ת", mentorId: "החונך/ת",
+  displayName: "השם", confirmationName: "שם החניכה לאישור המחיקה", email: "כתובת הדוא״ל", phone: "מספר הטלפון", role: "התפקיד", coordinatorId: "הרכז/ת", mentorId: "החונך/ת",
   serviceType: "סוג השירות", servicePlace: "מקום השירות", serviceRole: "התפקיד בשירות", profileNotes: "המידע הנוסף", notes: "תוכן הדיווח", reason: "הסיבה", method: "אופן הקשר", outcome: "תוצאת הקשר", occurredAt: "מועד הקשר", nextAppointmentAt: "מועד הפגישה", scheduledAt: "המועד", actions: "ההרשאות", expiresAt: "תוקף ההרשאה", summary: "הסיכום", message: "תוכן ההודעה", recipients: "הנמענים",
 };
 
@@ -75,6 +76,7 @@ function parseFailure(value: unknown): ApiFailure | null {
   if (error.conflictId !== undefined && (typeof error.conflictId !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(error.conflictId))) return null;
   const code = error.code as ApiFailure["error"]["code"];
   const field = error.field as string | undefined;
+  if (code === "conflict" && field === "reminderDelivery") return { ok: false, error: { code, field, message: "לא ניתן למחוק לצמיתות כל עוד מסרון נמצא בשליחה או שתוצאתו אינה ידועה. יש להמתין לסיום השליחה, או לפנות לתמיכה לבדיקת התוצאה מול ספק המסרונים." } };
   const label = field && validationLabels[field.split(".").at(-1) ?? ""];
   return { ok: false, error: { code, message: code === "validation" && label ? `יש לבדוק את ${label} ולתקן את הערך לפני ניסיון נוסף.` : apiFailureMessages[code], ...(field ? { field } : {}), ...(typeof error.conflictId === "string" ? { conflictId: error.conflictId } : {}) } };
 }
@@ -334,7 +336,7 @@ class WorkspaceController {
   };
 
   submit = (command: MentoringCommand, accountId: string | null = this.scope?.accountId ?? null): Promise<CommandResult> => {
-    if (command.type === "send_staff_sms") return this.submitOnline(command, accountId);
+    if (command.type === "send_staff_sms" || command.type === "permanently_delete_participant") return this.submitOnline(command, accountId);
     const submittedScope = this.scope;
     const submittedEpoch = this.epoch;
     const intent = structuredClone(command);
@@ -369,15 +371,20 @@ class WorkspaceController {
     return task;
   };
 
-  submitOnline = (command: Extract<MentoringCommand, { type: "send_staff_sms" }>, accountId: string | null = this.scope?.accountId ?? null): Promise<CommandResult> => {
+  submitOnline = (command: OnlineCommand, accountId: string | null = this.scope?.accountId ?? null): Promise<CommandResult> => {
     const submittedScope = this.scope;
     const submittedEpoch = this.epoch;
     const intent = structuredClone(command);
     const task = this.submitTask.catch(() => undefined).then(async (): Promise<CommandResult> => {
       const scope = this.scope;
       if (!scope || !submittedScope || scope.accountId !== accountId || scope.key !== submittedScope.key || !this.isCurrent(submittedEpoch) || !this.auth.loaded || this.auth.userId !== scope.accountId || this.authorizedEpoch !== submittedEpoch) return failure("not_authenticated", "החשבון השתנה או נדרש אימות מחדש. יש לפתוח מחדש את מסך ההודעות עם חיבור.");
-      if (!this.state.snapshot?.actor.active || this.state.snapshot.actor.role !== "ceo") return failure("forbidden", "שליחת הודעות לצוות זמינה להנהלה בלבד.");
-      if (!this.reachable || (typeof navigator !== "undefined" && !navigator.onLine)) return failure("unavailable", "נדרש חיבור לשליחת הודעה. ההודעה לא נשמרה לשליחה מאוחרת.");
+      if (!this.state.snapshot?.actor.active || this.state.snapshot.actor.role !== "ceo") return failure("forbidden", "הפעולה זמינה להנהלה בלבד.");
+      if (!this.reachable || (typeof navigator !== "undefined" && !navigator.onLine)) return failure("unavailable", intent.type === "permanently_delete_participant" ? "מחיקה לצמיתות מחייבת חיבור פעיל. הבקשה לא נשמרה לביצוע מאוחר." : "נדרש חיבור לשליחת הודעה. ההודעה לא נשמרה לשליחה מאוחרת.");
+      if (intent.type === "permanently_delete_participant") {
+        try { await mentoringOfflineStore.assertParticipantReadyForPurge(scope, intent.participantId); }
+        catch (error) { return failure("conflict", errorFor(error).message); }
+        if (!this.isCurrent(submittedEpoch) || this.scope?.key !== scope.key) return failure("not_authenticated", "החשבון השתנה. יש לפתוח מחדש את הכרטיס.");
+      }
       try {
         // Manual messages never enter the offline queue, even after a lost response.
         const response = await fetch("/api/mentoring/commands", { method: "POST", credentials: "same-origin", cache: "no-store", headers: { "Content-Type": "application/json", Accept: "application/json", "X-Mentoring-Account": scope.accountId }, body: JSON.stringify(intent) });
@@ -390,7 +397,26 @@ class WorkspaceController {
           return result;
         }
         if (response.status < 500 && response.status !== 408 && response.status !== 429 && responseFailure) return responseFailure;
-        if (response.ok && payload && typeof payload === "object" && "ok" in payload && payload.ok === true && "operationId" in payload && payload.operationId === intent.operationId && "acceptance" in payload && payload.acceptance === "accepted" && "staffSmsBatchId" in payload && payload.staffSmsBatchId === intent.operationId) {
+        const matchingResult = payload && typeof payload === "object" && (intent.type === "send_staff_sms" ? "staffSmsBatchId" in payload && payload.staffSmsBatchId === intent.operationId : "participantId" in payload && payload.participantId === intent.participantId);
+        if (response.ok && payload && typeof payload === "object" && "ok" in payload && payload.ok === true && "operationId" in payload && payload.operationId === intent.operationId && "acceptance" in payload && payload.acceptance === "accepted" && matchingResult) {
+          if (intent.type === "permanently_delete_participant") {
+            try {
+              await mentoringOfflineStore.purgeParticipant(scope, intent.participantId);
+              await this.restore(submittedEpoch);
+              if (typeof BroadcastChannel !== "undefined") {
+                const channel = new BroadcastChannel(MENTORING_OFFLINE_CHANNEL);
+                channel.postMessage({ type: "participant_purged", organizationId: scope.organizationId });
+                channel.close();
+              }
+              if (typeof window !== "undefined") window.dispatchEvent(new Event("mentoring-participant-purged"));
+            } catch {
+              if (!this.isCurrent(submittedEpoch) || this.scope?.key !== scope.key) return failure("not_authenticated", "החשבון השתנה לפני סיום ניקוי המידע. יש לבדוק את הכרטיס בחשבון המקורי.");
+              lockMentoringOfflineData();
+              await this.invalidate(failure("unavailable", "הכרטיס נמחק במערכת, אך ניקוי המידע המקומי לא הושלם. הגישה המקומית ננעלה; יש לרענן עם חיבור כדי להשלים את הניקוי."));
+              return failure("unavailable", "הכרטיס נמחק במערכת. יש לרענן עם חיבור כדי להשלים את ניקוי המידע המקומי.");
+            }
+          }
+          if (!this.isCurrent(submittedEpoch) || this.scope?.key !== scope.key) return failure("not_authenticated", "החשבון השתנה לפני סיום הפעולה. יש להיכנס מחדש לחשבון המקורי ולבדוק את הכרטיס.");
           void this.refresh();
           return payload as CommandResult;
         }
@@ -439,6 +465,7 @@ class WorkspaceController {
   };
 
   online = () => { this.reachable = true; this.update({}); void this.refresh(); };
+  participantPurged = () => { void this.restore().then(() => this.refresh()); };
   offline = () => { this.reachable = false; this.update({}); void this.restore(); };
   checkLease = () => { if (!this.reachable) void this.restore(); };
   activate = () => { this.disposed = false; if (this.auth.loaded && this.auth.userId) void this.refresh(); };
@@ -469,10 +496,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const storage = () => { if (!isMentoringOfflineAccessPrepared()) controller.externalClear(); };
     const focus = () => { if (document.visibilityState === "visible") { if (navigator.onLine) void controller.refresh(); else controller.checkLease(); } };
     const channel = typeof BroadcastChannel !== "undefined" ? new BroadcastChannel(MENTORING_OFFLINE_CHANNEL) : null;
-    if (channel) channel.onmessage = (event: MessageEvent<unknown>) => { if (event.data && typeof event.data === "object" && "type" in event.data && (event.data.type === "cleared" || event.data.type === "locked")) clear(); };
+    if (channel) channel.onmessage = (event: MessageEvent<unknown>) => { if (event.data && typeof event.data === "object" && "type" in event.data) {
+      if (event.data.type === "cleared" || event.data.type === "locked") clear();
+      else if (event.data.type === "participant_purged" && "organizationId" in event.data && event.data.organizationId === controller.getSnapshot().snapshot?.actor.organizationId) controller.participantPurged();
+    } };
     window.addEventListener("online", controller.online);
     window.addEventListener("offline", controller.offline);
     window.addEventListener("mentoring-private-cleared", clear);
+    window.addEventListener("mentoring-participant-purged", controller.participantPurged);
     window.addEventListener("storage", storage);
     document.addEventListener("visibilitychange", focus);
     const interval = window.setInterval(controller.checkLease, 30_000);
@@ -480,6 +511,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       window.removeEventListener("online", controller.online);
       window.removeEventListener("offline", controller.offline);
       window.removeEventListener("mentoring-private-cleared", clear);
+      window.removeEventListener("mentoring-participant-purged", controller.participantPurged);
       window.removeEventListener("storage", storage);
       document.removeEventListener("visibilitychange", focus);
       window.clearInterval(interval);
@@ -511,7 +543,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   // so an old form's delayed write cannot enter the next signed-in account.
   const drafts = useMemo(() => ({
     submit: (command: MentoringCommand) => controller.submit(command, accountId),
-    submitOnline: (command: Extract<MentoringCommand, { type: "send_staff_sms" }>) => controller.submitOnline(command, accountId),
+    submitOnline: (command: OnlineCommand) => controller.submitOnline(command, accountId),
     readDraft: <T,>(key: string) => controller.readDraft<T>(accountId, key, accessKey),
     writeDraft: <T,>(key: string, value: T) => controller.writeDraft(accountId, key, value, accessKey),
     clearDraft: (key: string) => controller.clearDraft(accountId, key, accessKey),

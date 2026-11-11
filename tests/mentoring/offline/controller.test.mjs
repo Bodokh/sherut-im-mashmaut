@@ -710,6 +710,74 @@ test('a coordinator can autosave a newly queued participant child form through t
 });
 
 
+for (const initiallyOnline of [true, false]) test(`mentor creation and first report use the real controller ${initiallyOnline ? 'online' : 'offline with ordered reconnect'}`, async () => {
+  Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { onLine: true } });
+  await offline.mentoringOfflineStore.clear();
+  let authoritative = snapshot();
+  authoritative.actor = { ...authoritative.actor, role: 'mentor', coordinatorId: 'coordinator_A' };
+  authoritative.staff = [authoritative.actor, { ...authoritative.actor, id: 'coordinator_A', role: 'coordinator', coordinatorId: null }];
+  authoritative.participants[0].allowedActions = [];
+  const create = { type: 'create_participant', operationId: crypto.randomUUID(), fields: { displayName: 'mentor created participant', phone: '+972501234567' } };
+  const contact = { type: 'record_contact', operationId: crypto.randomUUID(), participantId: create.operationId, expectedVersion: 1, expectedAppointmentVersion: null,
+    method: 'phone', outcome: 'completed', occurredAt: new Date(Date.now() - 60_000).toISOString(), nextAppointmentAt: new Date(Date.now() + 86_400_000).toISOString(), notes: 'first completed report' };
+  const posted = [];
+  globalThis.fetch = async (_url, options) => {
+    if (!options?.method) return Response.json(authoritative);
+    const intent = JSON.parse(options.body);
+    posted.push(intent);
+    assert.equal(options.headers['X-Mentoring-Account'], 'A');
+    authoritative = offline.applyOptimisticCommand(authoritative, { command: intent, status: 'pending', queuedAt: new Date().toISOString() }, true);
+    return Response.json({ ok: true, acceptance: 'accepted', operationId: intent.operationId, replayed: false, participantId: create.operationId });
+  };
+  const controller = new Controller();
+  try {
+    await controller.updateAuth(true, 'A');
+    const originalAccessKey = offline.offlineDraftAccessKey(controller.getSnapshot().snapshot);
+    const newDraft = { displayName: create.fields.displayName, phone: create.fields.phone, baseVersion: null };
+    await controller.writeDraft('A', 'participant-profile:new', newDraft, originalAccessKey);
+    assert.deepEqual(await controller.readDraft('A', 'participant-profile:new', originalAccessKey), newDraft);
+    await assert.rejects(controller.writeDraft('A', 'contact:p', { notes: 'unrelated case' }, originalAccessKey), { code: 'account_changed' });
+    if (!initiallyOnline) { navigator.onLine = false; controller.offline(); }
+    const createdResult = await controller.submit(create);
+    assert.equal(createdResult.acceptance, initiallyOnline ? 'accepted' : 'queued');
+    const created = controller.getSnapshot().snapshot.participants.find((view) => view.participant.id === create.operationId);
+    assert.ok(created, 'the real queue/controller path exposes the mentor own new card');
+    assert.equal(created.assignment.mentorId, authoritative.actor.id);
+    assert.equal(created.assignment.coordinatorId, 'coordinator_A');
+    assert.deepEqual(created.allowedActions, ['view', 'edit']);
+    const accessKey = offline.offlineDraftAccessKey(controller.getSnapshot().snapshot);
+    const childDraft = { notes: contact.notes, nextAppointmentAt: contact.nextAppointmentAt };
+    await controller.writeDraft('A', `contact:${create.operationId}`, childDraft, accessKey);
+    assert.equal((await controller.submit(contact)).acceptance, initiallyOnline ? 'accepted' : 'queued');
+    const session = await offline.mentoringOfflineStore.readSession('A');
+    if (!initiallyOnline) {
+      const queued = await offline.mentoringOfflineStore.operations(session.scope);
+      assert.deepEqual(queued.map((entry) => entry.command), [create, contact]);
+      assert.deepEqual(queued[1].dependsOnOperationIds, [create.operationId]);
+      await controller.refresh();
+      assert.equal(controller.getSnapshot().pendingCount, 2);
+      navigator.onLine = true;
+      await controller.refresh();
+    }
+    assert.deepEqual(posted, [create, contact], 'reconnect posts the original immutable creation before its report exactly once');
+    assert.equal(controller.getSnapshot().pendingCount, 0);
+    assert.deepEqual(controller.getSnapshot().recoveryVaults, []);
+    assert.deepEqual(controller.getSnapshot().localFailures, []);
+    assert.deepEqual(await controller.readDraft('A', `contact:${create.operationId}`, accessKey), childDraft);
+    const current = controller.getSnapshot().snapshot.participants.find((view) => view.participant.id === create.operationId);
+    assert.equal(current.contacts.length, 1);
+    assert.equal(current.contacts[0].id, contact.operationId);
+    assert.equal(current.participant.version, 2);
+    assert.equal((await controller.submit(create)).replayed, true);
+    await controller.refresh();
+    assert.equal(posted.length, 2);
+  } finally {
+    controller.dispose();
+    navigator.onLine = true;
+    await offline.mentoringOfflineStore.clear();
+  }
+});
+
 test('accepted historical contact corrections on paused and closed cases survive a failed follow-up refresh', async () => {
   for (const lifecycle of ['paused', 'closed']) {
     Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { onLine: true } });

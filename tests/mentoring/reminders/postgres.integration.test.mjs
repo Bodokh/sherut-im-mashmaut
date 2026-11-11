@@ -78,9 +78,11 @@ test("durable reminder claims honor current contact/account scope and retain tru
   await t.test("dedup, scoped diagnostics, missing integration, and no invented delivery", async () => {
     const id = await fixture();
     await transaction((client) => rebuildParticipantReminders(client, organizationId, id, ceo.id, null, now, accepted));
+    assert.equal((await database.query("SELECT appointment_reminder_minutes_before FROM mentoring.organization_settings WHERE organization_id=$1", [organizationId])).rows[0].appointment_reminder_minutes_before, 4320);
     assert.equal(Number((await database.query("SELECT count(*) FROM mentoring.reminder_jobs WHERE organization_id=$1 AND participant_id=$2", [organizationId, id])).rows[0].count), 6);
     const extras = await transaction((client) => loadReminderExtras(client, coordinator, [id]));
     assert.equal(extras.reminders.length, 6);
+    assert.deepEqual([...new Set(extras.reminders.map((item) => item.recipientStaffId))].sort(), [mentor.id, coordinator.id].sort());
     assert.equal(extras.reminderReadiness.smsProviderConfigured, false);
     assert.equal(extras.reminderReadiness.smsCredentialsConfigured, false);
     assert.equal(extras.reminderReadiness.smsSendingEnabled, false);
@@ -116,7 +118,7 @@ test("durable reminder claims honor current contact/account scope and retain tru
     await pause(id);
   });
 
-  await t.test("all-staff delivery discloses a mentee phone only with current view access", async (context) => {
+  await t.test("legacy all-staff policies and view grants cannot deliver to an unrelated mentor", async (context) => {
     const previousAudience = (await database.query("SELECT reminder_audience FROM mentoring.organization_settings WHERE organization_id=$1", [organizationId])).rows[0].reminder_audience;
     await database.query("UPDATE mentoring.organization_settings SET reminder_audience='all_staff' WHERE organization_id=$1", [organizationId]);
     try {
@@ -124,18 +126,100 @@ test("durable reminder claims honor current contact/account scope and retain tru
         await context.test(label, async () => {
           const id = await fixture();
           if (grant) await database.query("INSERT INTO mentoring.grants(id,organization_id,staff_id,participant_id,actions,active,expires_at) VALUES($1,$2,$3,$4,ARRAY['view'],$5,$6)", [randomUUID(), organizationId, outsider.id, id, grant.active, grant.expiresAt]);
-          const queued = await job(id, outsider.id);
-          const claim = await transaction((client) => claimReminder(client, ceo, queued.id, now, accepted));
-          assert.ok(claim);
-          assert.equal(claim.recipient, outsider.phone);
-          assert.equal(claim.message.includes("+972529999999"), label === "active grant");
+          assert.equal(await job(id, outsider.id), undefined, "New planning is limited to the assigned team even with a saved all-staff policy.");
+          const source = await job(id);
+          const legacyId = randomUUID();
+          await database.query(`INSERT INTO mentoring.reminder_jobs
+            (id,organization_id,participant_id,recipient_staff_id,kind,occurrence_key,generation,scheduled_at,reference_at,state,last_evaluated_by,created_at,updated_at)
+            VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending',$10,$11,$11)`,
+          [legacyId, organizationId, id, outsider.id, source.kind, source.occurrence_key, source.generation, source.scheduled_at, source.reference_at, ceo.id, now]);
+          assert.equal(await transaction((client) => claimReminder(client, ceo, legacyId, now, accepted)), null, "An old queued audience cannot bypass current recipient responsibility.");
+          assert.equal((await stateFor(legacyId)).state, "cancelled");
+          assert.equal(Number((await database.query("SELECT count(*) FROM mentoring.reminder_attempts WHERE organization_id=$1 AND job_id=$2", [organizationId, legacyId])).rows[0].count), 0);
+          const claim = await transaction((client) => claimReminder(client, ceo, source.id, now, accepted));
+          assert.ok(claim, "Rejecting unrelated recipients must preserve delivery to the assigned mentor.");
+          assert.equal(claim.recipient, mentor.phone);
+          assert.ok(claim.message.includes("+972529999999"));
           assert.equal(claim.message.includes("PRIVATE"), false);
-          await transaction((client) => recordReminderResult(client, claim, { state: "provider_accepted", providerReference: "test-view-access" }, now));
+          await transaction((client) => recordReminderResult(client, claim, { state: "provider_accepted", providerReference: "test-responsible-access" }, now));
           await pause(id);
         });
       }
     } finally {
       await database.query("UPDATE mentoring.organization_settings SET reminder_audience=$2 WHERE organization_id=$1", [organizationId, previousAudience]);
+    }
+  });
+
+  await t.test("weekly cycles deduplicate, skip missed runs without bursts, ignore no-answer and reset on a completed report", async () => {
+    const id = await fixture();
+    const anchor = "2030-10-01T07:00:00.000Z";
+    const delayed = "2030-11-01T09:00:00.000Z";
+    const rebuild = (time) => transaction((client) => rebuildParticipantReminders(client, organizationId, id, ceo.id, null, time, accepted));
+    const current = () => database.query("SELECT * FROM mentoring.reminder_jobs WHERE organization_id=$1 AND participant_id=$2 AND kind='seven_day_overdue' AND state IN ('pending','blocked') ORDER BY recipient_staff_id", [organizationId, id]);
+    await transaction((client) => complete(client, id, anchor));
+    await rebuild(delayed);
+    const latest = (await current()).rows;
+    assert.equal(latest.length, 2, "Each responsible recipient gets only the latest due week after four missed runs");
+    assert.equal(latest.every((row) => row.scheduled_at.toISOString() === "2030-10-29T08:00:00.000Z"), true, "The local wall clock remains 10:00 after Israel's DST change");
+    for (const row of latest) {
+      const claim = await transaction((client) => claimReminder(client, ceo, row.id, delayed, accepted));
+      assert.ok(claim);
+      await transaction((client) => recordReminderResult(client, claim, { state: "provider_accepted", providerReference: `weekly-proof-${row.recipient_staff_id}` }, delayed));
+      assert.equal(await transaction((client) => claimReminder(client, ceo, row.id, delayed, accepted)), null);
+    }
+    await rebuild("2030-11-02T10:00:00.000Z");
+    assert.equal((await current()).rows.length, 0, "An accepted occurrence cannot resend within the same week");
+    const noAnswer = randomUUID();
+    await database.query("INSERT INTO mentoring.resource_ids(id,organization_id,kind) VALUES($1,$2,'contact')", [noAnswer, organizationId]);
+    await database.query("INSERT INTO mentoring.contacts(id,organization_id,participant_id,actor_id,method,outcome,occurred_at,received_at) VALUES($1,$2,$3,$4,'phone','no_answer',$5,$5)", [noAnswer, organizationId, id, mentor.id, "2030-11-02T09:00:00Z"]);
+    await rebuild("2030-11-02T10:00:00.000Z");
+    assert.equal((await current()).rows.length, 0, "No-answer does not create a fresh cycle or duplicate accepted notices");
+    await rebuild("2030-11-05T08:00:00.000Z");
+    const nextWeek = (await current()).rows;
+    assert.equal(nextWeek.length, 2);
+    assert.equal(nextWeek.every((row) => row.scheduled_at.toISOString() === "2030-11-05T08:00:00.000Z"), true);
+    assert.equal(nextWeek.some((row) => latest.some((previous) => previous.occurrence_key === row.occurrence_key)), false);
+    await transaction((client) => complete(client, id, "2030-11-05T09:00:00.000Z"));
+    await rebuild("2030-11-05T09:00:00.000Z");
+    for (const row of nextWeek) {
+      assert.equal((await stateFor(row.id)).state, "cancelled");
+      assert.equal(await transaction((client) => claimReminder(client, ceo, row.id, "2030-11-05T09:00:00.000Z", accepted)), null, "A stale weekly claim cannot survive the completed report");
+    }
+    const fresh = (await current()).rows;
+    assert.equal(fresh.length, 2);
+    assert.equal(fresh.every((row) => row.scheduled_at.toISOString() === "2030-11-12T09:00:00.000Z"), true, "The new completed report starts a fresh seven-day cycle");
+    assert.equal(await transaction((client) => claimReminder(client, ceo, fresh[0].id, "2030-11-12T08:59:59.999Z", accepted)), null);
+    assert.ok(await transaction((client) => claimReminder(client, ceo, fresh[0].id, "2030-11-12T09:00:00.000Z", accepted)));
+    assert.equal(Number((await database.query("SELECT count(*) FROM mentoring.reminder_attempts WHERE organization_id=$1 AND participant_id=$2", [organizationId, id])).rows[0].count), 3);
+    await pause(id);
+  });
+
+  await t.test("notes-only report revisions retain prior delivery keys and cannot duplicate a weekly external effect", async (context) => {
+    for (const outcome of ["dispatching", "provider_accepted", "delivered", "uncertain", "failed"]) {
+      await context.test(outcome, async () => {
+        const id = await fixture();
+        const anchor = new Date(Date.parse(now) - 10 * 86_400_000).toISOString();
+        const contactId = await transaction((client) => complete(client, id, anchor));
+        const queued = (await database.query("SELECT * FROM mentoring.reminder_jobs WHERE organization_id=$1 AND participant_id=$2 AND recipient_staff_id=$3 AND kind='seven_day_overdue' AND state='pending'", [organizationId, id, mentor.id])).rows[0];
+        const claim = await transaction((client) => claimReminder(client, ceo, queued.id, now, accepted));
+        assert.ok(claim);
+        if (outcome !== "dispatching") await transaction((client) => recordReminderResult(client, claim, { state: outcome, ...(["provider_accepted", "delivered"].includes(outcome) ? { providerReference: `revision-proof-${outcome}` } : {}) }, now));
+        const jobBefore = await stateFor(queued.id);
+        const attemptsBefore = (await database.query("SELECT * FROM mentoring.reminder_attempts WHERE organization_id=$1 AND job_id=$2 ORDER BY id", [organizationId, queued.id])).rows;
+        await database.query("UPDATE mentoring.contacts SET revision=revision+1,notes='Notes corrected without changing the contact time' WHERE organization_id=$1 AND id=$2", [organizationId, contactId]);
+        await database.query("UPDATE mentoring.participants SET version=version+1 WHERE organization_id=$1 AND id=$2", [organizationId, id]);
+        await transaction((client) => rebuildParticipantReminders(client, organizationId, id, ceo.id, null, now, accepted));
+        assert.deepEqual(await stateFor(queued.id), jobBefore, "Known/uncertain/failed delivery evidence and its legacy key are never rekeyed");
+        assert.deepEqual((await database.query("SELECT * FROM mentoring.reminder_attempts WHERE organization_id=$1 AND job_id=$2 ORDER BY id", [organizationId, queued.id])).rows, attemptsBefore);
+        assert.equal(Number((await database.query("SELECT count(*) FROM mentoring.reminder_jobs WHERE organization_id=$1 AND participant_id=$2 AND recipient_staff_id=$3 AND kind='seven_day_overdue' AND state IN ('pending','blocked')", [organizationId, id, mentor.id])).rows[0].count), 0, "Correcting notes cannot create a second job for that same contact week");
+        assert.equal(await transaction((client) => claimReminder(client, ceo, queued.id, now, accepted)), null);
+        await transaction((client) => rebuildParticipantReminders(client, organizationId, id, ceo.id, null, new Date(Date.parse(now) + 7 * 86_400_000).toISOString(), accepted));
+        assert.equal(Number((await database.query("SELECT count(*) FROM mentoring.reminder_jobs WHERE organization_id=$1 AND participant_id=$2 AND recipient_staff_id=$3 AND kind='seven_day_overdue' AND state='pending'", [organizationId, id, mentor.id])).rows[0].count), 1, "The next weekly occurrence still becomes available");
+        // Finish this deliberately unsent test claim so a later organization-
+        // wide lease-expiry test observes only the claim it creates itself.
+        if (outcome === "dispatching") await transaction((client) => recordReminderResult(client, claim, { state: "failed" }, now));
+        await pause(id);
+      });
     }
   });
 
@@ -195,13 +279,17 @@ test("durable reminder claims honor current contact/account scope and retain tru
     await pause(id);
   });
 
-  await t.test("current CEO mute, account activity, phone, and lifecycle are rechecked at claim", async () => {
+  await t.test("CEOs are excluded and account activity, phone, and lifecycle are rechecked at claim", async () => {
     const id = await fixture();
+    const legacySource = await job(id);
+    await database.query(`INSERT INTO mentoring.reminder_jobs
+      (id,organization_id,participant_id,recipient_staff_id,kind,occurrence_key,generation,scheduled_at,reference_at,state,last_evaluated_by,created_at,updated_at)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending',$4,$10,$10)`,
+    [randomUUID(), organizationId, id, ceo.id, legacySource.kind, legacySource.occurrence_key, legacySource.generation, legacySource.scheduled_at, legacySource.reference_at, now]);
     const ceoJob = await job(id, ceo.id);
-    await database.query("UPDATE mentoring.memberships SET sms_muted=true,version=version+1 WHERE organization_id=$1 AND id=$2", [organizationId, ceo.id]);
+    await database.query("UPDATE mentoring.memberships SET sms_muted=false,version=version+1 WHERE organization_id=$1 AND id=$2", [organizationId, ceo.id]);
     assert.equal(await transaction((client) => claimReminder(client, ceo, ceoJob.id, now, accepted)), null);
     assert.equal((await job(id, ceo.id)).state, "cancelled");
-    await database.query("UPDATE mentoring.memberships SET sms_muted=false,version=version+1 WHERE organization_id=$1 AND id=$2", [organizationId, ceo.id]);
     await database.query("UPDATE mentoring.memberships SET phone='invalid',version=version+1 WHERE organization_id=$1 AND id=$2", [organizationId, mentor.id]);
     const mentorJob = await job(id);
     assert.equal(await transaction((client) => claimReminder(client, ceo, mentorJob.id, now, accepted)), null);

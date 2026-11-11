@@ -69,6 +69,8 @@ export interface WorkspaceSnapshot {
   readonly actor: StaffProfile;
   readonly staff: readonly StaffProfile[];
   readonly participants: readonly ParticipantView[];
+  /** Content-free tombstones let an authenticated device erase deleted local work on refresh. */
+  readonly permanentlyDeletedParticipantIds?: readonly string[];
   readonly conflicts: readonly ConflictView[];
   readonly serverTime: string;
   readonly offlineValidUntil: string;

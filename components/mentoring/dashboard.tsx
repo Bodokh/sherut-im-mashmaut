@@ -22,6 +22,7 @@ import {
 } from "@/components/staff/ui/card";
 import { Separator } from "@/components/staff/ui/separator";
 import { useWorkspace } from "@/lib/mentoring/workspace-client";
+import type { ParticipantView } from "@/lib/mentoring/contracts";
 import {
   ContactLink,
   FollowupBadge,
@@ -35,6 +36,35 @@ import {
 } from "./common";
 import { formatDateTime } from "./format";
 import { ParticipantEditor } from "./participant-forms";
+import { coordinatorGroups, personalParticipants } from "./personal-area-state";
+
+function ResponsibilityList({ participants }: { participants: readonly ParticipantView[] }) {
+  if (!participants.length) return <p className="text-sm text-muted-foreground">אין כרגע חניכות משויכות.</p>;
+  return <ul className="grid gap-2 sm:grid-cols-2">
+    {participants.map((view) => <li key={view.participant.id} className="min-w-0">
+      <Link href={staffPublicPath(`/staff/participants/${encodeURIComponent(view.participant.id)}`)}
+        className="flex min-h-14 items-center justify-between gap-3 rounded-xl border p-3 outline-offset-4 hover:bg-muted/50">
+        <div className="min-w-0">
+          <p className="break-words font-medium">{view.participant.displayName || "חניכה ללא שם"}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{view.participant.lifecycle === "active" ? "בליווי פעיל" : view.participant.lifecycle === "paused" ? "הליווי בהשהיה" : "הליווי הסתיים"}{view.participant.localPending ? " · ממתינה לאישור" : ""}</p>
+        </div>
+        <ArrowLeftIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+      </Link>
+    </li>)}
+  </ul>;
+}
+
+function CoordinatorResponsibilityList({ groups }: { groups: ReturnType<typeof coordinatorGroups> }) {
+  if (!groups.length) return <SectionEmpty title="הצוות שלך יופיע כאן" description="אפשר להוסיף חונך/ת לצוות או חניכה חדשה באמצעות הכפתורים במערכת." />;
+  return groups.map(({ mentor, participants }) => <section key={mentor?.id ?? "unassigned"} className="flex min-w-0 flex-col gap-3">
+    <div className="flex flex-wrap items-center gap-2">
+      <h3 className="break-words text-sm font-semibold">{mentor?.displayName ?? "חניכות נוספות באחריותי"}</h3>
+      <Badge variant="outline">{participants.length} חניכות</Badge>
+      {mentor && !mentor.active && <Badge variant="outline">{mentor.localPending ? "בקשת חברות ממתינה לאישור" : "ללא גישה פעילה"}</Badge>}
+    </div>
+    <ResponsibilityList participants={participants} />
+  </section>);
+}
 
 export function DashboardView() {
   const { snapshot } = useWorkspace();
@@ -83,15 +113,17 @@ export function DashboardView() {
     0,
   );
   const management = snapshot.actor.role !== "mentor";
+  const ownParticipants = personalParticipants(snapshot.actor, snapshot.participants);
+  const groups = snapshot.actor.role === "coordinator" ? coordinatorGroups(snapshot.actor, snapshot.staff, snapshot.participants) : [];
 
   return (
     <>
       <PageHeading
-        title={`שלום, ${snapshot.actor.displayName.split(/\s+/)[0] || snapshot.actor.displayName}`}
-        description="תמונת המצב של הליווי, הפגישות הקרובות והחניכות שזקוקות לתשומת לב."
+        title="האזור האישי שלי"
+        description={`שלום, ${snapshot.actor.displayName.split(/\s+/)[0] || snapshot.actor.displayName}. כאן מרוכזים הצוות, החניכות והמעקבים שבאחריותך.`}
         action={
           <>
-            {management && <ParticipantEditor />}
+            <ParticipantEditor />
             <ContactLink primary={!management} />
           </>
         }
@@ -171,6 +203,17 @@ export function DashboardView() {
           </CardFooter>
         </Card>
       </section>
+      <Card id="my-participants" className="scroll-mt-28" role="region" aria-labelledby="my-participants-title">
+        <CardHeader>
+          <CardTitle><h2 id="my-participants-title">{snapshot.actor.role === "coordinator" ? "הצוות והחניכות באחריותי" : snapshot.actor.role === "ceo" ? "החניכות במערך הליווי" : "החניכות שלי"}</h2></CardTitle>
+          <CardDescription>כל כרטיסי החניכות שבאחריותך, כולל ליווי בהשהיה וליווי שהסתיים. פתיחת הכרטיס מציגה את הפרטים ואת היסטוריית המעקב.</CardDescription>
+          <CardAction><Badge variant="secondary">{ownParticipants.length} חניכות</Badge></CardAction>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-6">
+          {snapshot.actor.role === "coordinator" ? <CoordinatorResponsibilityList groups={groups} /> : <ResponsibilityList participants={ownParticipants} />}
+        </CardContent>
+        {snapshot.actor.role === "coordinator" && <CardFooter><Button variant="link" nativeButton={false} render={<Link href={staffPublicPath("/staff/team")} />}>לפרטי הצוות שלי<ArrowLeftIcon data-icon="inline-end" /></Button></CardFooter>}
+      </Card>
       <div className="grid items-stretch gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         <Card id="attention" className="h-full scroll-mt-28 pb-0">
           <CardHeader>
@@ -233,7 +276,7 @@ export function DashboardView() {
                     ? "אין כרגע פערים במעקב השבועי או בקביעת הפגישה הבאה."
                     : management
                       ? "כדי להתחיל ליווי מסודר, אפשר להוסיף חניכה ולשייך לה חונך/ת."
-                      : "החניכות שישויכו לחשבון שלך יופיעו כאן, עם תמונת מצב ומועד הקשר הבא."
+                      : "אפשר להוסיף חניכה חדשה. היא תשויך אליך ותופיע כאן עם תמונת המצב ומועד הקשר הבא."
                 }
               />
             )}

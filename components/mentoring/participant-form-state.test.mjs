@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assignmentScope, canEditParticipant, changedParticipantFields, createdParticipantFields, fieldIsProtected, participantFormFields, participantInputError } from "./participant-form-state.ts";
+import { assignmentScope, canCreateParticipant, canEditParticipant, changedParticipantFields, createdParticipantFields, fieldIsProtected, participantFormFields, participantInputError } from "./participant-form-state.ts";
 import { reconcileStoredDraft } from "./draft-state.ts";
 import { parseCommand } from "../../lib/mentoring/validation.ts";
 
@@ -19,16 +19,22 @@ const staff = [
 
 const emptyCreateValues = { displayName: "", phone: "", serviceType: "unknown", servicePlace: "", serviceRole: "", profileNotes: "", baseVersion: null };
 
-test("a CEO name-only create protects the supplied name while an authorized mentor can fill the blank phone", () => {
+test("a CEO name-only create remains editable by an authorized mentor until explicitly protected", () => {
   const fields = createdParticipantFields({ ...emptyCreateValues, displayName: " רות " });
   assert.deepEqual(fields, { displayName: "רות" });
-  const scoped = [{ ...protection, fieldPaths: Object.keys(fields) }];
   const mentor = { ...actor, id: "mentor", role: "mentor" };
   const created = { ...participant, displayName: "רות", phone: null, serviceType: null, servicePlace: null, serviceRole: null, profileNotes: null, createdBy: "ceo" };
   assert.equal(canEditParticipant(mentor, { ...view, participant: created, allowedActions: ["view", "edit"] }), true);
-  assert.equal(fieldIsProtected(mentor, participant.id, scoped, "displayName"), true);
-  assert.equal(fieldIsProtected(mentor, participant.id, scoped, "phone"), false);
-  assert.deepEqual(changedParticipantFields({ ...emptyCreateValues, displayName: "שם חלופי", phone: "0501112222" }, created, mentor, scoped), { phone: "+972501112222" });
+  assert.equal(fieldIsProtected(mentor, participant.id, [], "displayName"), false);
+  assert.deepEqual(changedParticipantFields({ ...emptyCreateValues, displayName: "שם חלופי", phone: "0501112222" }, created, mentor, []), { displayName: "שם חלופי", phone: "+972501112222" });
+});
+
+test("all active staff roles can create participants while pending or inactive actors cannot", () => {
+  for (const role of ["mentor", "coordinator", "ceo"]) {
+    assert.equal(canCreateParticipant({ ...actor, role }), true);
+    assert.equal(canCreateParticipant({ ...actor, role, active: false }), false);
+    assert.equal(canCreateParticipant({ ...actor, role, localPending: true }), false);
+  }
 });
 
 test("create preserves every supplied input after normalization", () => {
