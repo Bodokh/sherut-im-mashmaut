@@ -9,6 +9,8 @@ import { ContactFormView } from "@/components/mentoring/contact-form";
 import { ConflictsView, ReviewsView, SettingsView, TeamView } from "@/components/mentoring/management";
 import { MonthlyOversightView } from "@/components/mentoring/monthly-oversight";
 import { ReminderCenter } from "@/components/mentoring/reminder-center";
+import { MentorCardView, MentorsView } from "@/components/mentoring/mentor-cards";
+import { CoordinatorsView, OrganizationTreeView } from "@/components/mentoring/team-overview";
 import { staffPathsAtRoot, toStaffInternalPath } from "@/lib/staff-host";
 
 function subscribe(listener: () => void) {
@@ -32,6 +34,11 @@ function OfflineRouteContent() {
   if (path === "/staff/settings") return <SettingsView />;
   if (path === "/staff/oversight") return <MonthlyOversightView initialMonth={url.searchParams.get("month") ?? undefined} />;
   if (path === "/staff/reminders") return <ReminderCenter />;
+  if (path === "/staff/coordinators") return <CoordinatorsView />;
+  if (path === "/staff/tree") return <OrganizationTreeView />;
+  if (path === "/staff/mentors") return <MentorsView />;
+  const mentor = path.match(/^\/staff\/mentors\/([^/]+)$/);
+  if (mentor) return <MentorCardView mentorId={decodeURIComponent(mentor[1])} />;
   return <DashboardView />;
 }
 

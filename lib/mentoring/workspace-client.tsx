@@ -8,7 +8,9 @@ import { isMentoringOfflineAccessPrepared, isOfflineDraftAccessCurrent, offlineD
 
 type WorkspaceError = { readonly message: string; readonly code?: string };
 type Connection = "online" | "offline" | "syncing" | "conflict";
-type OnlineCommand = Extract<MentoringCommand, { type: "send_staff_sms" | "permanently_delete_participant" }>;
+type OnlineCommand = Extract<MentoringCommand, { type: "send_staff_sms" | "permanently_delete_participant" | "save_tracking_card" | "record_tracking_report" }>;
+const isOnlineCommand = (command: MentoringCommand): command is OnlineCommand => command.type === "send_staff_sms" || command.type === "permanently_delete_participant" || command.type === "save_tracking_card" || command.type === "record_tracking_report";
+const isTrackingCommand = (command: OnlineCommand): command is Extract<OnlineCommand, { type: "save_tracking_card" | "record_tracking_report" }> => command.type === "save_tracking_card" || command.type === "record_tracking_report";
 interface WorkspaceState {
   readonly snapshot: WorkspaceSnapshot | null;
   readonly loading: boolean;
@@ -64,7 +66,7 @@ const apiFailureMessages: Record<ApiFailure["error"]["code"], string> = {
 };
 const validationLabels: Record<string, string> = {
   displayName: "השם", confirmationName: "שם החניכה לאישור המחיקה", email: "כתובת הדוא״ל", phone: "מספר הטלפון", role: "התפקיד", coordinatorId: "הרכז/ת", mentorId: "החונך/ת",
-  serviceType: "סוג השירות", servicePlace: "מקום השירות", serviceRole: "התפקיד בשירות", profileNotes: "המידע הנוסף", notes: "תוכן הדיווח", reason: "הסיבה", method: "אופן הקשר", outcome: "תוצאת הקשר", occurredAt: "מועד הקשר", nextAppointmentAt: "מועד הפגישה", scheduledAt: "המועד", actions: "ההרשאות", expiresAt: "תוקף ההרשאה", summary: "הסיכום", message: "תוכן ההודעה", recipients: "הנמענים",
+  serviceType: "סוג השירות", servicePlace: "מקום השירות", serviceRole: "התפקיד בשירות", profileNotes: "המידע הנוסף", notes: "תוכן הדיווח", reason: "הסיבה", method: "אופן הקשר", outcome: "תוצאת הקשר", occurredAt: "מועד הקשר", nextAppointmentAt: "מועד הפגישה", scheduledAt: "המועד", actions: "ההרשאות", expiresAt: "תוקף ההרשאה", summary: "הסיכום", message: "תוכן ההודעה", recipients: "הנמענים", status: "הסימון", nextFollowupAt: "מועד המעקב הבא", subject: "הכרטיס",
 };
 
 /** Only recognized, well-formed failures are definitive; never surface server text. */
@@ -336,7 +338,7 @@ class WorkspaceController {
   };
 
   submit = (command: MentoringCommand, accountId: string | null = this.scope?.accountId ?? null): Promise<CommandResult> => {
-    if (command.type === "send_staff_sms" || command.type === "permanently_delete_participant") return this.submitOnline(command, accountId);
+    if (isOnlineCommand(command)) return this.submitOnline(command, accountId);
     const submittedScope = this.scope;
     const submittedEpoch = this.epoch;
     const intent = structuredClone(command);
@@ -378,8 +380,9 @@ class WorkspaceController {
     const task = this.submitTask.catch(() => undefined).then(async (): Promise<CommandResult> => {
       const scope = this.scope;
       if (!scope || !submittedScope || scope.accountId !== accountId || scope.key !== submittedScope.key || !this.isCurrent(submittedEpoch) || !this.auth.loaded || this.auth.userId !== scope.accountId || this.authorizedEpoch !== submittedEpoch) return failure("not_authenticated", "החשבון השתנה או נדרש אימות מחדש. יש לפתוח מחדש את מסך ההודעות עם חיבור.");
-      if (!this.state.snapshot?.actor.active || this.state.snapshot.actor.role !== "ceo") return failure("forbidden", "הפעולה זמינה להנהלה בלבד.");
-      if (!this.reachable || (typeof navigator !== "undefined" && !navigator.onLine)) return failure("unavailable", intent.type === "permanently_delete_participant" ? "מחיקה לצמיתות מחייבת חיבור פעיל. הבקשה לא נשמרה לביצוע מאוחר." : "נדרש חיבור לשליחת הודעה. ההודעה לא נשמרה לשליחה מאוחרת.");
+      const actorRole = this.state.snapshot?.actor.role;
+      if (!this.state.snapshot?.actor.active || !(actorRole === "ceo" || (isTrackingCommand(intent) && actorRole === "coordinator"))) return failure("forbidden", isTrackingCommand(intent) ? "כרטיסי המעקב זמינים למנכ״ל ולרכזות בלבד." : "הפעולה זמינה להנהלה בלבד.");
+      if (!this.reachable || (typeof navigator !== "undefined" && !navigator.onLine)) return failure("unavailable", intent.type === "permanently_delete_participant" ? "מחיקה לצמיתות מחייבת חיבור פעיל. הבקשה לא נשמרה לביצוע מאוחר." : isTrackingCommand(intent) ? "עדכון כרטיס מעקב מחייב חיבור פעיל. הבקשה לא נשמרה לביצוע מאוחר." : "נדרש חיבור לשליחת הודעה. ההודעה לא נשמרה לשליחה מאוחרת.");
       if (intent.type === "permanently_delete_participant") {
         try { await mentoringOfflineStore.assertParticipantReadyForPurge(scope, intent.participantId); }
         catch (error) { return failure("conflict", errorFor(error).message); }
@@ -397,7 +400,9 @@ class WorkspaceController {
           return result;
         }
         if (response.status < 500 && response.status !== 408 && response.status !== 429 && responseFailure) return responseFailure;
-        const matchingResult = payload && typeof payload === "object" && (intent.type === "send_staff_sms" ? "staffSmsBatchId" in payload && payload.staffSmsBatchId === intent.operationId : "participantId" in payload && payload.participantId === intent.participantId);
+        const matchingResult = payload && typeof payload === "object" && (intent.type === "send_staff_sms" ? "staffSmsBatchId" in payload && payload.staffSmsBatchId === intent.operationId
+          : isTrackingCommand(intent) ? (intent.subject.kind === "mentor" ? "staffId" in payload && payload.staffId === intent.subject.staffId : "participantId" in payload && payload.participantId === intent.subject.participantId)
+          : "participantId" in payload && payload.participantId === intent.participantId);
         if (response.ok && payload && typeof payload === "object" && "ok" in payload && payload.ok === true && "operationId" in payload && payload.operationId === intent.operationId && "acceptance" in payload && payload.acceptance === "accepted" && matchingResult) {
           if (intent.type === "permanently_delete_participant") {
             try {

@@ -200,6 +200,8 @@ function commandAllowed(snapshot: WorkspaceSnapshot, command: MentoringCommand, 
   }
   switch (command.type) {
     case "send_staff_sms": return false;
+    case "save_tracking_card": return false;
+    case "record_tracking_report": return false;
     case "create_participant": return true;
     case "create_staff": return actor.role === "ceo" || (actor.role === "coordinator" && command.fields.role === "mentor" && command.fields.coordinatorId === actor.id);
     case "resend_staff_invite": return canSendStaffInvite(actor, snapshot.staff.find((member) => member.id === command.staffId));
@@ -459,6 +461,7 @@ export function createMentoringOfflineStore(databaseName = MENTORING_OFFLINE_DAT
 
   async function enqueue(scope: OfflineScope, command: MentoringCommand, now = Date.now()): Promise<OfflineOperation> {
     if (command.type === "permanently_delete_participant") throw new OfflineStorageError("invalid_command", "מחיקה לצמיתות דורשת חיבור פעיל ואישור מפורש. היא אינה נשמרת בתור המקומי.");
+    if (command.type === "save_tracking_card" || command.type === "record_tracking_report") throw new OfflineStorageError("invalid_command", "עדכון כרטיס מעקב דורש חיבור פעיל. הבקשה לא נשמרה בתור המקומי.");
     if (command.type === "send_staff_sms") throw new OfflineStorageError("invalid_command", "שליחת SMS לצוות דורשת חיבור פעיל ואישור שליחה. ההודעה לא נשמרה בתור המקומי.");
     if (!command.operationId || command.operationId.length > 128) throw new OfflineStorageError("invalid_command", "חסר מזהה תקין לפעולה. יש לפתוח מחדש את הטופס.");
     const signature = canonical(command);

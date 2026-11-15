@@ -115,6 +115,8 @@ async function permanentlyDeleteParticipant(context: CommandContext, command: Ex
   // Explicitly purge only this participant's relational and narrative data.
   // Contact revisions/review events and appointment/color history cascade from
   // their parents; all other participant foreign keys deliberately restrict.
+  await client.query("DELETE FROM mentoring.tracking_reports WHERE organization_id=$1 AND participant_id=$2", parameters);
+  await client.query("DELETE FROM mentoring.tracking_cards WHERE organization_id=$1 AND participant_id=$2", parameters);
   await client.query("DELETE FROM mentoring.reminder_attempts WHERE organization_id=$1 AND participant_id=$2", parameters);
   await client.query("DELETE FROM mentoring.reminder_jobs WHERE organization_id=$1 AND participant_id=$2", parameters);
   await client.query("DELETE FROM mentoring.outbox WHERE organization_id=$1 AND participant_id=$2", parameters);

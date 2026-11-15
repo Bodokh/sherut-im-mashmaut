@@ -64,6 +64,8 @@ import { AssignmentEditor, ParticipantEditor } from "./participant-forms";
 import { AppointmentReviewWarning, ContactCorrectionActions, ContactFollowupActions } from "./contact-corrections";
 import { ParticipantAuthorityControls } from "./authority-controls";
 import { ParticipantHistory } from "./participant-history";
+import { TrackingCardPanel } from "./tracking-card";
+import { canUseTrackingCards } from "./tracking-state";
 
 const lifecycleNames = {
   active: "בליווי פעיל",
@@ -334,6 +336,8 @@ export function ParticipantDetailView({
       protection.active && protection.resourceId === view.participant.id,
   );
   const deleted = Boolean(view.participant.deletedAt ?? view.deletedAt);
+  const showTracking = !deleted && canUseTrackingCards(snapshot.actor);
+  const showMentorContact = Boolean(mentor && canUseTrackingCards(snapshot.actor) && (snapshot.actor.role === "ceo" || mentor.coordinatorId === snapshot.actor.id));
 
   return (
     <>
@@ -433,6 +437,7 @@ export function ParticipantDetailView({
           </TabsTrigger>
           <TabsTrigger value="profile" className="min-h-11 flex-none px-3">פרטי החניכה והליווי</TabsTrigger>
           <TabsTrigger value="changes" className="min-h-11 flex-none px-3">שינויים ואחריות</TabsTrigger>
+          {showTracking && <TabsTrigger value="tracking" className="min-h-11 flex-none px-3">כרטיס מעקב</TabsTrigger>}
         </TabsList>
         <TabsContent value="history" className="pt-5">
           <Card>
@@ -613,6 +618,16 @@ export function ParticipantDetailView({
                     {mentor?.displayName ??
                       (view.assignment ? "שיוך לחונך/ת קיים" : "טרם הוגדר שיוך")}
                   </dd>
+                  {showMentorContact && mentor && (
+                    <>
+                      <dt className="text-muted-foreground">קשר עם החונך/ת</dt>
+                      <dd className="flex flex-col gap-1">
+                        {mentor.phone ? <a className="inline-flex min-h-11 items-center text-primary underline underline-offset-4" dir="ltr" href={`tel:${mentor.phone.replace(/[^\d+]/g, "")}`}>{mentor.phone}</a> : <span className="text-muted-foreground">אין מספר טלפון</span>}
+                        {mentor.email && <a className="inline-flex min-h-11 items-center break-all text-primary underline underline-offset-4" dir="ltr" href={`mailto:${mentor.email}`}>{mentor.email}</a>}
+                        <Link className="inline-flex min-h-11 items-center text-primary underline underline-offset-4" href={staffPublicPath(`/staff/mentors/${encodeURIComponent(mentor.id)}`)}>לכרטיס המעקב של החונך/ת</Link>
+                      </dd>
+                    </>
+                  )}
                   <dt className="text-muted-foreground">רכז/ת</dt>
                   <dd>{coordinator?.displayName ?? "טרם הוגדרה"}</dd>
                   <dt className="text-muted-foreground">מועד שיוך</dt>
@@ -633,6 +648,7 @@ export function ParticipantDetailView({
           </div>
         </TabsContent>
         <TabsContent value="changes" className="pt-5"><ParticipantHistory view={view} staff={snapshot.staff} /></TabsContent>
+        {showTracking && <TabsContent value="tracking" className="pt-5"><TrackingCardPanel kind="mentee" subjectId={view.participant.id} subjectName={view.participant.displayName || "חניכה ללא שם"} /></TabsContent>}
       </Tabs>
       <ParticipantAuthorityControls view={view} />
     </>
