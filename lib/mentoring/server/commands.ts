@@ -87,6 +87,7 @@ async function assignParticipant(client: PoolClient, actor: StaffProfile, comman
   if (!mentor) return failure("validation", "יש לבחור חונך/ת עם גישה פעילה.", "mentorId");
   if (command.coordinatorId && !coordinator) return failure("validation", "יש לבחור רכז/ת עם גישה פעילה.", "coordinatorId");
   if (actor.role === "coordinator" && (command.coordinatorId !== actor.id || mentor.coordinatorId !== actor.id)) return failure("forbidden", "אפשר לשייך חניכות רק לחונכים ולחונכות בצוות שלך.");
+  if ((mentor.coordinatorId ?? null) !== (command.coordinatorId ?? null)) return failure("validation", "החונך/ת שנבחר/ה אינו/ה בצוות של הרכז/ת שנבחר/ה. יש לבחור חונך/ת מתוך צוות הרכז/ת.", "mentorId");
   await client.query("UPDATE mentoring.assignments SET ended_at = $3 WHERE organization_id = $1 AND participant_id = $2 AND ended_at IS NULL", [actor.organizationId, view.participant.id, now]);
   if (view.nextAppointment) await client.query("UPDATE mentoring.appointments SET mentor_id = $3, version = version + 1 WHERE organization_id = $1 AND participant_id = $2 AND is_current = true", [actor.organizationId, view.participant.id, mentor.id]);
   const assignmentVersion = (view.assignment?.version ?? 0) + 1;

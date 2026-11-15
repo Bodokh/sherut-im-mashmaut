@@ -46,7 +46,7 @@ import { InlineError } from "./common";
 import { DraftStatus, useFormDraft } from "./form-draft";
 import { DraftRecovery } from "./draft-recovery";
 import { RecoveredDraft } from "./recovered-draft";
-import { assignmentScope, canCreateParticipant, canEditParticipant, changedParticipantFields, createdParticipantFields, fieldIsProtected, participantFieldNames, participantFormFields, participantInputError, type ParticipantFieldName } from "./participant-form-state";
+import { assignmentScope, canCreateParticipant, canEditParticipant, changedParticipantFields, createdParticipantFields, fieldIsProtected, initialAssignmentCoordinator, mentorsForCoordinator, participantFieldNames, participantFormFields, participantInputError, type ParticipantFieldName } from "./participant-form-state";
 
 export function ParticipantEditor({ view }: { view?: ParticipantView }) {
   const { snapshot } = useWorkspace();
@@ -465,7 +465,7 @@ function AssignmentForm({ view, onBusyChange, onClose }: {
   const [fieldError, setFieldError] = useState<{ field: "mentorId" | "coordinatorId"; message: string } | null>(null);
   const draft = useFormDraft(`assignment:${view.participant.id}`, {
     mentorId: view.assignment?.mentorId ?? "",
-    coordinatorId: snapshot?.actor.role === "coordinator" ? snapshot.actor.id : view.assignment?.coordinatorId ?? "none",
+    coordinatorId: snapshot ? initialAssignmentCoordinator(snapshot.actor, view, snapshot.staff) : "none",
     baseVersion: view.participant.version,
   });
   if (!snapshot) return null;
@@ -474,14 +474,15 @@ function AssignmentForm({ view, onBusyChange, onClose }: {
   const values = draft.value;
   const stale = draft.hydrated && currentView && values.baseVersion !== currentView.participant.version;
   const coordinatorId = snapshot.actor.role === "coordinator" ? snapshot.actor.id : values.coordinatorId;
-  const validSelection = Boolean(scope?.mentors.some((mentor) => mentor.id === values.mentorId) && (coordinatorId === "none" || scope?.coordinators.some((coordinator) => coordinator.id === coordinatorId)));
+  const teamMentors = scope ? mentorsForCoordinator(scope.mentors, coordinatorId) : [];
+  const validSelection = Boolean(teamMentors.some((mentor) => mentor.id === values.mentorId) && (coordinatorId === "none" || scope?.coordinators.some((coordinator) => coordinator.id === coordinatorId)));
   const nameFor = (id: string | null | undefined) => snapshot.staff.find((staff) => staff.id === id)?.displayName ?? "ללא שיוך";
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy || !draft.hydrated || stale || !scope?.canAssign) return;
-    if (!scope.mentors.some((mentor) => mentor.id === values.mentorId)) { setFieldError({ field: "mentorId", message: "יש לבחור חונך/ת זמין/ה מתוך הצוות העדכני." }); document.getElementById("assignment-mentor")?.focus(); return; }
     if (coordinatorId !== "none" && !scope.coordinators.some((coordinator) => coordinator.id === coordinatorId)) { setFieldError({ field: "coordinatorId", message: "יש לבחור רכז/ת זמין/ה או להסיר את השיוך." }); document.getElementById("assignment-coordinator")?.focus(); return; }
+    if (!teamMentors.some((mentor) => mentor.id === values.mentorId)) { setFieldError({ field: "mentorId", message: "יש לבחור חונך/ת מתוך הצוות של הרכז/ת שנבחר/ה." }); document.getElementById("assignment-mentor")?.focus(); return; }
     const payload = {
       type: "assign_participant" as const,
       participantId: view.participant.id,
@@ -540,24 +541,24 @@ function AssignmentForm({ view, onBusyChange, onClose }: {
         { label: "רכז/ת אחראי/ת", current: nameFor(currentView.assignment?.coordinatorId), draft: nameFor(coordinatorId) },
       ]} onRebase={() => { draft.update({ ...values, baseVersion: currentView.participant.version }); setError(null); }} />}
       <FieldGroup>
-        <Field data-disabled={busy || !draft.hydrated || !scope?.canAssign}>
-          <FieldLabel htmlFor="assignment-mentor">חונך/ת אחראי/ת</FieldLabel>
-          <Select items={Object.fromEntries(snapshot.staff.map((staff) => [staff.id, staff.displayName]))} disabled={busy || !draft.hydrated || !scope?.canAssign} value={values.mentorId || null} onValueChange={(value) => { draft.update({ ...values, mentorId: value ?? "" }); setFieldError(null); }}>
-            <SelectTrigger id="assignment-mentor" className="w-full" aria-invalid={fieldError?.field === "mentorId" || undefined} aria-describedby={fieldError?.field === "mentorId" ? "assignment-mentor-error" : undefined}><SelectValue placeholder="בחירת חונך/ת מהצוות" /></SelectTrigger>
-            <SelectContent><SelectGroup>{scope?.mentors.map((staff) => <SelectItem key={staff.id} value={staff.id}>{staff.displayName}</SelectItem>)}</SelectGroup></SelectContent>
-          </Select>
-          {scope?.mentors.length === 0 && <FieldDescription>אין כרגע חונכים או חונכות עם גישה פעילה הזמינים לשיוך.</FieldDescription>}
-          {values.mentorId && !validSelection && <FieldDescription>יש לבחור חונך/ת ורכז/ת עם גישה פעילה שאפשר לשייך לפי המידע העדכני.</FieldDescription>}
-        {fieldError?.field === "mentorId" && <p id="assignment-mentor-error" role="alert" className="text-sm text-destructive">{fieldError.message}</p>}
-        </Field>
         <Field data-disabled={snapshot.actor.role === "coordinator" || busy || !draft.hydrated || !scope?.canAssign}>
           <FieldLabel htmlFor="assignment-coordinator">רכז/ת אחראי/ת</FieldLabel>
-          <Select items={{ none: "ללא שיוך לרכז/ת", ...Object.fromEntries(snapshot.staff.map((staff) => [staff.id, staff.displayName])) }} disabled={snapshot.actor.role === "coordinator" || busy || !draft.hydrated || !scope?.canAssign} value={coordinatorId} onValueChange={(value) => { draft.update({ ...values, coordinatorId: value ?? "none" }); setFieldError(null); }}>
+          <Select items={{ none: "ללא שיוך לרכז/ת", ...Object.fromEntries(snapshot.staff.map((staff) => [staff.id, staff.displayName])) }} disabled={snapshot.actor.role === "coordinator" || busy || !draft.hydrated || !scope?.canAssign} value={coordinatorId} onValueChange={(value) => { const next = value ?? "none"; draft.update({ ...values, coordinatorId: next, mentorId: mentorsForCoordinator(scope?.mentors ?? [], next).some((mentor) => mentor.id === values.mentorId) ? values.mentorId : "" }); setFieldError(null); }}>
             <SelectTrigger id="assignment-coordinator" className="w-full" aria-invalid={fieldError?.field === "coordinatorId" || undefined} aria-describedby={fieldError?.field === "coordinatorId" ? "assignment-coordinator-error" : undefined}><SelectValue /></SelectTrigger>
             <SelectContent><SelectGroup><SelectItem value="none">ללא שיוך לרכז/ת</SelectItem>{scope?.coordinators.map((staff) => <SelectItem key={staff.id} value={staff.id}>{staff.displayName}</SelectItem>)}</SelectGroup></SelectContent>
           </Select>
           {snapshot.actor.role === "coordinator" && <FieldDescription>החניכה תישאר באחריות הצוות שלך.</FieldDescription>}
         {fieldError?.field === "coordinatorId" && <p id="assignment-coordinator-error" role="alert" className="text-sm text-destructive">{fieldError.message}</p>}
+        </Field>
+        <Field data-disabled={busy || !draft.hydrated || !scope?.canAssign}>
+          <FieldLabel htmlFor="assignment-mentor">חונך/ת אחראי/ת</FieldLabel>
+          <Select items={Object.fromEntries(snapshot.staff.map((staff) => [staff.id, staff.displayName]))} disabled={busy || !draft.hydrated || !scope?.canAssign} value={values.mentorId || null} onValueChange={(value) => { draft.update({ ...values, mentorId: value ?? "" }); setFieldError(null); }}>
+            <SelectTrigger id="assignment-mentor" className="w-full" aria-invalid={fieldError?.field === "mentorId" || undefined} aria-describedby={fieldError?.field === "mentorId" ? "assignment-mentor-error" : undefined}><SelectValue placeholder="בחירת חונך/ת מצוות הרכז/ת" /></SelectTrigger>
+            <SelectContent><SelectGroup>{teamMentors.map((staff) => <SelectItem key={staff.id} value={staff.id}>{staff.displayName}</SelectItem>)}</SelectGroup></SelectContent>
+          </Select>
+          {teamMentors.length === 0 && <FieldDescription>{coordinatorId === "none" ? "אין כרגע חונכים או חונכות פעילים ללא רכז/ת." : "אין כרגע חונכים או חונכות פעילים בצוות של הרכז/ת שנבחר/ה."}</FieldDescription>}
+          {values.mentorId && !validSelection && <FieldDescription>יש לבחור חונך/ת ורכז/ת עם גישה פעילה שאפשר לשייך לפי המידע העדכני.</FieldDescription>}
+        {fieldError?.field === "mentorId" && <p id="assignment-mentor-error" role="alert" className="text-sm text-destructive">{fieldError.message}</p>}
         </Field>
       </FieldGroup>
       {!isOnline && <Alert><AlertTitle>הבקשה תישמר במכשיר</AlertTitle><AlertDescription>עם חזרת החיבור המערכת תבדוק את ההרשאות ואת השיוך העדכני. הרשאות הצפייה ישתנו רק אחרי קבלת הבקשה.</AlertDescription></Alert>}
