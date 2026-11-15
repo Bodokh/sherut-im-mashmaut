@@ -17,6 +17,7 @@ The product and design documents retain the agreed/proposed requirement contract
 | [shadcn component specification](component-spec.md) | Required functional component foundation, blue semantic theming, screen/component mapping, RTL, and real-component acceptance. |
 | [Technical specification](technical-spec.md) | Data model, command/transaction contracts, access checks, offline synchronization, notification delivery, and integration requirements. |
 | [Implementation plan](implementation-plan.md) | Sequenced work packages, dependencies, decision ownership, and acceptance evidence. |
+| [Client requests of 15 November](client-requests-2026-11-15.md) | Per-task result for gallery, coordinator/CEO management, tracking cards, org tree, reminder dry run and migrations `014`-`016`. |
 | [Development guide](development.md) | Current `/staff` implementation, development integrations, setup/test commands and external blockers. |
 | [Requirement and evidence ledger](readiness.md) | All AC-01–AC-21 and TA-01–TA-15 mapped to implementation/test source, current verification, credentials and policy/client acceptance gates. |
 | [Staff acceptance walkthrough](acceptance-checklist.md) | Facilitated role/offline/error checks and blank client sign-off; records exceptions without claiming acceptance. |

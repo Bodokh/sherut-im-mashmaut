@@ -15,6 +15,7 @@ import type {
 import type { ContactCommand, ContactHistory } from "./features/contacts/contracts";
 import type { AuthorityCommand, AuthorityExtras, ParticipantDeletionState } from "./features/authority/contracts";
 import type { OversightCommand, OrganizationSettings, MonthlyReview } from "./features/oversight/contracts";
+import type { TrackingCardView, TrackingCommand } from "./features/tracking/contracts";
 import type { ReminderCommand, ReminderJobView, ReminderReadiness } from "./features/reminders/contracts";
 import type { SendStaffSmsCommand, StaffSmsBatchView } from "./features/staff-messages/contracts";
 
@@ -79,6 +80,8 @@ export interface WorkspaceSnapshot {
   readonly reminders?: readonly ReminderJobView[];
   readonly reminderReadiness?: ReminderReadiness;
   readonly staffSmsBatches?: readonly StaffSmsBatchView[];
+  /** Management-only: absent for mentors, scoped to the actor's own team for coordinators. */
+  readonly trackingCards?: readonly TrackingCardView[];
   readonly capabilities: {
     readonly smsConfigured: boolean;
     readonly smsSendingEnabled: boolean;
@@ -110,6 +113,7 @@ export type MentoringCommand = Operation & (
   | ContactCommand
   | AuthorityCommand
   | OversightCommand
+  | TrackingCommand
   | ReminderCommand
   | SendStaffSmsCommand
   | { readonly type: "create_staff"; readonly fields: NewStaffFields }

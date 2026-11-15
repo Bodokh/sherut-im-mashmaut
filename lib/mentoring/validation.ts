@@ -3,6 +3,7 @@ import type { ApiFailure, MentoringCommand } from "./contracts";
 import { contactCommandSchemas } from "./features/contacts/schema";
 import { authorityCommandSchemas } from "./features/authority/schema";
 import { oversightCommandSchemas } from "./features/oversight/schema";
+import { trackingCommandSchemas } from "./features/tracking/schema";
 import { booleanSchema, contactMethodSchema, contactOutcomeSchema, dateTimeSchema, emailSchema, manualColorSchema, notesSchema, operationIdSchema, phoneSchema, recordIdSchema, staffNameSchema, staffRoleSchema, strictObjectError, textSchema, versionSchema } from "./validation-fields";
 
 const fields = z.strictObject({
@@ -20,6 +21,7 @@ export const commandSchema = z.discriminatedUnion("type", [
   ...contactCommandSchemas,
   ...authorityCommandSchemas,
   ...oversightCommandSchemas,
+  ...trackingCommandSchemas,
   z.strictObject({
     ...operation, type: z.literal("send_staff_sms"), message: textSchema("תוכן ההודעה", 1_000, 1),
     recipients: z.array(z.strictObject({ staffId: recordIdSchema, expectedVersion: versionSchema }, strictObjectError), { error: "יש לבחור נמענים מרשימת הצוות." })

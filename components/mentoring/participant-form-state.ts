@@ -84,3 +84,17 @@ export function assignmentScope(actor: StaffProfile, view: AuthorityView, staff:
   const coordinators = staff.filter((member) => (member.active || member.localPending) && member.role === "coordinator" && member.organizationId === actor.organizationId && (actor.role === "ceo" || member.id === actor.id));
   return { canAssign, mentors, coordinators };
 }
+
+/** The mentor choices for a selected team: "none" selects mentors without a coordinator. */
+export function mentorsForCoordinator<T extends Pick<StaffProfile, "coordinatorId">>(mentors: readonly T[], coordinatorId: string): readonly T[] {
+  const team = coordinatorId === "none" ? null : coordinatorId;
+  return mentors.filter((mentor) => (mentor.coordinatorId ?? null) === team);
+}
+
+/** Existing assignments may predate team consistency; fall back to the mentor's own team. */
+export function initialAssignmentCoordinator(actor: Pick<StaffProfile, "id" | "role">, view: Pick<ParticipantView, "assignment">, staff: readonly Pick<StaffProfile, "id" | "coordinatorId">[]): string {
+  if (actor.role === "coordinator") return actor.id;
+  const assignment = view.assignment;
+  if (!assignment) return "none";
+  return assignment.coordinatorId ?? staff.find((member) => member.id === assignment.mentorId)?.coordinatorId ?? "none";
+}

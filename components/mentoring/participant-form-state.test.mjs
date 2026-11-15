@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assignmentScope, canCreateParticipant, canEditParticipant, changedParticipantFields, createdParticipantFields, fieldIsProtected, participantFormFields, participantInputError } from "./participant-form-state.ts";
+import { assignmentScope, canCreateParticipant, canEditParticipant, changedParticipantFields, createdParticipantFields, fieldIsProtected, initialAssignmentCoordinator, mentorsForCoordinator, participantFormFields, participantInputError } from "./participant-form-state.ts";
 import { reconcileStoredDraft } from "./draft-state.ts";
 import { parseCommand } from "../../lib/mentoring/validation.ts";
 
@@ -226,4 +226,34 @@ test("a restored unknown service value is rejected even when phone and other fie
 test("the all-blank participant create payload satisfies the shared command policy", () => {
   const result = parseCommand({ type: "create_participant", operationId: "0bb726ac-2921-4794-a8b1-9c52cb3f8437", fields: createdParticipantFields(emptyCreateValues) });
   assert.equal(result.ok, true);
+});
+
+test("Task 2: the mentor list follows the selected coordinator for a CEO reassignment", () => {
+  const ceo = { id: "ceo", role: "ceo", organizationId: "org", active: true };
+  const teams = [
+    ceo,
+    { id: "coordinator-a", organizationId: "org", role: "coordinator", active: true, coordinatorId: null },
+    { id: "coordinator-b", organizationId: "org", role: "coordinator", active: true, coordinatorId: null },
+    { id: "mentor-a1", organizationId: "org", role: "mentor", active: true, coordinatorId: "coordinator-a" },
+    { id: "mentor-a2", organizationId: "org", role: "mentor", active: true, coordinatorId: "coordinator-a" },
+    { id: "mentor-b1", organizationId: "org", role: "mentor", active: true, coordinatorId: "coordinator-b" },
+    { id: "mentor-free", organizationId: "org", role: "mentor", active: true, coordinatorId: null },
+    { id: "mentor-inactive", organizationId: "org", role: "mentor", active: false, coordinatorId: "coordinator-a" },
+  ];
+  const scope = assignmentScope(ceo, { ...view, allowedActions: ["view", "edit"] }, teams);
+  const ids = (list) => list.map((member) => member.id);
+  assert.deepEqual(ids(mentorsForCoordinator(scope.mentors, "coordinator-a")), ["mentor-a1", "mentor-a2"]);
+  assert.deepEqual(ids(mentorsForCoordinator(scope.mentors, "coordinator-b")), ["mentor-b1"]);
+  assert.deepEqual(ids(mentorsForCoordinator(scope.mentors, "none")), ["mentor-free"]);
+  assert.deepEqual(ids(mentorsForCoordinator(scope.mentors, "unknown-coordinator")), []);
+});
+
+test("Task 2: the initial team of an assignment edit falls back to the mentor's own team", () => {
+  const roster = [{ id: "mentor-a1", coordinatorId: "coordinator-a" }, { id: "mentor-free", coordinatorId: null }];
+  const ceo = { id: "ceo", role: "ceo" };
+  assert.equal(initialAssignmentCoordinator(ceo, { assignment: null }, roster), "none");
+  assert.equal(initialAssignmentCoordinator(ceo, { assignment: { mentorId: "mentor-a1", coordinatorId: "coordinator-b" } }, roster), "coordinator-b");
+  assert.equal(initialAssignmentCoordinator(ceo, { assignment: { mentorId: "mentor-a1", coordinatorId: null } }, roster), "coordinator-a");
+  assert.equal(initialAssignmentCoordinator(ceo, { assignment: { mentorId: "mentor-free", coordinatorId: null } }, roster), "none");
+  assert.equal(initialAssignmentCoordinator({ id: "coordinator-a", role: "coordinator" }, { assignment: null }, roster), "coordinator-a");
 });

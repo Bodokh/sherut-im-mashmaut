@@ -12,12 +12,15 @@ import {
   ClipboardCheckIcon,
   CheckCheckIcon,
   CloudOffIcon,
+  ContactRoundIcon,
   HomeIcon,
   LogOutIcon,
+  NetworkIcon,
   RefreshCwIcon,
   Settings2Icon,
   ShieldCheckIcon,
   UsersRoundIcon,
+  UsersIcon,
 } from "lucide-react";
 import {
   Alert,
@@ -59,7 +62,10 @@ const management = [
   { href: "/staff/reviews", label: "בקרה ואישורים", icon: CheckCheckIcon },
   { href: "/staff/oversight", label: "בקרה חודשית", icon: ClipboardCheckIcon },
   { href: "/staff/team", label: "הצוות", icon: ShieldCheckIcon },
+  { href: "/staff/coordinators", label: "צוותי הרכזות", icon: UsersIcon },
+  { href: "/staff/mentors", label: "כרטיסי חונכות", icon: ContactRoundIcon },
 ];
+const ceoManagement = [{ href: "/staff/tree", label: "עץ הארגון", icon: NetworkIcon }];
 
 function NavigationItems({
   entries,
@@ -156,9 +162,10 @@ export function MentoringShell({ children }: { children: ReactNode }) {
 
   const actor = snapshot.actor;
   const isManagement = actor.role !== "mentor";
+  const managementEntries = actor.role === "ceo" ? [...management, ...ceoManagement] : management;
   const items = [
     ...navigation,
-    ...(isManagement ? management : []),
+    ...(isManagement ? managementEntries : []),
     { href: "/staff/conflicts", label: "עדכונים לבדיקה", icon: ActivityIcon },
   ];
   const current = items.find(
@@ -205,7 +212,7 @@ export function MentoringShell({ children }: { children: ReactNode }) {
             <SidebarGroup>
               <SidebarGroupLabel>ניהול ובקרה</SidebarGroupLabel>
               <SidebarGroupContent>
-                <NavigationItems entries={management} pathname={pathname} />
+                <NavigationItems entries={managementEntries} pathname={pathname} />
               </SidebarGroupContent>
             </SidebarGroup>
           )}
