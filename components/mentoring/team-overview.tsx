@@ -96,7 +96,7 @@ export function CoordinatorsView() {
         <Card>
           <CardHeader>
             <CardTitle>חניכות ללא חונכת</CardTitle>
-            <CardDescription>{totals.unassignedMentees} כרטיסי חניכות שטרם שויכו לחונכת, ולכן אינם נספרים בצוות כלשהו.</CardDescription>
+            <CardDescription>{totals.unassignedMentees === 1 ? "כרטיס חניכה אחד שטרם שויך לחונכת, ולכן אינו נספר בצוות כלשהו." : `${totals.unassignedMentees} כרטיסי חניכות שטרם שויכו לחונכת, ולכן אינם נספרים בצוות כלשהו.`}</CardDescription>
           </CardHeader>
         </Card>
       )}
