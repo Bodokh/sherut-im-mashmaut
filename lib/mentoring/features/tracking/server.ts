@@ -8,6 +8,7 @@ import type { CommandContext } from "../../server/command-context";
 import { loadActorGrants, loadParticipant, ownsUnassignedParticipant } from "../../server/repository";
 import type { TrackingCardView, TrackingCommand, TrackingReportView, TrackingSubject } from "./contracts";
 import { TRACKING_COMMAND_TYPES } from "./contracts";
+import { trackingSchemaState } from "./database-schema";
 
 const REPORTS_PER_CARD = 100;
 const iso = (value: unknown): string => new Date(value as string | Date).toISOString();
@@ -34,6 +35,7 @@ function reportFromRow(row: QueryResultRow): TrackingReportView {
  */
 export async function loadTrackingCards(client: PoolClient, actor: StaffProfile, participantIds: readonly string[]): Promise<readonly TrackingCardView[] | undefined> {
   if (!canUseTrackingCards(actor)) return undefined;
+  if (await trackingSchemaState(client) !== "ready") return undefined;
   const mentorRows = await client.query("SELECT id FROM mentoring.memberships WHERE organization_id = $1 AND role = 'mentor' AND ($2 = 'ceo' OR coordinator_id = $3)", [actor.organizationId, actor.role, actor.id]);
   const mentorIds = mentorRows.rows.map((row) => String(row.id));
   if (!participantIds.length && !mentorIds.length) return [];
@@ -99,6 +101,7 @@ export async function handleTrackingCommand(ctx: CommandContext, command: Mentor
   if (!isTrackingCommand(command)) return null;
   const { client, actor, now } = ctx;
   if (!canUseTrackingCards(actor)) return ctx.failure("forbidden", "כרטיסי המעקב זמינים למנכ״ל ולרכזות בלבד.");
+  if (await trackingSchemaState(client) !== "ready") return ctx.failure("not_configured", "כרטיסי המעקב אינם זמינים כרגע. יש לנסות שוב מאוחר יותר.");
   const denied = await authorizeSubject(ctx, command.subject);
   if (denied) return denied;
   const subject = subjectColumns(command.subject);

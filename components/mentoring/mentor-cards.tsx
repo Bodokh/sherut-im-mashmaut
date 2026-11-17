@@ -13,7 +13,7 @@ import { useWorkspace } from "@/lib/mentoring/workspace-client";
 import { staffPublicPath } from "@/lib/staff-host";
 import { AccessDenied, FollowupBadge, ManualColorBadge, PageHeading, SectionEmpty, followupFor, useNow } from "./common";
 import { formatDateTime } from "./format";
-import { TrackingCardPanel } from "./tracking-card";
+import { TrackingCardPanel, TrackingUnavailable } from "./tracking-card";
 import { canUseTrackingCards, trackedMentors, trackingCardFor } from "./tracking-state";
 
 function menteesOf(snapshot: WorkspaceSnapshot, mentorId: string) {
@@ -35,6 +35,7 @@ export function MentorsView() {
   const [query, setQuery] = useState("");
   if (!snapshot) return null;
   if (!canUseTrackingCards(snapshot.actor)) return <AccessDenied />;
+  if (snapshot.trackingCards === undefined) return <TrackingUnavailable />;
   const normalized = query.trim().toLocaleLowerCase("he");
   const mentors = trackedMentors(snapshot.actor, snapshot.staff)
     .filter((mentor) => !normalized || [mentor.displayName, mentor.phone, mentor.email].some((value) => value?.toLocaleLowerCase("he").includes(normalized)));

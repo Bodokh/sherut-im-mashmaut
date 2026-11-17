@@ -6,6 +6,7 @@ import type { CommandResult, MentoringCommand } from "../../contracts";
 import type { CommandContext } from "../../server/command-context";
 import type { AssignmentHistoryView, AuthorityCommand, AuthorityExtras, GrantView, ParticipantDeletionState, ParticipantLifecycle, ProtectionStateView } from "./contracts";
 import { CONTACT_PROTECTION_FIELDS, PARTICIPANT_PROTECTION_FIELDS } from "./schema";
+import { trackingSchemaState } from "../tracking/database-schema";
 
 const commandTypes = new Set(["set_access_grant", "set_ceo_protection", "set_participant_lifecycle", "delete_participant", "permanently_delete_participant", "restore_participant", "update_staff"]);
 export const isAuthorityCommand = (command: { readonly type: string }): command is AuthorityCommand => commandTypes.has(command.type);
@@ -112,11 +113,15 @@ async function permanentlyDeleteParticipant(context: CommandContext, command: Ex
   const jobs = await client.query("SELECT id,state FROM mentoring.reminder_jobs WHERE organization_id=$1 AND participant_id=$2 ORDER BY id FOR UPDATE", parameters);
   if (jobs.rows.some((job) => job.state === "dispatching")) return context.failure("conflict", "הודעת תזכורת נמצאת כעת בשליחה. יש להמתין לסיום השליחה, לרענן ולאשר את המחיקה מחדש.", "reminderDelivery");
   if (jobs.rows.some((job) => job.state === "uncertain")) return context.failure("conflict", "מצב שליחת תזכורת לחניכה אינו ידוע. יש לפנות לתמיכה לבירור ההודעה מול ספק המסרונים לפני מחיקה לצמיתות.", "reminderDelivery");
+  const trackingSchema = await trackingSchemaState(client);
+  if (trackingSchema === "partial") return context.failure("not_configured", "לא ניתן להשלים מחיקה לצמיתות כרגע. יש לנסות שוב מאוחר יותר.");
   // Explicitly purge only this participant's relational and narrative data.
   // Contact revisions/review events and appointment/color history cascade from
   // their parents; all other participant foreign keys deliberately restrict.
-  await client.query("DELETE FROM mentoring.tracking_reports WHERE organization_id=$1 AND participant_id=$2", parameters);
-  await client.query("DELETE FROM mentoring.tracking_cards WHERE organization_id=$1 AND participant_id=$2", parameters);
+  if (trackingSchema === "ready") {
+    await client.query("DELETE FROM mentoring.tracking_reports WHERE organization_id=$1 AND participant_id=$2", parameters);
+    await client.query("DELETE FROM mentoring.tracking_cards WHERE organization_id=$1 AND participant_id=$2", parameters);
+  }
   await client.query("DELETE FROM mentoring.reminder_attempts WHERE organization_id=$1 AND participant_id=$2", parameters);
   await client.query("DELETE FROM mentoring.reminder_jobs WHERE organization_id=$1 AND participant_id=$2", parameters);
   await client.query("DELETE FROM mentoring.outbox WHERE organization_id=$1 AND participant_id=$2", parameters);

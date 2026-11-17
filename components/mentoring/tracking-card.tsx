@@ -156,6 +156,15 @@ function ReportForm({ kind, subjectId, onClose }: { kind: TrackingSubjectKind; s
 
 const methodIcons = { phone: PhoneIcon, in_person: UserRoundIcon, message: MessageSquareIcon } as const;
 
+export function TrackingUnavailable() {
+  return (
+    <Alert>
+      <AlertTitle>כרטיסי המעקב אינם זמינים כרגע</AlertTitle>
+      <AlertDescription>אפשר להמשיך לעבוד בשאר המערכת. יש לרענן את העמוד או לנסות שוב מאוחר יותר.</AlertDescription>
+    </Alert>
+  );
+}
+
 /**
  * The management tracking card. It renders nothing for a mentor, who also never
  * receives the data: the server omits it from the workspace snapshot.
@@ -165,6 +174,7 @@ export function TrackingCardPanel({ kind, subjectId, subjectName }: { kind: Trac
   const [editing, setEditing] = useState(false);
   const [reporting, setReporting] = useState(false);
   if (!snapshot || !canUseTrackingCards(snapshot.actor)) return null;
+  if (snapshot.trackingCards === undefined) return <TrackingUnavailable />;
   const card = trackingCardFor(snapshot, kind, subjectId);
   const names = kindNames[kind];
 
