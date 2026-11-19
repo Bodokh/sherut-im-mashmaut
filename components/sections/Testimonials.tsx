@@ -1,5 +1,5 @@
 import { Section } from "@/components/ui/Section";
-import { TestimonialsCarousel } from "@/components/sections/TestimonialsCarousel";
+import { ScrollCarousel } from "@/components/sections/ScrollCarousel";
 import type { Dictionary } from "@/i18n/dictionaries";
 import styles from "./ProofAndGiving.module.css";
 
@@ -34,7 +34,14 @@ export function Testimonials({ dict }: { dict: Dictionary }) {
         ) : null}
       </div>
 
-      <TestimonialsCarousel label={t.title} prevLabel={t.prev} nextLabel={t.next} playLabel={dict.hero.player.play} pauseLabel={dict.hero.player.pause}>
+      <ScrollCarousel
+        label={t.title}
+        prevLabel={t.prev}
+        nextLabel={t.next}
+        playback={{ playLabel: dict.hero.player.play, pauseLabel: dict.hero.player.pause }}
+        className={styles.testimonialsCarousel}
+        viewportClassName={styles.testimonialsViewport}
+      >
         <ul className={styles.quoteTrack}>
           {t.items.map((item, i) => (
             <li
@@ -52,7 +59,7 @@ export function Testimonials({ dict }: { dict: Dictionary }) {
             </li>
           ))}
         </ul>
-      </TestimonialsCarousel>
+      </ScrollCarousel>
     </Section>
   );
 }

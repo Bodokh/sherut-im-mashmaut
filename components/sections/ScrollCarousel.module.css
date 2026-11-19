@@ -1,4 +1,10 @@
-.carousel { margin-block-start: 3rem; }
+.viewport {
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.viewport::-webkit-scrollbar { display: none; }
+.viewport:focus-visible { outline: 2px solid var(--color-brand-600); outline-offset: -2px; }
 .controls {
   display: grid;
   grid-template-columns: auto minmax(3rem, 1fr) auto;

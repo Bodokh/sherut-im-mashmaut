@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { ScrollCarousel } from "@/components/sections/ScrollCarousel";
 import { Section } from "@/components/ui/Section";
 import { localizedPath } from "@/lib/routes";
 import type { Locale } from "@/i18n/config";
@@ -18,7 +19,7 @@ function PartnerCard({ partner, linkSuffix }: { partner: Partner; linkSuffix: st
             alt=""
             width={partner.logoWidth ?? 160}
             height={partner.logoHeight ?? 160}
-            sizes="(max-width: 640px) 25vw, 120px"
+            sizes="(max-width: 760px) 40vw, 170px"
           />
         </span>
       ) : null}
@@ -58,23 +59,29 @@ export function Partners({ locale, dict }: { locale: Locale; dict: Dictionary })
             </svg>
           </Link>
         </div>
-        <ul className={styles.partnerList} aria-label={t.title}>
-          {hasPartners
-            ? t.items.map((partner) => (
+        {hasPartners ? (
+          <ScrollCarousel label={t.title} prevLabel={t.prev} nextLabel={t.next}>
+            <ul className={styles.partnerList}>
+              {t.items.map((partner) => (
                 <li key={partner.name}>
                   <PartnerCard partner={partner} linkSuffix={t.linkSuffix} />
                 </li>
-              ))
-            : Array.from({ length: PLACEHOLDER_SLOTS }, (_, i) => (
-                <li key={i} className={styles.partnerPlaceholder}>
-                  <svg viewBox="0 0 24 24" className="h-6 w-6 text-ink-300" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
-                    <circle cx="12" cy="12" r="8.5" />
-                    <path d="M12 8.6v6.8M8.6 12h6.8" strokeLinecap="round" />
-                  </svg>
-                  <span className="text-xs font-semibold">{t.slotLabel}</span>
-                </li>
               ))}
-        </ul>
+            </ul>
+          </ScrollCarousel>
+        ) : (
+          <ul className={styles.partnerPlaceholders} aria-label={t.title}>
+            {Array.from({ length: PLACEHOLDER_SLOTS }, (_, i) => (
+              <li key={i} className={styles.partnerPlaceholder}>
+                <svg viewBox="0 0 24 24" className="h-6 w-6 text-ink-300" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+                  <circle cx="12" cy="12" r="8.5" />
+                  <path d="M12 8.6v6.8M8.6 12h6.8" strokeLinecap="round" />
+                </svg>
+                <span className="text-xs font-semibold">{t.slotLabel}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
       {hasPartners ? null : <p className={styles.partnerNote}>{t.note}</p>}
     </Section>

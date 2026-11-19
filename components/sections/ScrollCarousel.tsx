@@ -2,14 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { startTestimonialsAutoplay } from "./testimonials-autoplay";
-import styles from "./TestimonialsCarousel.module.css";
+import styles from "./ScrollCarousel.module.css";
 
 type Props = {
   label: string;
   prevLabel: string;
   nextLabel: string;
-  playLabel: string;
-  pauseLabel: string;
+  playback?: { playLabel: string; pauseLabel: string };
+  className?: string;
+  viewportClassName?: string;
   children: ReactNode;
 };
 
@@ -27,7 +28,8 @@ type Position = {
  * Horizontal snap-scroll track with previous / next controls. Direction-aware:
  * "next" always moves toward the end of the reading order (left in RTL).
  */
-export function TestimonialsCarousel({ label, prevLabel, nextLabel, playLabel, pauseLabel, children }: Props) {
+export function ScrollCarousel({ label, prevLabel, nextLabel, playback, className, viewportClassName, children }: Props) {
+  const hasPlayback = Boolean(playback);
   const carouselRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const autoplayRef = useRef<ReturnType<typeof startTestimonialsAutoplay> | null>(null);
@@ -51,7 +53,7 @@ export function TestimonialsCarousel({ label, prevLabel, nextLabel, playLabel, p
       : 0;
     const next = { first, last: atEnd ? count : last, count, atStart: offset <= EDGE_TOLERANCE, atEnd };
     // Scroll events remain cheap: geometry is measured on resize, and React
-    // updates only when the visible quote range or an edge actually changes.
+    // updates only when the visible slide range or an edge actually changes.
     setPosition((prev) => (
       prev.first === next.first && prev.last === next.last && prev.count === next.count
       && prev.atStart === next.atStart && prev.atEnd === next.atEnd ? prev : next
@@ -96,8 +98,8 @@ export function TestimonialsCarousel({ label, prevLabel, nextLabel, playLabel, p
   useEffect(() => {
     const carousel = carouselRef.current;
     const track = trackRef.current;
-    if (!carousel || !track) return;
-    // Reverse at the edges rather than sweeping across every quote to rewind.
+    if (!hasPlayback || !carousel || !track) return;
+    // Reverse at the edges to avoid scrolling through every slide to rewind.
     let direction: 1 | -1 = 1;
     const autoplay = startTestimonialsAutoplay(carousel, track, () => {
       const { max } = measurements.current;
@@ -109,7 +111,7 @@ export function TestimonialsCarousel({ label, prevLabel, nextLabel, playLabel, p
     }, setAutoplayEnabled);
     autoplayRef.current = autoplay;
     return () => { autoplayRef.current = null; autoplay.cleanup(); };
-  }, [step]);
+  }, [hasPlayback, step]);
 
   const manualStep = (direction: 1 | -1) => {
     autoplayRef.current?.reset();
@@ -117,6 +119,7 @@ export function TestimonialsCarousel({ label, prevLabel, nextLabel, playLabel, p
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.target !== event.currentTarget) return;
     if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
     const rtl = getComputedStyle(event.currentTarget).direction === "rtl";
     const forward = (event.key === "ArrowRight") === !rtl;
@@ -125,7 +128,7 @@ export function TestimonialsCarousel({ label, prevLabel, nextLabel, playLabel, p
   };
 
   return (
-    <div ref={carouselRef} className={styles.carousel} data-autoplay={autoplayEnabled ? "playing" : "paused"}>
+    <div ref={carouselRef} className={className} data-autoplay={playback ? (autoplayEnabled ? "playing" : "paused") : undefined}>
       <div
         ref={trackRef}
         role="region"
@@ -134,7 +137,7 @@ export function TestimonialsCarousel({ label, prevLabel, nextLabel, playLabel, p
         tabIndex={0}
         onScroll={syncPosition}
         onKeyDown={onKeyDown}
-        className="-mx-[var(--gutter)] snap-x snap-mandatory overflow-x-auto scroll-px-[var(--gutter)] px-[var(--gutter)] pb-4 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-600 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className={viewportClassName ? `${styles.viewport} ${viewportClassName}` : styles.viewport}
         data-reveal
       >
         {children}
@@ -148,16 +151,18 @@ export function TestimonialsCarousel({ label, prevLabel, nextLabel, playLabel, p
           <span className={styles.progressFill} style={{ transform: `scaleX(${position.count ? position.last / position.count : 0})` }} />
         </div>
         <div className={styles.arrows}>
-          <button
-            type="button"
-            aria-label={`${autoplayEnabled ? pauseLabel : playLabel}: ${label}`}
-            onClick={() => autoplayRef.current?.toggle()}
-            className={styles.arrow}
-          >
-            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true">
-              {autoplayEnabled ? <path d="M7 5h3v14H7zm7 0h3v14h-3z" /> : <path d="m8 5 11 7-11 7z" />}
-            </svg>
-          </button>
+          {playback ? (
+            <button
+              type="button"
+              aria-label={`${autoplayEnabled ? playback.pauseLabel : playback.playLabel}: ${label}`}
+              onClick={() => autoplayRef.current?.toggle()}
+              className={styles.arrow}
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true">
+                {autoplayEnabled ? <path d="M7 5h3v14H7zm7 0h3v14h-3z" /> : <path d="m8 5 11 7-11 7z" />}
+              </svg>
+            </button>
+          ) : null}
           <ArrowButton label={prevLabel} disabled={position.atStart} onClick={() => manualStep(-1)} direction="prev" />
           <ArrowButton label={nextLabel} disabled={position.atEnd} onClick={() => manualStep(1)} direction="next" />
         </div>
