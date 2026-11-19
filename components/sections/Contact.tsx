@@ -39,9 +39,9 @@ export function Contact({ locale, dict }: { locale: Locale; dict: Dictionary }) 
               <WhatsAppIcon className={styles.icon} />
               {t.whatsappCta}
             </a>
-            <a href={contactLinks.hotline} className={styles.hotline}>
+            <a href={contactLinks.phone} className={styles.phone}>
               <PhoneIcon className={styles.icon} />
-              <span>{t.hotlineCta}<bdi dir="ltr">{d.hotline}</bdi></span>
+              <span>{t.callCta}<bdi dir="ltr">{d.phone}</bdi></span>
             </a>
           </div>
         </div>

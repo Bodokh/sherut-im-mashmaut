@@ -87,7 +87,7 @@
 :global([dir="rtl"]) .primary svg { transform: scaleX(-1); }
 .primary:active { transform: scale(.98); }
 
-.hotline {
+.phone {
   display: inline-flex;
   min-height: 3.4rem;
   align-items: center;
@@ -95,23 +95,23 @@
   color: #fff;
 }
 
-.hotline > svg {
+.phone > svg {
   width: 1.4rem;
   height: 1.4rem;
   flex: none;
 }
 
-.hotline > span {
+.phone > span {
   display: grid;
   gap: .15rem;
 }
 
-.hotline > span > span {
+.phone > span > span {
   color: #c7d8de;
   font-size: .75rem;
 }
 
-.hotline bdi {
+.phone bdi {
   font-size: 1.05rem;
   font-weight: 500;
   letter-spacing: .025em;
@@ -157,7 +157,7 @@
 
 @media (hover: hover) and (pointer: fine) {
   .primary:hover { background: #fff; }
-  .hotline:hover bdi { text-decoration: underline; text-underline-offset: .3em; }
+  .phone:hover bdi { text-decoration: underline; text-underline-offset: .3em; }
   .community a:hover { text-decoration-color: currentColor; }
 }
 

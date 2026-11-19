@@ -2,19 +2,20 @@ const SUPPORT_EMAIL = "support@imashmaut.co.il";
 const PRIVACY_EMAIL = "privacy@imashmaut.co.il";
 const WHATSAPP_NUMBER = "972527575290";
 
+export const contactPhone = "073-367-9000";
+export const contactPhoneInternational = `+972${contactPhone.slice(1).replaceAll("-", "")}`;
+
 function whatsappHref(text?: string) {
   if (!text) return `https://wa.me/${WHATSAPP_NUMBER}`;
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
 }
 
-// Canonical contact endpoints — presentation strings live in the dictionaries.
 export const contactLinks = {
   emailAddress: SUPPORT_EMAIL,
   email: `mailto:${SUPPORT_EMAIL}`,
   privacyEmailAddress: PRIVACY_EMAIL,
   privacyEmail: `mailto:${PRIVACY_EMAIL}`,
-  phone: "tel:+972527575290",
-  hotline: "tel:+972559739365",
+  phone: `tel:${contactPhoneInternational}`,
   whatsapp: whatsappHref(),
 } as const;
 

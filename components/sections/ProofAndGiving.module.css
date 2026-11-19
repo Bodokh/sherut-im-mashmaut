@@ -149,6 +149,7 @@
 .partnerList {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  row-gap: 1rem;
   align-items: stretch;
 }
 
@@ -156,7 +157,7 @@
   min-width: 0;
 }
 
-.partnerList > li + li {
+.partnerList > li:not(:nth-child(3n + 1)) {
   border-inline-start: 1px solid #e3e9ec;
 }
 

@@ -1,5 +1,6 @@
 // Hebrew, primary language. This object defines the shape of the dictionary.
 
+import { contactPhone } from "@/lib/contact";
 import type { Partner, Testimonial } from "../dictionaries";
 
 export const he = {
@@ -173,7 +174,7 @@ export const he = {
     lead: "מאחורי 'שירות עם משמעות' עומדת קבוצת מרצות, מלוות ופעילות שחיו את הדרך בעצמן. הן לא מדברות בתאוריה. הן מביאות סיפור אישי, אמת ופשטות, ויוצרות שיחה שנוגעת בלב של כל מי שיושבת באולם.",
     missionTitle: "המשימה שלנו",
     mission: "עמותה רשומה שפועלת לקידומן, להעצמתן ולפיתוחן האישי, החינוכי, הערכי והמנהיגותי של צעירות בישראל, בתקופה שבין סיום הלימודים לבין הגיוס לצה״ל, לשירות הלאומי או לשירות האזרחי.",
-    programs: ["הרצאות ומפגשים", "ליווי אישי והכוונה", "מענה למשפחות", "קהילה וקו חם"],
+    programs: ["הרצאות ומפגשים", "ליווי אישי והכוונה", "מענה למשפחות", "קהילה ותמיכה"],
   },
 
   reach: {
@@ -253,7 +254,6 @@ export const he = {
     disclaimer: "העמותה אינה מספקת ייעוץ משפטי ואינה אחראית להחלטות שקיבלה פונה לעמותה.",
     cta: "לפנייה אישית",
     girlsBlogCta: "להצטרפות לקבוצת בלוג בנות",
-    hotlineCta: "קו חם",
     items: [
       {
         title: "ליווי אישי",
@@ -287,6 +287,10 @@ export const he = {
       { name: "אמנה – אולפנת בני עקיבא כפר סבא", logo: "/partners/amana-kfar-saba.svg", logoWidth: 1532, logoHeight: 1669 },
       { name: "חורב ירושלים", logo: "/partners/horev-jerusalem.png", logoWidth: 635, logoHeight: 640 },
       { name: "אולפנת עפרה", logo: "/partners/ulpanat-ofra.png", logoWidth: 640, logoHeight: 583 },
+      { name: "אולפנת רבבה" },
+      { name: "אולפנת טליה" },
+      { name: "אולפנת מרכז שפירא" },
+      { name: "אולפנת גילה בית שמש" },
     ] as Partner[],
   },
 
@@ -380,7 +384,6 @@ export const he = {
     lead: "הכי פשוט: הודעת וואטסאפ או שיחת טלפון. אנחנו כאן לכל שאלה.",
     whatsappCta: "לכתוב לנו בוואטסאפ",
     callCta: "להתקשר אלינו",
-    hotlineCta: "קו חם",
     groupsTitle: "קבוצות הוואטסאפ שלנו",
     groups: {
       educators: "קבוצת נשות חינוך",
@@ -417,8 +420,7 @@ export const he = {
       emailLabel: "דוא״ל",
       email: "support@imashmaut.co.il",
       phoneLabel: "טלפון",
-      phone: "052-7575-290",
-      hotline: "055-973-9365",
+      phone: contactPhone,
       whatsappLabel: "וואטסאפ",
       hoursLabel: "שעות מענה",
       hours: "א׳–ה׳ · 9:00–18:00",
@@ -671,7 +673,7 @@ export const he = {
       },
       {
         title: "קהילה ומעטפת תמיכה",
-        text: "קבוצות וואטסאפ לצעירות, להורים ולאנשי חינוך, קו חם, וקהילת בוגרות שירות מצפון ועד דרום שממשיכה ללוות, לחבר ולתמוך.",
+        text: "קבוצות וואטסאפ לצעירות, להורים ולאנשי חינוך וקהילת בוגרות שירות מצפון ועד דרום שממשיכה ללוות, לחבר ולתמוך.",
       },
     ],
     purposesTitle: "מטרות העמותה כפי שנרשמו",

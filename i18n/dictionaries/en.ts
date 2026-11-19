@@ -1,3 +1,4 @@
+import { contactPhone } from "@/lib/contact";
 import type { Partner, Testimonial } from "../dictionaries";
 import type { Dictionary } from "./he";
 
@@ -173,7 +174,7 @@ export const en: Dictionary = {
     lead: "Behind Service with Meaning stands a group of women lecturers, mentors and activists who have walked the path themselves. They don't speak in theory. They bring personal story, honesty and simplicity, and create a conversation that reaches every woman in the room.",
     missionTitle: "Our mission",
     mission: "A registered nonprofit working to advance, empower and develop young women in Israel, personally, educationally, ethically and as leaders, in the period between finishing school and enlisting in the IDF, national service or civilian service.",
-    programs: ["Lectures and gatherings", "Personal guidance", "Support for families", "Community and hotline"],
+    programs: ["Lectures and gatherings", "Personal guidance", "Support for families", "Community and support"],
   },
 
   reach: {
@@ -241,7 +242,6 @@ export const en: Dictionary = {
     disclaimer: "The organization does not provide legal advice and is not responsible for decisions made by anyone who contacts it.",
     cta: "Reach out personally",
     girlsBlogCta: "Join the girls' blog WhatsApp group",
-    hotlineCta: "Hotline",
     items: [
       {
         title: "Personal mentoring",
@@ -270,6 +270,10 @@ export const en: Dictionary = {
       { name: "Amana – Bnei Akiva Ulpana, Kfar Saba", logo: "/partners/amana-kfar-saba.svg", logoWidth: 1532, logoHeight: 1669 },
       { name: "Horev Jerusalem", logo: "/partners/horev-jerusalem.png", logoWidth: 635, logoHeight: 640 },
       { name: "Ulpanat Ofra", logo: "/partners/ulpanat-ofra.png", logoWidth: 640, logoHeight: 583 },
+      { name: "Ulpanat Revava" },
+      { name: "Ulpanat Talia" },
+      { name: "Ulpanat Merkaz Shapira" },
+      { name: "Ulpanat Gila, Beit Shemesh" },
     ] as Partner[],
   },
 
@@ -359,7 +363,6 @@ export const en: Dictionary = {
     lead: "The simplest way: a WhatsApp message or a phone call. We're here for any question.",
     whatsappCta: "Message us on WhatsApp",
     callCta: "Give us a call",
-    hotlineCta: "Hotline",
     groupsTitle: "Our WhatsApp groups",
     groups: {
       educators: "Educators group",
@@ -396,8 +399,7 @@ export const en: Dictionary = {
       emailLabel: "Email",
       email: "support@imashmaut.co.il",
       phoneLabel: "Phone",
-      phone: "052-7575-290",
-      hotline: "055-973-9365",
+      phone: contactPhone,
       whatsappLabel: "WhatsApp",
       hoursLabel: "Hours",
       hours: "Sun–Thu · 9:00–18:00",
@@ -650,7 +652,7 @@ export const en: Dictionary = {
       },
       {
         title: "Community and support network",
-        text: "WhatsApp groups for young women, parents and educators, a hotline, and a nationwide community of service alumnae that keeps guiding, connecting and supporting.",
+        text: "WhatsApp groups for young women, parents and educators, and a nationwide community of service alumnae that keeps guiding, connecting and supporting.",
       },
     ],
     purposesTitle: "Our purposes as registered",

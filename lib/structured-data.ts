@@ -14,7 +14,7 @@ import type {
 } from "schema-dts";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/i18n/dictionaries";
-import { socialLinks } from "@/lib/contact";
+import { contactPhoneInternational, socialLinks } from "@/lib/contact";
 import { organization } from "@/lib/organization";
 import { absoluteUrl, SITE_ORIGIN, type SiteRouteKey } from "@/lib/routes";
 import { routeLabel } from "@/lib/seo";
@@ -69,29 +69,20 @@ function organizationNode(locale: Locale, dict: Dictionary): NGO {
       height: "512",
     },
     email: "support@imashmaut.co.il",
-    telephone: "+972527575290",
+    telephone: contactPhoneInternational,
     sameAs: [socialLinks.facebook, socialLinks.instagram, socialLinks.youtube, socialLinks.x],
     areaServed: {
       "@type": "Country",
       name: "Israel",
     },
-    contactPoint: [
-      {
-        "@type": "ContactPoint",
-        contactType: "general inquiries",
-        email: "support@imashmaut.co.il",
-        telephone: "+972527575290",
-        areaServed: "IL",
-        availableLanguage: ["Hebrew", "English"],
-      },
-      {
-        "@type": "ContactPoint",
-        contactType: "hotline",
-        telephone: "+972559739365",
-        areaServed: "IL",
-        availableLanguage: ["Hebrew", "English"],
-      },
-    ],
+    contactPoint: {
+      "@type": "ContactPoint",
+      contactType: "general inquiries",
+      email: "support@imashmaut.co.il",
+      telephone: contactPhoneInternational,
+      areaServed: "IL",
+      availableLanguage: ["Hebrew", "English"],
+    },
   };
 }
 

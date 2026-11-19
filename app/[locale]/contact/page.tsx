@@ -86,7 +86,6 @@ export default async function ContactPage({ params }: { params: Promise<{ locale
                 <DetailRow label={d.emailLabel} value={d.email} href={`mailto:${d.email}`} ltr />
                 <DetailRow label={d.whatsappLabel} value={dict.contact.whatsappCta} href={contactLinks.whatsapp} external />
                 <DetailRow label={d.phoneLabel} value={d.phone} href={contactLinks.phone} ltr />
-                <DetailRow label={dict.contact.hotlineCta} value={d.hotline} href={contactLinks.hotline} ltr />
                 <div className={`${styles.detail} ${styles.wide}`}>
                   <dt>{dict.contact.groupsTitle}</dt>
                   <dd className={styles.groups}>
