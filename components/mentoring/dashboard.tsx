@@ -37,6 +37,7 @@ import {
 import { formatDateTime } from "./format";
 import { ParticipantEditor } from "./participant-forms";
 import { coordinatorGroups, personalParticipants } from "./personal-area-state";
+import { IncomingTransferAlertBanner } from "./transfer-requests";
 
 function ResponsibilityList({ participants }: { participants: readonly ParticipantView[] }) {
   if (!participants.length) return <p className="text-sm text-muted-foreground">אין כרגע חניכות משויכות.</p>;
@@ -71,8 +72,16 @@ export function DashboardView() {
   const now = useNow();
   if (!snapshot) return null;
   const active = snapshot.participants.filter(
-    (view) => view.participant.lifecycle === "active",
+    (view) =>
+      view.participant.lifecycle === "active" &&
+      (snapshot.actor.role === "ceo" ||
+        Boolean(view.assignment) ||
+        view.participant.createdBy === snapshot.actor.id ||
+        Boolean(view.allowedActions?.includes("edit"))),
   );
+  const unassignedNewCount = snapshot.participants.filter(
+    (view) => !view.participant.deletedAt && view.participant.lifecycle === "active" && !view.assignment,
+  ).length;
   const attention = active
     .map((view) => ({ view, followup: followupFor(view, now) }))
     .filter(
@@ -128,6 +137,27 @@ export function DashboardView() {
           </>
         }
       />
+      <IncomingTransferAlertBanner />
+      {unassignedNewCount > 0 && (
+        <Card className="border-dashed">
+          <CardHeader className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+            <div>
+              <CardTitle className="text-base">
+                {unassignedNewCount === 1
+                  ? "קיימת חניכה חדשה אחת הממתינה לשיוך"
+                  : `קיימות ${unassignedNewCount} חניכות חדשות הממתינות לשיוך`}
+              </CardTitle>
+              <CardDescription>
+                גם חונכות וגם רכזות יכולות לשייך חניכות חדשות מתוך מסך החניכות.
+              </CardDescription>
+            </div>
+            <Button variant="outline" size="sm" nativeButton={false} render={<Link href={staffPublicPath("/staff/participants")} />}>
+              לצפייה ושיוך חניכות חדשות
+              <ArrowLeftIcon data-icon="inline-end" />
+            </Button>
+          </CardHeader>
+        </Card>
+      )}
       <section className="grid items-stretch gap-4 lg:grid-cols-3" aria-label="תמונת המצב">
         <div className="flex h-full flex-col justify-between gap-7 rounded-2xl bg-primary p-6 text-primary-foreground">
           <HeartHandshakeIcon className="size-7" />

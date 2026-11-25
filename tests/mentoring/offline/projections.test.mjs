@@ -289,6 +289,64 @@ test("pending assignment cannot turn view-only coordinator access into local edi
   assert.equal(apply(snapshot, assign).participants[0].assignment, null, "an explicit authoritative action set overrides inferred creator ownership");
 });
 
+test("pending mentor and coordinator initial assignments project visibly via canAssignInitial without granting premature edit authority", () => {
+  // Mentor self-assigning an unassigned mentee created by CEO
+  const mentorSnapshot = fixture("mentor");
+  mentorSnapshot.actor.coordinatorId = "coord-1";
+  mentorSnapshot.staff.push({ ...mentorSnapshot.actor, id: "coord-1", role: "coordinator", coordinatorId: null });
+  mentorSnapshot.participants[0] = {
+    ...mentorSnapshot.participants[0],
+    assignment: null,
+    nextAppointment: null,
+    contacts: [],
+    reviews: [],
+    allowedActions: ["view"],
+    canAssignInitial: true,
+  };
+  const mentorAssign = participantCommand("assign_participant", { mentorId: mentorSnapshot.actor.id, coordinatorId: "coord-1" });
+  const pendingMentor = apply(mentorSnapshot, mentorAssign).participants[0];
+  assert.equal(pendingMentor.assignment?.mentorId, mentorSnapshot.actor.id);
+  assert.equal(pendingMentor.assignment?.coordinatorId, "coord-1");
+  assert.equal(pendingMentor.participant.version, 2);
+  assert.equal(pendingMentor.participant.localPending, true);
+  assert.equal(pendingMentor.canAssignInitial, false);
+  assert.equal(pendingMentor.acceptedAssignment, null);
+  assert.deepEqual(pendingMentor.allowedActions, ["view"], "pending initial assignment does not elevate allowedActions before server acceptance");
+
+  // Pending profile edit on unaccepted initial assignment remains blocked
+  const prematureEdit = participantCommand("update_participant", { expectedVersion: 2, fields: { profileNotes: "לפני אישור שרת" } });
+  assert.equal(apply({ ...mentorSnapshot, participants: [pendingMentor] }, prematureEdit).participants[0].participant.profileNotes, null);
+
+  // Server acceptance upgrades allowedActions and acceptedAssignment
+  const acceptedMentor = apply(mentorSnapshot, mentorAssign, true).participants[0];
+  assert.equal(acceptedMentor.participant.localPending, false);
+  assert.equal(acceptedMentor.acceptedAssignment?.mentorId, mentorSnapshot.actor.id);
+  assert.deepEqual(acceptedMentor.allowedActions, ["view", "edit"]);
+
+  // Coordinator assigning an unassigned mentee created by CEO to her team mentor
+  const coordSnapshot = fixture("coordinator");
+  coordSnapshot.staff[1] = { ...coordSnapshot.staff[1], coordinatorId: coordSnapshot.actor.id };
+  coordSnapshot.participants[0] = {
+    ...coordSnapshot.participants[0],
+    assignment: null,
+    nextAppointment: null,
+    contacts: [],
+    reviews: [],
+    allowedActions: ["view"],
+    canAssignInitial: true,
+  };
+  const coordAssign = participantCommand("assign_participant", { mentorId: "target", coordinatorId: coordSnapshot.actor.id });
+  const pendingCoord = apply(coordSnapshot, coordAssign).participants[0];
+  assert.equal(pendingCoord.assignment?.mentorId, "target");
+  assert.equal(pendingCoord.assignment?.coordinatorId, coordSnapshot.actor.id);
+  assert.equal(pendingCoord.participant.localPending, true);
+  assert.equal(pendingCoord.canAssignInitial, false);
+  assert.deepEqual(pendingCoord.allowedActions, ["view"]);
+
+  const acceptedCoord = apply(coordSnapshot, coordAssign, true).participants[0];
+  assert.deepEqual(acceptedCoord.allowedActions, ["view", "edit", "approve"]);
+});
+
 test("coordinator create acknowledgement retains creator ownership for its queued assignment", () => {
   const snapshot = fixture("coordinator");
   const create = { type: "create_participant", operationId: "new-participant", fields: { displayName: "חדשה" } };

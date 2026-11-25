@@ -16,6 +16,7 @@ import type { ContactCommand, ContactHistory } from "./features/contacts/contrac
 import type { AuthorityCommand, AuthorityExtras, ParticipantDeletionState } from "./features/authority/contracts";
 import type { OversightCommand, OrganizationSettings, MonthlyReview } from "./features/oversight/contracts";
 import type { TrackingCardView, TrackingCommand } from "./features/tracking/contracts";
+import type { TransferCommand, TransferRequestView, TransferableParticipantSummary } from "./features/transfers/contracts";
 import type { ReminderCommand, ReminderJobView, ReminderReadiness } from "./features/reminders/contracts";
 import type { SendStaffSmsCommand, StaffSmsBatchView } from "./features/staff-messages/contracts";
 
@@ -45,6 +46,7 @@ export interface ParticipantView extends Partial<ContactHistory>, Partial<Author
   readonly acceptedNextAppointment?: Appointment | null;
   readonly acceptedAssignment?: Assignment | null;
   readonly allowedActions?: readonly ParticipantAction[];
+  readonly canAssignInitial?: boolean;
   readonly participant: ParticipantProfile;
   readonly assignment: Assignment | null;
   readonly nextAppointment: Appointment | null;
@@ -82,6 +84,10 @@ export interface WorkspaceSnapshot {
   readonly staffSmsBatches?: readonly StaffSmsBatchView[];
   /** Management-only: absent for mentors, scoped to the actor's own team for coordinators. */
   readonly trackingCards?: readonly TrackingCardView[];
+  /** Scoped to incoming/outgoing requests for coordinators and organization-wide for CEO. */
+  readonly transferRequests?: readonly TransferRequestView[];
+  /** Minimal redacted directory of active assigned mentees held by other coordinators. */
+  readonly transferableParticipants?: readonly TransferableParticipantSummary[];
   readonly capabilities: {
     readonly smsConfigured: boolean;
     readonly smsSendingEnabled: boolean;
@@ -114,6 +120,7 @@ export type MentoringCommand = Operation & (
   | AuthorityCommand
   | OversightCommand
   | TrackingCommand
+  | TransferCommand
   | ReminderCommand
   | SendStaffSmsCommand
   | { readonly type: "create_staff"; readonly fields: NewStaffFields }
@@ -169,6 +176,7 @@ export interface CommandSuccess {
   readonly participantId?: string;
   readonly staffId?: string;
   readonly staffSmsBatchId?: string;
+  readonly transferRequestId?: string;
   readonly reminderScan?: { readonly scanned: number; readonly planned: number; readonly nextCursor: string | null };
 }
 

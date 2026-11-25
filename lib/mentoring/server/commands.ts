@@ -9,6 +9,7 @@ import { handleContactCommand, recordAppointmentHistory, recordManualColorHistor
 import { handleAuthorityCommand, isAuthorityCommand } from "../features/authority/server";
 import { handleOversightCommand } from "../features/oversight/server";
 import { canUseTrackingCards, handleTrackingCommand, isTrackingCommand } from "../features/tracking/server";
+import { canCoordinatorManageTransfers, handleTransferCommand, isTransferCommand, rejectPendingParticipantTransfers } from "../features/transfers/server";
 import { canReviewMonthlyScope } from "../features/oversight/selectors";
 import { handleReminderCommand, rebuildParticipantReminders } from "../features/reminders/server";
 import { createStaffSmsBatch } from "../features/staff-messages/server";
@@ -78,17 +79,39 @@ async function updateParticipant(client: PoolClient, actor: StaffProfile, comman
   return success(command, view.participant.id);
 }
 
+function canInitialAssignParticipant(actor: StaffProfile, view: ParticipantView): boolean {
+  return actor.active
+    && actor.organizationId === view.participant.organizationId
+    && !view.assignment
+    && view.participant.deletedAt == null
+    && view.participant.lifecycle === "active"
+    && (actor.role === "mentor" || actor.role === "coordinator");
+}
+
 async function assignParticipant(client: PoolClient, actor: StaffProfile, command: Extract<MentoringCommand, { type: "assign_participant" }>, view: ParticipantView, now: string): Promise<CommandResult> {
-  if (view.assignment && actor.role !== "ceo") return failure("forbidden", "החלפת השיוך הקיים מחייבת אישור וביצוע של המנכ״ל.");
+  if (view.assignment && actor.role !== "ceo") {
+    return failure("forbidden", "שינוי שיוך של חניכה שכבר משובצת אפשרי רק על ידי המנכ״ל או באמצעות בקשת העברה מרכזת לרכזת.");
+  }
+  if (actor.role === "mentor" && command.mentorId !== actor.id) {
+    return failure("forbidden", "חונכת יכולה לשייך חניכה חדשה לעצמה בלבד.");
+  }
   // Lock all staff rows in a deterministic order before checking current roles.
-  const staffResult = await client.query("SELECT * FROM mentoring.memberships WHERE organization_id = $1 AND id = ANY($2::uuid[]) ORDER BY id FOR SHARE", [actor.organizationId, [command.mentorId, ...(command.coordinatorId ? [command.coordinatorId] : [])]]);
+  const staffIds = [...new Set([command.mentorId, ...(command.coordinatorId ? [command.coordinatorId] : [])])];
+  const staffResult = await client.query("SELECT * FROM mentoring.memberships WHERE organization_id = $1 AND id = ANY($2::uuid[]) ORDER BY id FOR SHARE", [actor.organizationId, staffIds]);
   const members = staffResult.rows.map(staffFromRow);
   const mentor = members.find((member) => member.id === command.mentorId && member.active && member.role === "mentor");
   const coordinator = members.find((member) => member.id === command.coordinatorId && member.active && member.role === "coordinator");
   if (!mentor) return failure("validation", "יש לבחור חונך/ת עם גישה פעילה.", "mentorId");
   if (command.coordinatorId && !coordinator) return failure("validation", "יש לבחור רכז/ת עם גישה פעילה.", "coordinatorId");
   if (actor.role === "coordinator" && (command.coordinatorId !== actor.id || mentor.coordinatorId !== actor.id)) return failure("forbidden", "אפשר לשייך חניכות רק לחונכים ולחונכות בצוות שלך.");
-  if ((mentor.coordinatorId ?? null) !== (command.coordinatorId ?? null)) return failure("validation", "החונך/ת שנבחר/ה אינו/ה בצוות של הרכז/ת שנבחר/ה. יש לבחור חונך/ת מתוך צוות הרכז/ת.", "mentorId");
+  let expectedCoordinatorId: string | null = mentor.coordinatorId ?? null;
+  if (actor.role === "mentor" && expectedCoordinatorId) {
+    const activeCoordinator = coordinator?.id === expectedCoordinatorId
+      ? coordinator
+      : (await client.query("SELECT id FROM mentoring.memberships WHERE organization_id = $1 AND id = $2 AND role = 'coordinator' AND active = true FOR SHARE", [actor.organizationId, expectedCoordinatorId])).rows[0];
+    if (!activeCoordinator) expectedCoordinatorId = null;
+  }
+  if (expectedCoordinatorId !== (command.coordinatorId ?? null)) return failure("validation", "החונך/ת שנבחר/ה אינו/ה בצוות של הרכז/ת שנבחר/ה. יש לבחור חונך/ת מתוך צוות הרכז/ת.", "mentorId");
   await client.query("UPDATE mentoring.assignments SET ended_at = $3 WHERE organization_id = $1 AND participant_id = $2 AND ended_at IS NULL", [actor.organizationId, view.participant.id, now]);
   if (view.nextAppointment) await client.query("UPDATE mentoring.appointments SET mentor_id = $3, version = version + 1 WHERE organization_id = $1 AND participant_id = $2 AND is_current = true", [actor.organizationId, view.participant.id, mentor.id]);
   const assignmentVersion = (view.assignment?.version ?? 0) + 1;
@@ -96,6 +119,7 @@ async function assignParticipant(client: PoolClient, actor: StaffProfile, comman
   await client.query("INSERT INTO mentoring.assignments (id,organization_id,participant_id,mentor_id,coordinator_id,assigned_at,followup_anchor_at,version) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)", [randomUUID(), actor.organizationId, view.participant.id, mentor.id, command.coordinatorId, now, followupAnchorAt, assignmentVersion]);
   await client.query("UPDATE mentoring.participants SET last_ceo_version = CASE WHEN $3::boolean THEN version + 1 ELSE last_ceo_version END, version = version + 1, updated_at = clock_timestamp() WHERE organization_id = $1 AND id = $2", [actor.organizationId, view.participant.id, actor.role === "ceo"]);
   await cancelReminders(client, actor.organizationId, view.participant.id);
+  await rejectPendingParticipantTransfers(client, actor.organizationId, view.participant.id, actor.id, now, "נסגרה עקב שינוי שיוך ישיר.");
   await audit(client, actor, command, view.participant.id, { mentorId: mentor.id, coordinatorId: command.coordinatorId, assignmentVersion });
   return success(command, view.participant.id);
 }
@@ -248,18 +272,19 @@ export async function executeCommand(authUserId: string, verifiedEmail: string |
         }
       }
       if (isTrackingCommand(command) && !canUseTrackingCards(actor)) return failure("forbidden", "כרטיסי המעקב זמינים למנכ״ל ולרכזות בלבד.");
+      if (isTransferCommand(command) && !canCoordinatorManageTransfers(actor)) return failure("forbidden", "בקשות העברת שיוך מנוהלות בין רכזות בלבד.");
       if (command.type === "update_organization_settings" && actor.role !== "ceo") return failure("forbidden", "שינוי מדיניות זמין למנכ״ל בלבד.");
       if (command.type === "send_staff_sms" && actor.role !== "ceo") return failure("forbidden", "שליחת הודעות לצוות זמינה למנכ״ל בלבד.");
       if (command.type === "save_monthly_review" && !canReviewMonthlyScope(actor, command.scopeStaffId)) return failure("forbidden", "אין הרשאה לסקירה החודשית שנבחרה.");
       if ((command.type === "invalidate_contact" || command.type === "evaluate_reminders") && actor.role === "mentor") return failure("forbidden", "הפעולה זמינה להנהלה ולרכזים ולרכזות בלבד.");
       if (command.type === "create_staff" && actor.role === "coordinator" && (command.fields.role !== "mentor" || command.fields.coordinatorId !== actor.id)) return failure("forbidden", "אפשר לצרף חונכים וחונכות לצוות שלך בלבד.");
-      if (command.type === "assign_participant" || command.type === "create_staff") {
-        if (actor.role === "mentor") return failure("forbidden", "יצירה ושיוך של חניכות זמינים להנהלה ולרכזים ולרכזות בלבד.");
+      if (command.type === "create_staff") {
+        if (actor.role === "mentor") return failure("forbidden", "צירוף חברי וחברות צוות זמין להנהלה ולרכזות בלבד.");
       }
       if (command.type === "set_sms_muted" || command.type === "resolve_conflict" || command.type === "set_staff_active") {
         if (actor.role !== "ceo") return failure("forbidden", "הפעולה זמינה למנכ״ל בלבד.");
       }
-      if ("participantId" in command) {
+      if ("participantId" in command && !isTransferCommand(command)) {
         // Every participant writer takes this lock before assignment/grant/protection checks.
         view = await loadParticipant(client, actor.organizationId, command.participantId, true);
         if (!view) return failure("not_found", "כרטיס החניכה לא נמצא.");
@@ -267,16 +292,18 @@ export async function executeCommand(authUserId: string, verifiedEmail: string |
         const time = await client.query("SELECT clock_timestamp() AS now");
         now = iso(time.rows[0].now);
         const action = command.type === "review_contact" ? "approve" : command.type === "delete_participant" || command.type === "permanently_delete_participant" ? "delete" : "edit";
-        if (!canPerformParticipantAction(actor, view.participant, view.assignment, action, grants, now) && !await ownsUnassignedParticipant(client, actor, view)) return failure("forbidden", "אין הרשאה לפעול בכרטיס החניכה הזה.");
+        const initialAssignAllowed = command.type === "assign_participant" && canInitialAssignParticipant(actor, view);
+        if (!canPerformParticipantAction(actor, view.participant, view.assignment, action, grants, now) && !initialAssignAllowed && !await ownsUnassignedParticipant(client, actor, view)) return failure("forbidden", "אין הרשאה לפעול בכרטיס החניכה הזה.");
         if (command.type === "revise_contact" && actor.role === "mentor" && view.contacts.find((entry) => entry.id === command.contactId)?.actorId !== actor.id) return failure("forbidden", "ניתן לתקן רק דיווח שכתבת בעצמך.");
       }
       if (!now) now = iso((await client.query("SELECT clock_timestamp() AS now")).rows[0].now);
       const assertCurrentScope = async (): Promise<void> => {
-        if (view && actor.role !== "ceo") {
+        if (view && actor.role !== "ceo" && !isTransferCommand(command)) {
           const grants = await loadActorGrants(client, actor, view.participant.id);
           const acceptedAt = iso((await client.query("SELECT clock_timestamp() AS now")).rows[0].now);
           const action = command.type === "review_contact" ? "approve" : "edit";
-          if (!canPerformParticipantAction(actor, view.participant, view.assignment, action, grants, acceptedAt) && !await ownsUnassignedParticipant(client, actor, view)) {
+          const initialAssignAllowed = command.type === "assign_participant" && canInitialAssignParticipant(actor, view);
+          if (!canPerformParticipantAction(actor, view.participant, view.assignment, action, grants, acceptedAt) && !initialAssignAllowed && !await ownsUnassignedParticipant(client, actor, view)) {
             throw new MentoringServerError("forbidden", "ההרשאה לכרטיס פגה לפני השלמת הפעולה. יש לפנות להנהלה.");
           }
         }
@@ -353,7 +380,7 @@ export async function executeCommand(authUserId: string, verifiedEmail: string |
         await audit(client, actor, command, undefined, { staffSmsBatchId: batch.batchId, recipientCount: batch.recipientCount, deliveryCount: batch.deliveryCount });
         return finish({ ...success(command), staffSmsBatchId: batch.batchId });
       }
-      for (const handler of [handleContactCommand, handleAuthorityCommand, handleOversightCommand, handleTrackingCommand, handleReminderCommand]) {
+      for (const handler of [handleContactCommand, handleAuthorityCommand, handleOversightCommand, handleTrackingCommand, handleTransferCommand, handleReminderCommand]) {
         const result = await handler(context, command);
         if (result !== null) return finish(result);
       }

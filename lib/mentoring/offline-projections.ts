@@ -117,20 +117,27 @@ function projectParticipant(view: View, command: ProjectionCommand, actor: Staff
   }
   if (view.deletedAt || view.participant.deletedAt) return view;
   if (["record_contact", "assign_participant", "reschedule_appointment"].includes(command.type) && view.participant.lifecycle !== "active") return view;
+  const lacksAcceptedEdit = !accepted && view.allowedActions !== undefined && !view.allowedActions.includes("edit");
   if (command.type === "update_participant") {
-    if (protectedResource(view, view.participant.id, actor, Object.keys(command.fields))) return view;
+    if (lacksAcceptedEdit || protectedResource(view, view.participant.id, actor, Object.keys(command.fields))) return view;
     const next = { ...view, participant: { ...view.participant, ...command.fields, version: view.participant.version + 1 } };
     return next;
   }
   if (command.type === "assign_participant") {
-    if (actor.role === "mentor" || (view.assignment && actor.role !== "ceo") || protectedResource(view, view.participant.id, actor, ["assignment"])) return view;
+    if ((actor.role === "mentor" && command.mentorId !== actor.id) || (actor.role === "coordinator" && command.coordinatorId !== actor.id) || (view.assignment && actor.role !== "ceo") || protectedResource(view, view.participant.id, actor, ["assignment"])) return view;
     const acceptedAssignment = "acceptedAssignment" in view ? view.acceptedAssignment ?? null : view.assignment;
     const hasAcceptedEdit = view.allowedActions !== undefined ? view.allowedActions.includes("edit") : canPerformParticipantAction(actor, view.participant, acceptedAssignment, "edit", view.accessGrants ?? [], at);
     const ownsCreatedParticipant = view.allowedActions === undefined && actor.role === "coordinator" && !acceptedAssignment && (view.participant.createdBy === actor.id || view.participant.localCreatedByStaffId === actor.id);
-    if (!accepted && !hasAcceptedEdit && !ownsCreatedParticipant) return view;
+    const canInitialAssign = view.canAssignInitial === true && !acceptedAssignment && (actor.role === "mentor" || actor.role === "coordinator");
+    if (!accepted && !hasAcceptedEdit && !ownsCreatedParticipant && !canInitialAssign) return view;
     const assignment = { id: command.operationId, organizationId: actor.organizationId, participantId: command.participantId, mentorId: command.mentorId,
       coordinatorId: command.coordinatorId, assignedAt: at, followupAnchorAt: view.assignment?.followupAnchorAt ?? view.assignment?.assignedAt ?? at, version: (view.assignment?.version ?? 0) + 1 };
+    const nextAllowedActions = accepted && view.allowedActions
+      ? [...new Set([...view.allowedActions, "edit" as const, ...(actor.role === "coordinator" ? ["approve" as const] : [])])]
+      : view.allowedActions;
     const next = { ...view, participant: { ...view.participant, version: view.participant.version + 1 }, assignment,
+      ...(view.canAssignInitial !== undefined ? { canAssignInitial: false } : {}),
+      ...(nextAllowedActions ? { allowedActions: nextAllowedActions } : {}),
       acceptedAssignment: accepted ? assignment : acceptedAssignment,
       acceptedNextAppointment: "acceptedNextAppointment" in view ? view.acceptedNextAppointment : view.nextAppointment,
       nextAppointment: view.nextAppointment ? { ...view.nextAppointment, mentorId: command.mentorId, version: view.nextAppointment.version + 1 } : null,
@@ -138,6 +145,7 @@ function projectParticipant(view: View, command: ProjectionCommand, actor: Staff
         ...view.assignmentHistory.map((entry) => entry.endedAt == null ? { ...entry, endedAt: at, localPending: !accepted, localTimestamp: true } : entry)] } : {}) };
     return next;
   }
+  if (lacksAcceptedEdit) return view;
   if (command.type === "record_contact") {
     if (command.expectedAppointmentVersion !== (view.nextAppointment?.version ?? null)) return view;
     if (command.manualColor !== undefined && command.manualColor !== view.manualColor && protectedResource(view, view.participant.id, actor, ["manualColor"])) return view;

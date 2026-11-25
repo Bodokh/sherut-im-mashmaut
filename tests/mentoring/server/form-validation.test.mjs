@@ -32,6 +32,8 @@ const commands = {
   save_monthly_review: () => ({ operationId: id(), month: "2026-10", scopeStaffId: null, expectedVersion: null, summary: "סיכום", reviewed: true }),
   evaluate_reminders: () => ({ operationId: id(), afterParticipantId: null }),
   send_staff_sms: () => ({ operationId: id(), message: "הודעה לצוות", recipients: [{ staffId: id(), expectedVersion: 1 }] }),
+  request_participant_transfer: () => ({ operationId: id(), participantId: id(), targetMentorId: id(), note: "בקשת העברה לצוות" }),
+  respond_participant_transfer: () => ({ operationId: id(), transferRequestId: id(), decision: "approved", note: "מאשרת את ההעברה" }),
   set_sms_muted: () => ({ operationId: id(), muted: true }),
   resolve_conflict: () => ({ operationId: id(), conflictId: id(), decision: "keep_ceo" }),
 };
@@ -68,7 +70,7 @@ test("client-safe and server command parsers share every supported command shape
 });
 
 test("client-safe validation dependency graph contains no server or Node imports", async () => {
-  const files = ["validation.ts", "validation-fields.ts", "features/authority/schema.ts", "features/contacts/schema.ts", "features/oversight/schema.ts"];
+  const files = ["validation.ts", "validation-fields.ts", "features/authority/schema.ts", "features/contacts/schema.ts", "features/oversight/schema.ts", "features/tracking/schema.ts", "features/transfers/schema.ts"];
   for (const file of files) {
     const source = await readFile(new URL(`../../../lib/mentoring/${file}`, import.meta.url), "utf8");
     assert.doesNotMatch(source, /(?:from\s*|import\s*)["'](?:node:|server-only|.*\/server(?:\/|["']))/, file);
@@ -76,7 +78,7 @@ test("client-safe validation dependency graph contains no server or Node imports
 });
 
 test("every required form field rejects omission with a Hebrew field error", () => {
-  const optional = new Set(["evaluate_reminders.afterParticipantId", "record_contact.manualColor", "revise_contact.nextAppointmentAt", "set_manual_color.reason"]);
+  const optional = new Set(["evaluate_reminders.afterParticipantId", "record_contact.manualColor", "revise_contact.nextAppointmentAt", "set_manual_color.reason", "request_participant_transfer.note", "respond_participant_transfer.note"]);
   for (const type of Object.keys(commands)) {
     const command = make(type);
     for (const field of Object.keys(command).filter((key) => key !== "type")) {
@@ -144,6 +146,7 @@ test("text fields have clear length limits and required staff names and reasons 
     ["create_participant", "fields.serviceRole", 240], ["update_participant", "fields.serviceRole", 240],
     ["create_participant", "fields.profileNotes", 20_000], ["update_participant", "fields.profileNotes", 20_000],
     ["record_contact", "notes", 20_000], ["revise_contact", "notes", 20_000], ["save_monthly_review", "summary", 20_000],
+    ["request_participant_transfer", "note", 2_000], ["respond_participant_transfer", "note", 2_000],
   ];
   for (const type of Object.keys(commands)) if ("reason" in make(type)) limits.push([type, "reason", 2_000]);
   for (const [type, path, maximum] of limits) {
@@ -162,7 +165,7 @@ test("text fields have clear length limits and required staff names and reasons 
 });
 
 test("enum choices and authority arrays explain invalid selections and preserve policy constraints", () => {
-  const fields = [["create_staff", "fields.role"], ["update_staff", "fields.role"], ["create_participant", "fields.serviceType"], ["update_participant", "fields.serviceType"], ["record_contact", "method"], ["record_contact", "outcome"], ["record_contact", "manualColor"], ["revise_contact", "method"], ["revise_contact", "outcome"], ["review_contact", "decision"], ["set_manual_color", "color"], ["set_participant_lifecycle", "lifecycle"], ["update_organization_settings", "settings.reminderAudience"], ["resolve_conflict", "decision"]];
+  const fields = [["create_staff", "fields.role"], ["update_staff", "fields.role"], ["create_participant", "fields.serviceType"], ["update_participant", "fields.serviceType"], ["record_contact", "method"], ["record_contact", "outcome"], ["record_contact", "manualColor"], ["revise_contact", "method"], ["revise_contact", "outcome"], ["review_contact", "decision"], ["respond_participant_transfer", "decision"], ["set_manual_color", "color"], ["set_participant_lifecycle", "lifecycle"], ["update_organization_settings", "settings.reminderAudience"], ["resolve_conflict", "decision"]];
   for (const [type, field] of fields) for (const value of ["unsupported", "", 1]) rejected(set(make(type), field, value), field);
   for (const actions of [["unsupported"], ["view", "view"], ["edit"], ["approve"], ["view", "edit", "approve", "view"], "view"]) rejected(set(make("set_access_grant"), "actions", actions));
   assert.equal(parseCommand(set(make("set_access_grant"), "actions", [])).ok, true, "an empty list continues to revoke a grant");

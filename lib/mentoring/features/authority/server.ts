@@ -7,6 +7,8 @@ import type { CommandContext } from "../../server/command-context";
 import type { AssignmentHistoryView, AuthorityCommand, AuthorityExtras, GrantView, ParticipantDeletionState, ParticipantLifecycle, ProtectionStateView } from "./contracts";
 import { CONTACT_PROTECTION_FIELDS, PARTICIPANT_PROTECTION_FIELDS } from "./schema";
 import { trackingSchemaState } from "../tracking/database-schema";
+import { transferSchemaState } from "../transfers/database-schema";
+import { rejectPendingParticipantTransfers } from "../transfers/server";
 
 const commandTypes = new Set(["set_access_grant", "set_ceo_protection", "set_participant_lifecycle", "delete_participant", "permanently_delete_participant", "restore_participant", "update_staff"]);
 export const isAuthorityCommand = (command: { readonly type: string }): command is AuthorityCommand => commandTypes.has(command.type);
@@ -114,13 +116,18 @@ async function permanentlyDeleteParticipant(context: CommandContext, command: Ex
   if (jobs.rows.some((job) => job.state === "dispatching")) return context.failure("conflict", "הודעת תזכורת נמצאת כעת בשליחה. יש להמתין לסיום השליחה, לרענן ולאשר את המחיקה מחדש.", "reminderDelivery");
   if (jobs.rows.some((job) => job.state === "uncertain")) return context.failure("conflict", "מצב שליחת תזכורת לחניכה אינו ידוע. יש לפנות לתמיכה לבירור ההודעה מול ספק המסרונים לפני מחיקה לצמיתות.", "reminderDelivery");
   const trackingSchema = await trackingSchemaState(client);
-  if (trackingSchema === "partial") return context.failure("not_configured", "לא ניתן להשלים מחיקה לצמיתות כרגע. יש לנסות שוב מאוחר יותר.");
+  const transferSchema = await transferSchemaState(client);
+  if (trackingSchema === "partial" || transferSchema === "partial") return context.failure("not_configured", "לא ניתן להשלים מחיקה לצמיתות כרגע. יש לנסות שוב מאוחר יותר.");
   // Explicitly purge only this participant's relational and narrative data.
   // Contact revisions/review events and appointment/color history cascade from
   // their parents; all other participant foreign keys deliberately restrict.
   if (trackingSchema === "ready") {
     await client.query("DELETE FROM mentoring.tracking_reports WHERE organization_id=$1 AND participant_id=$2", parameters);
     await client.query("DELETE FROM mentoring.tracking_cards WHERE organization_id=$1 AND participant_id=$2", parameters);
+  }
+  if (transferSchema === "ready") {
+    await client.query("DELETE FROM mentoring.transfer_request_emails WHERE organization_id=$1 AND transfer_request_id IN (SELECT id FROM mentoring.transfer_requests WHERE organization_id=$1 AND participant_id=$2)", parameters);
+    await client.query("DELETE FROM mentoring.transfer_requests WHERE organization_id=$1 AND participant_id=$2", parameters);
   }
   await client.query("DELETE FROM mentoring.reminder_attempts WHERE organization_id=$1 AND participant_id=$2", parameters);
   await client.query("DELETE FROM mentoring.reminder_jobs WHERE organization_id=$1 AND participant_id=$2", parameters);
@@ -167,13 +174,17 @@ export async function handleAuthorityCommand(context: CommandContext, command: M
   if (command.type === "delete_participant") {
     await context.client.query("UPDATE mentoring.participants SET deleted_at = $3, deleted_by = $4, deletion_reason = $5, deleted_previous_lifecycle = lifecycle, last_ceo_version = version + 1, version = version + 1, updated_at = clock_timestamp() WHERE organization_id = $1 AND id = $2", [context.actor.organizationId, command.participantId, context.now, context.actor.id, command.reason]);
     await cancelUnsentReminders(context, command.participantId);
+    await rejectPendingParticipantTransfers(context.client, context.actor.organizationId, command.participantId, context.actor.id, context.now, "נסגרה עקב העברת כרטיס החניכה לסל המחזור.");
     await context.audit(command, command.participantId, { reason: command.reason, previousLifecycle: view.participant.lifecycle, version: view.participant.version + 1 });
     return context.success(command, command.participantId);
   }
   if (command.type === "set_participant_lifecycle") {
     await context.client.query("UPDATE mentoring.participants SET lifecycle = $3, last_ceo_version = version + 1, version = version + 1, updated_at = clock_timestamp() WHERE organization_id = $1 AND id = $2", [context.actor.organizationId, command.participantId, command.lifecycle]);
     if (command.lifecycle === "active") await context.refreshReminders(command.participantId);
-    else await cancelUnsentReminders(context, command.participantId);
+    else {
+      await cancelUnsentReminders(context, command.participantId);
+      await rejectPendingParticipantTransfers(context.client, context.actor.organizationId, command.participantId, context.actor.id, context.now, "נסגרה עקב שינוי מצב הליווי של החניכה.");
+    }
     await context.audit(command, command.participantId, { reason: command.reason, previousLifecycle: view.participant.lifecycle, lifecycle: command.lifecycle, version: view.participant.version + 1 });
     return context.success(command, command.participantId);
   }
