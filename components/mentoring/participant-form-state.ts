@@ -78,10 +78,30 @@ export function canEditParticipant(actor: StaffProfile, view: AuthorityView): bo
 export function assignmentScope(actor: StaffProfile, view: AuthorityView, staff: readonly StaffProfile[]) {
   const sameOrganization = actor.organizationId === view.participant.organizationId;
   const acceptedAssignment = view.acceptedAssignment ?? null;
-  const canAssign = actor.active && sameOrganization && canEditParticipant(actor, view) && (actor.role === "ceo" || (actor.role === "coordinator" && !acceptedAssignment && !view.assignment)) && !fieldIsProtected(actor, view.participant.id, view.protections, "assignment");
+  const activeLifecycle = (view.participant.lifecycle ?? "active") === "active";
+  const unassignedActive = !acceptedAssignment && !view.assignment && view.participant.deletedAt == null && activeLifecycle;
+  const hasInitialAssignPermission = Boolean(view.canAssignInitial)
+    || canEditParticipant(actor, view)
+    || (view.allowedActions === undefined && actor.role === "mentor" && unassignedActive);
+  const canAssign = actor.active
+    && !actor.localPending
+    && sameOrganization
+    && !fieldIsProtected(actor, view.participant.id, view.protections, "assignment")
+    && (
+      actor.role === "ceo"
+        ? canEditParticipant(actor, view) && activeLifecycle
+        : (actor.role === "coordinator" || actor.role === "mentor") && unassignedActive && hasInitialAssignPermission
+    );
   // Pending staff choices are queue dependencies; they never authorize the actor.
-  const mentors = staff.filter((member) => (member.active || member.localPending) && member.role === "mentor" && member.organizationId === actor.organizationId && (actor.role === "ceo" || member.coordinatorId === actor.id));
-  const coordinators = staff.filter((member) => (member.active || member.localPending) && member.role === "coordinator" && member.organizationId === actor.organizationId && (actor.role === "ceo" || member.id === actor.id));
+  const mentors = actor.role === "mentor"
+    ? (() => {
+        const own = staff.filter((member) => member.active && member.role === "mentor" && member.id === actor.id && member.organizationId === actor.organizationId);
+        return own.length ? own : (actor.active ? [actor] : []);
+      })()
+    : staff.filter((member) => (member.active || member.localPending) && member.role === "mentor" && member.organizationId === actor.organizationId && (actor.role === "ceo" || member.coordinatorId === actor.id));
+  const coordinators = actor.role === "mentor"
+    ? staff.filter((member) => member.active && member.role === "coordinator" && member.organizationId === actor.organizationId && member.id === actor.coordinatorId)
+    : staff.filter((member) => (member.active || member.localPending) && member.role === "coordinator" && member.organizationId === actor.organizationId && (actor.role === "ceo" || member.id === actor.id));
   return { canAssign, mentors, coordinators };
 }
 
@@ -92,9 +112,23 @@ export function mentorsForCoordinator<T extends Pick<StaffProfile, "coordinatorI
 }
 
 /** Existing assignments may predate team consistency; fall back to the mentor's own team. */
-export function initialAssignmentCoordinator(actor: Pick<StaffProfile, "id" | "role">, view: Pick<ParticipantView, "assignment">, staff: readonly Pick<StaffProfile, "id" | "coordinatorId">[]): string {
+export function initialAssignmentCoordinator(
+  actor: Pick<StaffProfile, "id" | "role" | "coordinatorId">,
+  view: Pick<ParticipantView, "assignment">,
+  staff: readonly (Pick<StaffProfile, "id" | "coordinatorId"> & { readonly active?: boolean; readonly role?: string })[],
+): string {
   if (actor.role === "coordinator") return actor.id;
+  if (actor.role === "mentor" && !view.assignment) {
+    if (!actor.coordinatorId) return "none";
+    const ownCoordinator = staff.find((member) => member.id === actor.coordinatorId && member.active !== false && (!member.role || member.role === "coordinator"));
+    return ownCoordinator ? ownCoordinator.id : "none";
+  }
   const assignment = view.assignment;
   if (!assignment) return "none";
   return assignment.coordinatorId ?? staff.find((member) => member.id === assignment.mentorId)?.coordinatorId ?? "none";
+}
+
+export function initialAssignmentMentor(actor: Pick<StaffProfile, "id" | "role">, view: Pick<ParticipantView, "assignment">): string {
+  if (actor.role === "mentor" && !view.assignment) return actor.id;
+  return view.assignment?.mentorId ?? "";
 }

@@ -6,6 +6,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   ActivityIcon,
+  ArrowLeftRightIcon,
   ArrowRightIcon,
   CalendarCheck2Icon,
   BellRingIcon,
@@ -51,6 +52,7 @@ import { useWorkspace } from "@/lib/mentoring/workspace-client";
 import { staffPublicPath, toStaffInternalPath } from "@/lib/staff-host";
 import { initials } from "./format";
 import { readableError, roleNames } from "./common";
+import { pendingIncomingTransferCount } from "./transfer-state";
 
 const navigation = [
   { href: "/staff", label: "האזור האישי שלי", icon: HomeIcon },
@@ -59,6 +61,7 @@ const navigation = [
   { href: "/staff/reminders", label: "התזכורות שלי", icon: BellRingIcon },
 ];
 const management = [
+  { href: "/staff/transfers", label: "העברות שיוך", icon: ArrowLeftRightIcon },
   { href: "/staff/reviews", label: "בקרה ואישורים", icon: CheckCheckIcon },
   { href: "/staff/oversight", label: "בקרה חודשית", icon: ClipboardCheckIcon },
   { href: "/staff/team", label: "הצוות", icon: ShieldCheckIcon },
@@ -70,28 +73,34 @@ const ceoManagement = [{ href: "/staff/tree", label: "עץ הארגון", icon: 
 function NavigationItems({
   entries,
   pathname,
+  badges,
 }: {
   entries: typeof navigation;
   pathname: string;
+  badges?: Readonly<Record<string, number>>;
 }) {
   const current = toStaffInternalPath(pathname);
   return (
     <SidebarMenu>
-      {entries.map(({ href, label, icon: Icon }) => (
-        <SidebarMenuItem key={href}>
-          <SidebarMenuButton
-            size="lg"
-            isActive={
-              href === current ||
-              (href !== "/staff" && current.startsWith(`${href}/`))
-            }
-            render={<Link href={staffPublicPath(href)} />}
-          >
-            <Icon />
-            <span>{label}</span>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      ))}
+      {entries.map(({ href, label, icon: Icon }) => {
+        const count = badges?.[href] ?? 0;
+        return (
+          <SidebarMenuItem key={href}>
+            <SidebarMenuButton
+              size="lg"
+              isActive={
+                href === current ||
+                (href !== "/staff" && current.startsWith(`${href}/`))
+              }
+              render={<Link href={staffPublicPath(href)} />}
+            >
+              <Icon />
+              <span className="flex-1 truncate">{label}</span>
+              {count > 0 && <Badge className="ms-auto">{count}</Badge>}
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        );
+      })}
     </SidebarMenu>
   );
 }
@@ -162,6 +171,8 @@ export function MentoringShell({ children }: { children: ReactNode }) {
 
   const actor = snapshot.actor;
   const isManagement = actor.role !== "mentor";
+  const incomingTransfers = pendingIncomingTransferCount(actor, snapshot.transferRequests);
+  const managementBadges = incomingTransfers > 0 ? { "/staff/transfers": incomingTransfers } : undefined;
   const managementEntries = actor.role === "ceo" ? [...management, ...ceoManagement] : management;
   const items = [
     ...navigation,
@@ -212,7 +223,7 @@ export function MentoringShell({ children }: { children: ReactNode }) {
             <SidebarGroup>
               <SidebarGroupLabel>ניהול ובקרה</SidebarGroupLabel>
               <SidebarGroupContent>
-                <NavigationItems entries={managementEntries} pathname={pathname} />
+                <NavigationItems entries={managementEntries} pathname={pathname} badges={managementBadges} />
               </SidebarGroupContent>
             </SidebarGroup>
           )}

@@ -66,6 +66,7 @@ import { ParticipantAuthorityControls } from "./authority-controls";
 import { ParticipantHistory } from "./participant-history";
 import { TrackingCardPanel } from "./tracking-card";
 import { canUseTrackingCards } from "./tracking-state";
+import { IncomingTransferAlertBanner, RequestTransferDialog } from "./transfer-requests";
 
 const lifecycleNames = {
   active: "בליווי פעיל",
@@ -78,13 +79,16 @@ export function ParticipantsView() {
   const [query, setQuery] = useState("");
   const [service, setService] = useState("all");
   const [lifecycle, setLifecycle] = useState("active");
+  const [assignmentFilter, setAssignmentFilter] = useState("all");
   const now = useNow();
   if (!snapshot) return null;
   const normalized = query.trim().toLocaleLowerCase("he");
   const views = snapshot.participants.filter(
-    ({ participant }) =>
+    ({ participant, assignment }) =>
       !participant.deletedAt &&
       (lifecycle === "all" || participant.lifecycle === lifecycle) &&
+      (assignmentFilter === "all" ||
+        (assignmentFilter === "unassigned" ? !assignment : Boolean(assignment))) &&
       (service === "all" ||
         participant.serviceType === service ||
         (service === "unknown" && !participant.serviceType)) &&
@@ -100,8 +104,16 @@ export function ParticipantsView() {
       <PageHeading
         title="החניכות"
         description="לכל חניכה יש כרטיס אחד שמרכז את הפרטים, האחריות לליווי והקשר לאורך הדרך."
-        action={<ParticipantEditor />}
+        action={
+          <>
+            {snapshot.actor.role === "coordinator" && (
+              <RequestTransferDialog triggerVariant="outline" />
+            )}
+            <ParticipantEditor />
+          </>
+        }
       />
+      <IncomingTransferAlertBanner />
       <Card>
         <CardHeader>
           <CardTitle>מבט על מערך הליווי</CardTitle>
@@ -111,7 +123,7 @@ export function ParticipantsView() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <FieldGroup className="grid gap-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
+          <FieldGroup className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]">
             <Field>
               <FieldLabel htmlFor="participant-search">חיפוש חניכה</FieldLabel>
               <Input
@@ -162,6 +174,29 @@ export function ParticipantsView() {
                     <SelectItem value="paused">הליווי בהשהיה</SelectItem>
                     <SelectItem value="closed">הליווי הסתיים</SelectItem>
                     <SelectItem value="all">כל החניכות</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="assignment-filter">מצב השיוך</FieldLabel>
+              <Select
+                items={{
+                  all: "כל מצבי השיוך",
+                  unassigned: "ממתינות לשיוך (חדשות)",
+                  assigned: "משויכות לליווי",
+                }}
+                value={assignmentFilter}
+                onValueChange={(value) => setAssignmentFilter(value ?? "all")}
+              >
+                <SelectTrigger id="assignment-filter" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="all">כל מצבי השיוך</SelectItem>
+                    <SelectItem value="unassigned">ממתינות לשיוך (חדשות)</SelectItem>
+                    <SelectItem value="assigned">משויכות לליווי</SelectItem>
                   </SelectGroup>
                 </SelectContent>
               </Select>
@@ -243,7 +278,11 @@ export function ParticipantsView() {
                     לכרטיס החניכה
                     <ArrowLeftIcon data-icon="inline-end" />
                   </Button>
+                  {!view.assignment && view.participant.lifecycle === "active" ? (
+                    <AssignmentEditor view={view} />
+                  ) : (
                     <ContactLink participantId={view.participant.id} />
+                  )}
                 </CardFooter>
               </Card>
             );
