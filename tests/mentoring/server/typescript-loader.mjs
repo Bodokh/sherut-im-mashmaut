@@ -4,14 +4,25 @@ import { existsSync } from "node:fs";
 import { registerHooks } from "node:module";
 import { fileURLToPath } from "node:url";
 
+const repoRoot = new URL("../../../", import.meta.url);
+
 registerHooks({
   resolve(specifier, context, nextResolve) {
     try {
       return nextResolve(specifier, context);
     } catch (error) {
-      if (!specifier.startsWith(".") || !context.parentURL?.startsWith("file:") || !["ERR_MODULE_NOT_FOUND", "ERR_UNSUPPORTED_DIR_IMPORT"].includes(error.code)) throw error;
+      if (!["ERR_MODULE_NOT_FOUND", "ERR_UNSUPPORTED_DIR_IMPORT"].includes(error.code)) throw error;
+      if (specifier.startsWith("@/")) {
+        const base = new URL(specifier.slice(2), repoRoot);
+        for (const suffix of ["", ".ts", ".tsx", "/index.ts"]) {
+          const candidate = new URL(`${base.href}${suffix}`);
+          if (existsSync(fileURLToPath(candidate))) return nextResolve(candidate.href, context);
+        }
+        throw error;
+      }
+      if (!specifier.startsWith(".") || !context.parentURL?.startsWith("file:")) throw error;
       const unresolved = new URL(specifier, context.parentURL);
-      for (const suffix of [".ts", "/index.ts"]) {
+      for (const suffix of [".ts", ".tsx", "/index.ts"]) {
         const candidate = new URL(`${unresolved.href}${suffix}`);
         if (existsSync(fileURLToPath(candidate))) return nextResolve(candidate.href, context);
       }

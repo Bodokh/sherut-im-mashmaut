@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assignmentScope, canCreateParticipant, canEditParticipant, changedParticipantFields, createdParticipantFields, fieldIsProtected, initialAssignmentCoordinator, mentorsForCoordinator, participantFormFields, participantInputError } from "./participant-form-state.ts";
+import { assignmentScope, canCreateParticipant, canEditParticipant, changedParticipantFields, createdParticipantFields, fieldIsProtected, initialAssignmentCoordinator, initialAssignmentMentor, mentorsForCoordinator, participantFormFields, participantInputError } from "./participant-form-state.ts";
 import { reconcileStoredDraft } from "./draft-state.ts";
 import { parseCommand } from "../../lib/mentoring/validation.ts";
 
@@ -257,3 +257,45 @@ test("Task 2: the initial team of an assignment edit falls back to the mentor's 
   assert.equal(initialAssignmentCoordinator(ceo, { assignment: { mentorId: "mentor-free", coordinatorId: null } }, roster), "none");
   assert.equal(initialAssignmentCoordinator({ id: "coordinator-a", role: "coordinator" }, { assignment: null }, roster), "coordinator-a");
 });
+
+test("mentors can self-assign active unassigned mentees paired with their active coordinator, but never reassign", () => {
+  const mentorWithTeam = { id: "own-mentor", organizationId: "org", role: "mentor", active: true, coordinatorId: actor.id };
+  const unassignedView = { ...view, participant: { ...participant, createdBy: "ceo", lifecycle: "active" }, allowedActions: ["view"], canAssignInitial: true };
+  const scope = assignmentScope(mentorWithTeam, unassignedView, staff);
+  assert.equal(scope.canAssign, true);
+  assert.deepEqual(scope.mentors.map((member) => member.id), ["own-mentor"]);
+  assert.deepEqual(scope.coordinators.map((member) => member.id), [actor.id]);
+  assert.equal(initialAssignmentMentor(mentorWithTeam, unassignedView), "own-mentor");
+  assert.equal(initialAssignmentCoordinator(mentorWithTeam, unassignedView, staff), actor.id);
+
+  const soloMentor = { id: "solo-mentor", organizationId: "org", role: "mentor", active: true, coordinatorId: null };
+  const soloScope = assignmentScope(soloMentor, unassignedView, [...staff, soloMentor]);
+  assert.equal(soloScope.canAssign, true);
+  assert.deepEqual(soloScope.coordinators, []);
+  assert.equal(initialAssignmentMentor(soloMentor, unassignedView), "solo-mentor");
+  assert.equal(initialAssignmentCoordinator(soloMentor, unassignedView, [...staff, soloMentor]), "none");
+
+  const alreadyAssigned = { ...unassignedView, assignment: { mentorId: "other-mentor", coordinatorId: "other-coordinator" }, canAssignInitial: false };
+  assert.equal(assignmentScope(mentorWithTeam, alreadyAssigned, staff).canAssign, false);
+});
+
+test("coordinators can assign unassigned active mentees created by other staff, while non-active mentees deny assignment", () => {
+  const foreignCreatedUnassigned = {
+    ...view,
+    participant: { ...participant, createdBy: "ceo", lifecycle: "active" },
+    allowedActions: ["view"],
+    canAssignInitial: true,
+  };
+  const scope = assignmentScope(actor, foreignCreatedUnassigned, staff);
+  assert.equal(scope.canAssign, true);
+  assert.deepEqual(scope.mentors.map((member) => member.id), ["own-mentor"]);
+
+  const pausedUnassigned = {
+    ...foreignCreatedUnassigned,
+    participant: { ...foreignCreatedUnassigned.participant, lifecycle: "paused" },
+  };
+  assert.equal(assignmentScope(actor, pausedUnassigned, staff).canAssign, false);
+  assert.equal(assignmentScope({ ...actor, role: "ceo" }, { ...pausedUnassigned, allowedActions: ["view", "edit"] }, staff).canAssign, false);
+  assert.equal(assignmentScope({ ...actor, role: "ceo" }, { ...foreignCreatedUnassigned, allowedActions: ["view", "edit"] }, staff).canAssign, true);
+});
+

@@ -144,6 +144,7 @@ test("the command route schedules a committed new SMS batch after responding, ne
     if (specifier.endsWith("/http")) return http;
     if (specifier.endsWith("/staff-onboarding")) return { dispatchStaffOnboardingEmails: () => assert.fail("not an invite") };
     if (specifier.endsWith("/staff-onboarding-email")) return { staffOnboardingSender: () => assert.fail("not an invite") };
+    if (specifier.endsWith("/transfers/email")) return { dispatchTransferRequestEmails: () => assert.fail("not a transfer"), transferRequestEmailSender: () => assert.fail("not a transfer") };
     if (specifier.endsWith("/staff-messages/dispatcher")) return { runStaffSmsDispatcher: async (options) => dispatched.push(options) };
     throw new Error(`Unexpected dependency ${specifier}`);
   });
