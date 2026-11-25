@@ -61,6 +61,7 @@ import {
 } from "./common";
 import { formatDateTime } from "./format";
 import { AssignmentEditor, ParticipantEditor } from "./participant-forms";
+import { canEditParticipant } from "./participant-form-state";
 import { AppointmentReviewWarning, ContactCorrectionActions, ContactFollowupActions } from "./contact-corrections";
 import { ParticipantAuthorityControls } from "./authority-controls";
 import { ParticipantHistory } from "./participant-history";
@@ -375,7 +376,7 @@ export function ParticipantDetailView({
       protection.active && protection.resourceId === view.participant.id,
   );
   const deleted = Boolean(view.participant.deletedAt ?? view.deletedAt);
-  const showTracking = !deleted && canUseTrackingCards(snapshot.actor);
+  const showTracking = !deleted && canUseTrackingCards(snapshot.actor) && (snapshot.actor.role === "ceo" || canEditParticipant(snapshot.actor, view));
   const showMentorContact = Boolean(mentor && canUseTrackingCards(snapshot.actor) && (snapshot.actor.role === "ceo" || mentor.coordinatorId === snapshot.actor.id));
 
   return (

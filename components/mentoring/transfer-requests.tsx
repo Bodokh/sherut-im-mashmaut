@@ -99,9 +99,11 @@ export function IncomingTransferAlertBanner() {
 export function RequestTransferDialog({
   defaultParticipantId = "",
   triggerVariant = "default",
+  onRequested,
 }: {
   defaultParticipantId?: string;
   triggerVariant?: "default" | "outline";
+  onRequested?: () => void;
 }) {
   const { snapshot } = useWorkspace();
   const [open, setOpen] = useState(false);
@@ -125,6 +127,7 @@ export function RequestTransferDialog({
           defaultParticipantId={defaultParticipantId}
           onBusyChange={setBusy}
           onClose={() => setOpen(false)}
+          onRequested={onRequested}
         />
       </DialogContent>
     </Dialog>
@@ -135,10 +138,12 @@ function RequestTransferForm({
   defaultParticipantId,
   onBusyChange,
   onClose,
+  onRequested,
 }: {
   defaultParticipantId: string;
   onBusyChange: (busy: boolean) => void;
   onClose: () => void;
+  onRequested?: () => void;
 }) {
   const { snapshot, submitOnline, isOnline } = useWorkspace();
   const intent = useCommandIntent();
@@ -210,6 +215,7 @@ function RequestTransferForm({
       }
       intent.clear();
       toast.success("בקשת ההעברה נשלחה לרכזת לאישור");
+      onRequested?.();
       onClose();
     } finally {
       setBusy(false);
@@ -573,6 +579,76 @@ function TransferRequestCard({
   );
 }
 
+function CoordinatorTransfersTabs({
+  incoming,
+  outgoing,
+  pendingIncoming,
+}: {
+  incoming: readonly TransferRequestView[];
+  outgoing: readonly TransferRequestView[];
+  pendingIncoming: number;
+}) {
+  const initialTab = pendingIncoming > 0 || incoming.length > 0 || outgoing.length === 0 ? "incoming" : "outgoing";
+  const [activeTab, setActiveTab] = useState<"incoming" | "outgoing">(initialTab);
+
+  return (
+    <>
+      <PageHeading
+        title="בקשות העברת שיוך"
+        description="כדי להעביר אלייך חניכה שכבר משובצת בצוות אחר, שלחי בקשת העברה לרכזת המחזיקה בה. החניכה תעבור רק לאחר אישור הרכזת."
+        action={<RequestTransferDialog onRequested={() => setActiveTab("outgoing")} />}
+      />
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => {
+          if (value === "incoming" || value === "outgoing") setActiveTab(value);
+        }}
+        className="flex flex-col gap-5"
+      >
+        <TabsList className="self-start">
+          <TabsTrigger value="incoming" className="gap-2">
+            בקשות נכנסות לאישורי
+            {pendingIncoming > 0 && <Badge>{pendingIncoming}</Badge>}
+          </TabsTrigger>
+          <TabsTrigger value="outgoing" className="gap-2">
+            בקשות ששלחתי
+            {outgoing.length > 0 && <Badge variant="outline">{outgoing.length}</Badge>}
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="incoming" className="flex flex-col gap-4">
+          {incoming.length === 0 ? (
+            <SectionEmpty
+              title="אין בקשות העברה נכנסות"
+              description="כאשר רכזת אחרת תבקש להעביר לצוות שלה חניכה המשויכת אלייך, תקבלי התראה כאן ובדוא״ל ותוכלי לאשר או לדחות את הבקשה."
+            />
+          ) : (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {incoming.map((request) => (
+                <TransferRequestCard key={request.id} request={request} direction="incoming" />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+        <TabsContent value="outgoing" className="flex flex-col gap-4">
+          {outgoing.length === 0 ? (
+            <SectionEmpty
+              title="טרם שלחת בקשות העברה"
+              description="אפשר לבקש העברת שיוך של חניכה המשובצת אצל רכזת אחרת באמצעות הכפתור למעלה. עד לאישור הרכזת לא יתבצע שינוי בשיוך."
+              action={<RequestTransferDialog triggerVariant="outline" onRequested={() => setActiveTab("outgoing")} />}
+            />
+          ) : (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {outgoing.map((request) => (
+                <TransferRequestCard key={request.id} request={request} direction="outgoing" />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+    </>
+  );
+}
+
 export function TransfersView() {
   const { snapshot } = useWorkspace();
   if (!snapshot) return null;
@@ -625,56 +701,11 @@ export function TransfersView() {
     );
   }
 
-  const defaultTab = pendingIncoming > 0 || incoming.length > 0 || outgoing.length === 0 ? "incoming" : "outgoing";
-
   return (
-    <>
-      <PageHeading
-        title="בקשות העברת שיוך"
-        description="כדי להעביר אלייך חניכה שכבר משובצת בצוות אחר, שלחי בקשת העברה לרכזת המחזיקה בה. החניכה תעבור רק לאחר אישור הרכזת."
-        action={<RequestTransferDialog />}
-      />
-      <Tabs defaultValue={defaultTab} className="flex flex-col gap-5">
-        <TabsList className="self-start">
-          <TabsTrigger value="incoming" className="gap-2">
-            בקשות נכנסות לאישורי
-            {pendingIncoming > 0 && <Badge>{pendingIncoming}</Badge>}
-          </TabsTrigger>
-          <TabsTrigger value="outgoing" className="gap-2">
-            בקשות ששלחתי
-            {outgoing.length > 0 && <Badge variant="outline">{outgoing.length}</Badge>}
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="incoming" className="flex flex-col gap-4">
-          {incoming.length === 0 ? (
-            <SectionEmpty
-              title="אין בקשות העברה נכנסות"
-              description="כאשר רכזת אחרת תבקש להעביר לצוות שלה חניכה המשויכת אלייך, תקבלי התראה כאן ובדוא״ל ותוכלי לאשר או לדחות את הבקשה."
-            />
-          ) : (
-            <div className="grid gap-4 lg:grid-cols-2">
-              {incoming.map((request) => (
-                <TransferRequestCard key={request.id} request={request} direction="incoming" />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-        <TabsContent value="outgoing" className="flex flex-col gap-4">
-          {outgoing.length === 0 ? (
-            <SectionEmpty
-              title="טרם שלחת בקשות העברה"
-              description="אפשר לבקש העברת שיוך של חניכה המשובצת אצל רכזת אחרת באמצעות הכפתור למעלה. עד לאישור הרכזת לא יתבצע שינוי בשיוך."
-              action={<RequestTransferDialog triggerVariant="outline" />}
-            />
-          ) : (
-            <div className="grid gap-4 lg:grid-cols-2">
-              {outgoing.map((request) => (
-                <TransferRequestCard key={request.id} request={request} direction="outgoing" />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
-    </>
+    <CoordinatorTransfersTabs
+      incoming={incoming}
+      outgoing={outgoing}
+      pendingIncoming={pendingIncoming}
+    />
   );
 }
