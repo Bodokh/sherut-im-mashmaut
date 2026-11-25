@@ -145,6 +145,8 @@ function withoutDeletedParticipants(snapshot: WorkspaceSnapshot, deleted: Readon
   return { ...snapshot, ...(deleted.size || snapshot.permanentlyDeletedParticipantIds ? { permanentlyDeletedParticipantIds: [...deleted] } : {}),
     participants: snapshot.participants.filter((view) => !deleted.has(view.participant.id)),
     conflicts: snapshot.conflicts.filter((conflict) => !deleted.has(conflict.participantId)),
+    ...(snapshot.transferRequests ? { transferRequests: snapshot.transferRequests.filter((item) => !deleted.has(item.participantId)) } : {}),
+    ...(snapshot.transferableParticipants ? { transferableParticipants: snapshot.transferableParticipants.filter((item) => !deleted.has(item.participantId)) } : {}),
     ...(snapshot.reminders ? { reminders: snapshot.reminders.filter((reminder) => !deleted.has(reminder.participantId)) } : {}) };
 }
 
@@ -188,12 +190,26 @@ export function isOfflineDraftAccessCurrent(snapshot: WorkspaceSnapshot | null, 
 
 function commandAllowed(snapshot: WorkspaceSnapshot, command: MentoringCommand, localCreates: ReadonlySet<string> = new Set()): boolean {
   const actor = snapshot.actor;
-  if (command.type === "permanently_delete_participant" || snapshot.permanentlyDeletedParticipantIds?.includes(participantIdFor(command) ?? "")) return false;
+  if (command.type === "permanently_delete_participant" || command.type === "request_participant_transfer" || command.type === "respond_participant_transfer" || snapshot.permanentlyDeletedParticipantIds?.includes(participantIdFor(command) ?? "")) return false;
   if (participantCommand(command) && "participantId" in command) {
     const view = snapshot.participants.find((item) => item.participant.id === command.participantId);
     if (!view && !localCreates.has(command.participantId)) return false;
     if (["set_access_grant", "set_ceo_protection", "set_participant_lifecycle", "delete_participant", "restore_participant"].includes(command.type)) return actor.role === "ceo";
     if (command.type === "invalidate_contact" && actor.role === "mentor") return false;
+    if (command.type === "assign_participant") {
+      if (!view) return actor.role === "ceo" || (actor.role === "coordinator" && command.coordinatorId === actor.id);
+      const currentAssignment = view.acceptedAssignment ?? view.assignment;
+      if (actor.role === "ceo") {
+        return view.allowedActions ? view.allowedActions.includes("edit") : canPerformParticipantAction(actor, view.participant, currentAssignment, "edit", view.accessGrants ?? []);
+      }
+      if (currentAssignment || view.participant.deletedAt != null || view.participant.lifecycle !== "active") return false;
+      const hasInitialAssign = Boolean(view.canAssignInitial) || (view.allowedActions
+        ? view.allowedActions.includes("edit")
+        : (actor.role === "coordinator" && view.participant.createdBy === actor.id) || canPerformParticipantAction(actor, view.participant, null, "edit", view.accessGrants ?? []));
+      if (!hasInitialAssign) return false;
+      if (actor.role === "mentor") return command.mentorId === actor.id;
+      return actor.role === "coordinator" && command.coordinatorId === actor.id;
+    }
     if (!view) return actor.role !== "mentor" || !["review_contact", "assign_participant"].includes(command.type);
     const action = command.type === "review_contact" ? "approve" : "edit";
     return view.allowedActions ? view.allowedActions.includes(action) : canPerformParticipantAction(actor, view.participant, view.acceptedAssignment ?? view.assignment, action, view.accessGrants ?? []);
@@ -462,6 +478,7 @@ export function createMentoringOfflineStore(databaseName = MENTORING_OFFLINE_DAT
   async function enqueue(scope: OfflineScope, command: MentoringCommand, now = Date.now()): Promise<OfflineOperation> {
     if (command.type === "permanently_delete_participant") throw new OfflineStorageError("invalid_command", "מחיקה לצמיתות דורשת חיבור פעיל ואישור מפורש. היא אינה נשמרת בתור המקומי.");
     if (command.type === "save_tracking_card" || command.type === "record_tracking_report") throw new OfflineStorageError("invalid_command", "עדכון כרטיס מעקב דורש חיבור פעיל. הבקשה לא נשמרה בתור המקומי.");
+    if (command.type === "request_participant_transfer" || command.type === "respond_participant_transfer") throw new OfflineStorageError("invalid_command", "ניהול בקשות העברת שיוך דורש חיבור פעיל. הבקשה לא נשמרה בתור המקומי.");
     if (command.type === "send_staff_sms") throw new OfflineStorageError("invalid_command", "שליחת SMS לצוות דורשת חיבור פעיל ואישור שליחה. ההודעה לא נשמרה בתור המקומי.");
     if (!command.operationId || command.operationId.length > 128) throw new OfflineStorageError("invalid_command", "חסר מזהה תקין לפעולה. יש לפתוח מחדש את הטופס.");
     const signature = canonical(command);

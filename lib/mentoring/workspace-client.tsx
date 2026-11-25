@@ -8,9 +8,10 @@ import { isMentoringOfflineAccessPrepared, isOfflineDraftAccessCurrent, offlineD
 
 type WorkspaceError = { readonly message: string; readonly code?: string };
 type Connection = "online" | "offline" | "syncing" | "conflict";
-type OnlineCommand = Extract<MentoringCommand, { type: "send_staff_sms" | "permanently_delete_participant" | "save_tracking_card" | "record_tracking_report" }>;
-const isOnlineCommand = (command: MentoringCommand): command is OnlineCommand => command.type === "send_staff_sms" || command.type === "permanently_delete_participant" || command.type === "save_tracking_card" || command.type === "record_tracking_report";
+type OnlineCommand = Extract<MentoringCommand, { type: "send_staff_sms" | "permanently_delete_participant" | "save_tracking_card" | "record_tracking_report" | "request_participant_transfer" | "respond_participant_transfer" }>;
+const isOnlineCommand = (command: MentoringCommand): command is OnlineCommand => command.type === "send_staff_sms" || command.type === "permanently_delete_participant" || command.type === "save_tracking_card" || command.type === "record_tracking_report" || command.type === "request_participant_transfer" || command.type === "respond_participant_transfer";
 const isTrackingCommand = (command: OnlineCommand): command is Extract<OnlineCommand, { type: "save_tracking_card" | "record_tracking_report" }> => command.type === "save_tracking_card" || command.type === "record_tracking_report";
+const isTransferOnlineCommand = (command: OnlineCommand): command is Extract<OnlineCommand, { type: "request_participant_transfer" | "respond_participant_transfer" }> => command.type === "request_participant_transfer" || command.type === "respond_participant_transfer";
 interface WorkspaceState {
   readonly snapshot: WorkspaceSnapshot | null;
   readonly loading: boolean;
@@ -381,8 +382,12 @@ class WorkspaceController {
       const scope = this.scope;
       if (!scope || !submittedScope || scope.accountId !== accountId || scope.key !== submittedScope.key || !this.isCurrent(submittedEpoch) || !this.auth.loaded || this.auth.userId !== scope.accountId || this.authorizedEpoch !== submittedEpoch) return failure("not_authenticated", "החשבון השתנה או נדרש אימות מחדש. יש לפתוח מחדש את מסך ההודעות עם חיבור.");
       const actorRole = this.state.snapshot?.actor.role;
-      if (!this.state.snapshot?.actor.active || !(actorRole === "ceo" || (isTrackingCommand(intent) && actorRole === "coordinator"))) return failure("forbidden", isTrackingCommand(intent) ? "כרטיסי המעקב זמינים למנכ״ל ולרכזות בלבד." : "הפעולה זמינה להנהלה בלבד.");
-      if (!this.reachable || (typeof navigator !== "undefined" && !navigator.onLine)) return failure("unavailable", intent.type === "permanently_delete_participant" ? "מחיקה לצמיתות מחייבת חיבור פעיל. הבקשה לא נשמרה לביצוע מאוחר." : isTrackingCommand(intent) ? "עדכון כרטיס מעקב מחייב חיבור פעיל. הבקשה לא נשמרה לביצוע מאוחר." : "נדרש חיבור לשליחת הודעה. ההודעה לא נשמרה לשליחה מאוחרת.");
+      if (!this.state.snapshot?.actor.active || !(actorRole === "ceo" || (isTrackingCommand(intent) && actorRole === "coordinator") || (isTransferOnlineCommand(intent) && actorRole === "coordinator"))) {
+        return failure("forbidden", isTransferOnlineCommand(intent) ? "בקשות העברת שיוך מנוהלות בין רכזות בלבד." : isTrackingCommand(intent) ? "כרטיסי המעקב זמינים למנכ״ל ולרכזות בלבד." : "הפעולה זמינה להנהלה בלבד.");
+      }
+      if (!this.reachable || (typeof navigator !== "undefined" && !navigator.onLine)) {
+        return failure("unavailable", intent.type === "permanently_delete_participant" ? "מחיקה לצמיתות מחייבת חיבור פעיל. הבקשה לא נשמרה לביצוע מאוחר." : isTransferOnlineCommand(intent) ? "ניהול בקשות העברת שיוך מחייב חיבור פעיל. הבקשה לא נשמרה לביצוע מאוחר." : isTrackingCommand(intent) ? "עדכון כרטיס מעקב מחייב חיבור פעיל. הבקשה לא נשמרה לביצוע מאוחר." : "נדרש חיבור לשליחת הודעה. ההודעה לא נשמרה לשליחה מאוחרת.");
+      }
       if (intent.type === "permanently_delete_participant") {
         try { await mentoringOfflineStore.assertParticipantReadyForPurge(scope, intent.participantId); }
         catch (error) { return failure("conflict", errorFor(error).message); }
@@ -402,6 +407,7 @@ class WorkspaceController {
         if (response.status < 500 && response.status !== 408 && response.status !== 429 && responseFailure) return responseFailure;
         const matchingResult = payload && typeof payload === "object" && (intent.type === "send_staff_sms" ? "staffSmsBatchId" in payload && payload.staffSmsBatchId === intent.operationId
           : isTrackingCommand(intent) ? (intent.subject.kind === "mentor" ? "staffId" in payload && payload.staffId === intent.subject.staffId : "participantId" in payload && payload.participantId === intent.subject.participantId)
+          : isTransferOnlineCommand(intent) ? "transferRequestId" in payload && payload.transferRequestId === (intent.type === "request_participant_transfer" ? intent.operationId : intent.transferRequestId)
           : "participantId" in payload && payload.participantId === intent.participantId);
         if (response.ok && payload && typeof payload === "object" && "ok" in payload && payload.ok === true && "operationId" in payload && payload.operationId === intent.operationId && "acceptance" in payload && payload.acceptance === "accepted" && matchingResult) {
           if (intent.type === "permanently_delete_participant") {

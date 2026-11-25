@@ -158,16 +158,17 @@ export async function getWorkspace(authUserId: string, verifiedEmail?: string | 
     const actor = await requireIdentity(client, authUserId, verifiedEmail, passwordEnabled);
     const time = await client.query("SELECT clock_timestamp() AS now");
     const serverTime = iso(time.rows[0].now);
-    const visible = await client.query(`SELECT p.id FROM mentoring.participants p WHERE p.organization_id = $1 AND (p.deleted_at IS NULL OR $3 = 'ceo') AND ($3 = 'ceo' OR ($3 = 'coordinator' AND p.created_by = $2 AND NOT EXISTS (SELECT 1 FROM mentoring.assignments a WHERE a.organization_id = p.organization_id AND a.participant_id = p.id AND a.ended_at IS NULL)) OR EXISTS (SELECT 1 FROM mentoring.assignments a WHERE a.organization_id = p.organization_id AND a.participant_id = p.id AND a.ended_at IS NULL AND (($3 = 'mentor' AND a.mentor_id = $2) OR ($3 = 'coordinator' AND a.coordinator_id = $2))) OR EXISTS (SELECT 1 FROM mentoring.grants g WHERE g.organization_id = p.organization_id AND g.participant_id = p.id AND g.staff_id = $2 AND g.active = true AND 'view' = ANY(g.actions) AND (g.expires_at IS NULL OR g.expires_at > $4::timestamptz))) ORDER BY p.created_at DESC, p.id`, [actor.organizationId, actor.id, actor.role, serverTime]);
+    const visible = await client.query(`SELECT p.id FROM mentoring.participants p WHERE p.organization_id = $1 AND (p.deleted_at IS NULL OR $3 = 'ceo') AND ($3 = 'ceo' OR (p.deleted_at IS NULL AND NOT EXISTS (SELECT 1 FROM mentoring.assignments a WHERE a.organization_id = p.organization_id AND a.participant_id = p.id AND a.ended_at IS NULL) AND (p.lifecycle = 'active' OR ($3 = 'coordinator' AND p.created_by = $2))) OR EXISTS (SELECT 1 FROM mentoring.assignments a WHERE a.organization_id = p.organization_id AND a.participant_id = p.id AND a.ended_at IS NULL AND (($3 = 'mentor' AND a.mentor_id = $2) OR ($3 = 'coordinator' AND a.coordinator_id = $2))) OR EXISTS (SELECT 1 FROM mentoring.grants g WHERE g.organization_id = p.organization_id AND g.participant_id = p.id AND g.staff_id = $2 AND g.active = true AND 'view' = ANY(g.actions) AND (g.expires_at IS NULL OR g.expires_at > $4::timestamptz))) ORDER BY p.created_at DESC, p.id`, [actor.organizationId, actor.id, actor.role, serverTime]);
     const baseParticipants = await loadVisibleParticipants(client, actor.organizationId, visible.rows.map((row) => text(row.id)));
-    const [{ loadContactHistory }, { loadAuthorityExtras }, { loadOversightExtras }, { loadReminderExtras }, { loadTrackingCards }] = await Promise.all([
-      import("../features/contacts/server"), import("../features/authority/server"), import("../features/oversight/server"), import("../features/reminders/server"), import("../features/tracking/server"),
+    const [{ loadContactHistory }, { loadAuthorityExtras }, { loadOversightExtras }, { loadReminderExtras }, { loadTrackingCards }, { loadWorkspaceTransfers }] = await Promise.all([
+      import("../features/contacts/server"), import("../features/authority/server"), import("../features/oversight/server"), import("../features/reminders/server"), import("../features/tracking/server"), import("../features/transfers/server"),
     ]);
     const ids = baseParticipants.map((view) => view.participant.id);
     const history = await loadContactHistory(client, actor.organizationId, ids);
     const authority = await loadAuthorityExtras(client, actor.organizationId, ids);
     const oversight = await loadOversightExtras(client, actor, serverTime);
     const reminderData = await loadReminderExtras(client, actor, ids);
+    const transfers = await loadWorkspaceTransfers(client, actor);
     const staffSmsBatches = actor.role === "ceo"
       ? await (await import("../features/staff-messages/server")).loadStaffSmsBatches(client, actor)
       : undefined;
@@ -176,8 +177,14 @@ export async function getWorkspace(authUserId: string, verifiedEmail?: string | 
     const participants = baseParticipants.map((view): ParticipantView => {
       const extras = authority.get(view.participant.id);
       const ownUnassigned = actor.role === "coordinator" && !view.assignment && view.participant.createdBy === actor.id;
-      const allowedActions = (["view", "edit", "approve", "delete"] as ParticipantAction[]).filter((action) => canPerformParticipantAction(actor, view.participant, view.assignment, action, currentGrants, serverTime) || (ownUnassigned && action !== "delete"));
-      return { ...view, ...history.get(view.participant.id), ...extras, allowedActions,
+      const canAssignInitial = !view.assignment && !view.participant.deletedAt && view.participant.lifecycle === "active";
+      const allowedActions = (["view", "edit", "approve", "delete"] as ParticipantAction[]).filter(
+        (action) =>
+          canPerformParticipantAction(actor, view.participant, view.assignment, action, currentGrants, serverTime)
+          || (ownUnassigned && action !== "delete")
+          || (canAssignInitial && action === "view"),
+      );
+      return { ...view, ...history.get(view.participant.id), ...extras, allowedActions, canAssignInitial,
         accessGrants: extras?.accessGrants.filter((grant) => actor.role === "ceo" || grant.staffId === actor.id).map((grant) => actor.role === "ceo" ? grant : { ...grant, reason: null }),
         protectionStates: extras?.protectionStates.map((protection) => actor.role === "ceo" ? protection : { ...protection, reason: null }),
         authorityHistory: actor.role === "mentor" ? [] : actor.role === "ceo" ? extras?.authorityHistory : extras?.authorityHistory.filter((event) => !["set_access_grant", "set_ceo_protection"].includes(event.action)),
@@ -199,7 +206,7 @@ export async function getWorkspace(authUserId: string, verifiedEmail?: string | 
       return { ...member, email: null, phone: null, authUserId: "" };
     });
     const conflictsResult = await client.query("SELECT c.*, p.display_name AS participant_name, m.display_name AS author_name FROM mentoring.conflicts c JOIN mentoring.participants p ON p.organization_id = c.organization_id AND p.id = c.participant_id JOIN mentoring.memberships m ON m.organization_id = c.organization_id AND m.id = c.actor_id WHERE c.organization_id = $1 AND ($3 = 'ceo' OR c.actor_id = $2) ORDER BY c.created_at DESC", [actor.organizationId, actor.id, actor.role]);
-    const trackingCards = await loadTrackingCards(client, actor, participants.filter((view) => !view.participant.deletedAt).map((view) => view.participant.id));
+    const trackingCards = await loadTrackingCards(client, actor, participants.filter((view) => !view.participant.deletedAt && (actor.role === "ceo" || view.allowedActions?.includes("edit"))).map((view) => view.participant.id));
     const visibleIds = new Set(participants.map((view) => view.participant.id));
     const conflicts: ConflictView[] = conflictsResult.rows.filter((row) => visibleIds.has(text(row.participant_id))).map((row) => ({ id: text(row.id), participantId: text(row.participant_id), participantName: text(row.participant_name), authorName: text(row.author_name), authoritativeValue: JSON.stringify(row.authoritative_value, null, 2), submittedValue: JSON.stringify(row.submitted_value, null, 2), createdAt: iso(row.created_at), resolvedAt: nullableIso(row.resolved_at) }));
     // The reserved namespace survives permanent deletion. UUIDs alone identify
@@ -217,6 +224,6 @@ export async function getWorkspace(authUserId: string, verifiedEmail?: string | 
       const expiry = await client.query("SELECT min(expires_at) AS expires_at FROM mentoring.grants WHERE organization_id = $1 AND staff_id = $2 AND active = true AND expires_at > $3::timestamptz", [actor.organizationId, actor.id, serverTime]);
       if (expiry.rows[0].expires_at != null) offlineDeadline = Math.min(offlineDeadline, Date.parse(iso(expiry.rows[0].expires_at)));
     }
-    return { actor, staff, participants, permanentlyDeletedParticipantIds, conflicts, ...oversight, ...reminderData, ...(staffSmsBatches ? { staffSmsBatches } : {}), ...(trackingCards ? { trackingCards } : {}), serverTime, offlineValidUntil: new Date(offlineDeadline).toISOString(), capabilities: { smsConfigured: reminderData.reminderReadiness.smsProviderConfigured && reminderData.reminderReadiness.smsCredentialsConfigured, smsSendingEnabled: reminderData.reminderReadiness.smsSendingEnabled } };
+    return { actor, staff, participants, permanentlyDeletedParticipantIds, conflicts, ...oversight, ...reminderData, ...transfers, ...(staffSmsBatches ? { staffSmsBatches } : {}), ...(trackingCards ? { trackingCards } : {}), serverTime, offlineValidUntil: new Date(offlineDeadline).toISOString(), capabilities: { smsConfigured: reminderData.reminderReadiness.smsProviderConfigured && reminderData.reminderReadiness.smsCredentialsConfigured, smsSendingEnabled: reminderData.reminderReadiness.smsSendingEnabled } };
   }, { repeatableRead: true });
 }
